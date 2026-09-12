@@ -42,7 +42,7 @@ export default tseslint.config(
             { from: "widgets", allow: ["widgets", "core", "store", "entitlements", "platform", "primitives"] },
             /* 功能模块只能引自己目录，互相不许 import */
             { from: "feature", allow: [["feature", { name: "${from.name}" }], "core", "store", "entitlements", "platform", "primitives", "widgets"] },
-            { from: "app", allow: ["app", "core", "store", "entitlements", "platform", "primitives", "styles", "feature"] },
+            { from: "app", allow: ["app", "core", "store", "entitlements", "platform", "primitives", "styles", "feature", "widgets"] },
             { from: "entry", allow: ["app", "store", "data", "platform", "styles", "core"] },
           ],
         },

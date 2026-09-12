@@ -12,11 +12,14 @@ import { isOtherTeacher, teacherOfLesson } from "@/core/teacher";
 import { AttendanceChips } from "@/ui/widgets/AttendanceChips";
 import { ClassLessonSheet } from "@/ui/widgets/ClassLessonSheet";
 import { balance, doneLessonsInWeek, lowBalanceStudents, fmtMoney } from "@/core/finance";
-import { formatCN, nowHHMM, todayISO } from "@/core/date";
+import { formatCN, nowHHMM } from "@/core/date";
 import type { Lesson } from "@/core/types";
 import { Avatar, Button, Chip, Empty, Num, Stamp, TeacherTag } from "@/ui/primitives";
 import { LogLessonSheet } from "@/ui/widgets/LogLessonSheet";
 import { UndoLessonSheet } from "@/ui/widgets/UndoLessonSheet";
+import { closingDayData } from "@/core/closing-day";
+import { ClosingDaySheet } from "@/ui/widgets/ClosingDaySheet";
+import { useLocalDay } from "@/ui/widgets/useLocalDay";
 import { IncomeStat } from "@/ui/widgets/IncomeStat";
 import type { FeedbackPoint } from "@/core/lesson-feedback";
 import { platform } from "@/platform";
@@ -25,7 +28,7 @@ import "./today.css";
 export function TodayPage() {
   const s = useStore((x) => x.s);
   const { complete, cancel, log, copyLastWeek, toggleTodo, go, completeClass, cancelGroup } = useStore(useShallow((x) => ({ complete: x.complete, cancel: x.cancel, log: x.log, copyLastWeek: x.copyLastWeek, toggleTodo: x.toggleTodo, go: x.go, completeClass: x.completeClass, cancelGroup: x.cancelGroup })));
-  const today = todayISO();
+  const today = useLocalDay();
   const items = useMemo(() => lessonsOn(s, today), [s, today]);
   const groups = useMemo(() => groupItems(items), [items]);
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({});
@@ -34,6 +37,8 @@ export function TodayPage() {
   const suggestions = useMemo(() => suggestionsFor(s, today), [s, today]);
   const low = useMemo(() => lowBalanceStudents(s), [s]);
   const todos = useMemo(() => s.todos.filter((t) => !t.done && t.due <= today).sort((a, b) => a.due.localeCompare(b.due)), [s.todos, today]);
+  const closing = useMemo(() => closingDayData(s, today), [s, today]);
+  const [closingOpen, setClosingOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [undoTarget, setUndoTarget] = useState<Lesson | null>(null);
   const [fresh, setFresh] = useState<string | null>(null);
@@ -74,7 +79,7 @@ export function TodayPage() {
       <div className="stat-row">
         <div className="stat">今天 <b>{doneCount}/{groups.filter((g) => groupStatus(g) !== "cancelled").length}</b> 节</div>
         <div className="stat">本周已上 <b>{doneLessonsInWeek(s, today)}</b> 节</div>
-        <IncomeStat />
+        <IncomeStat key={today} />
         {low.length > 0 && <div className={`stat ${low.some((l) => l.level === "danger") ? "danger" : "warn"}`}>该提醒续费 <b>{low.length}</b> 人</div>}
       </div>
 
@@ -176,7 +181,7 @@ export function TodayPage() {
             );
           })
         )}
-        {groups.length > 0 && pending.length === 0 && doneCount > 0 && <div className="timeline-done">今天的课都上完了 🎉</div>}
+        {closing.eligible && <div className="closing-trigger"><Button onClick={() => setClosingOpen(true)}>收工</Button></div>}
       </div>
 
       {/* ---------- 从历史推断的建议 ---------- */}
@@ -241,6 +246,7 @@ export function TodayPage() {
         </div>
       </div>
 
+      {closingOpen && closing.eligible && <ClosingDaySheet key={today} onClose={() => setClosingOpen(false)} />}
       <LogLessonSheet open={logOpen} onClose={() => setLogOpen(false)} />
       <UndoLessonSheet lesson={undoTarget} onClose={() => setUndoTarget(null)} />
       <ClassLessonSheet group={classPick} onClose={() => setClassPick(null)} />

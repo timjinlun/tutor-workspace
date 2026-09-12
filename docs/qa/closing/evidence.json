@@ -1,0 +1,15 @@
+{
+  "width": 1080,
+  "height": 1350,
+  "httpStatus": 200,
+  "servedMatchesPoster": true,
+  "netDiagnostics": {
+    "connections": 1,
+    "requests": 1,
+    "ticks": 41
+  },
+  "savedMatchesPoster": true,
+  "qrVisible": true,
+  "closed": true,
+  "physicalPhoneScan": "not verified"
+}

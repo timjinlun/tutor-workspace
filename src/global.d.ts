@@ -1,7 +1,13 @@
 import type { Appearance, AuditEntry, State } from "@/core/types";
+import type { LanAddress, ShareResult } from "@/core/poster-share-types";
 
 /** preload 暴露给页面的桥。页面拿不到 Node，只有这些。 */
 export interface TutorBridge {
+  posterShare: {
+    addresses(): Promise<LanAddress[]>;
+    start(dataUrl: string, address?: string): Promise<ShareResult>;
+    stop(sessionId?: string): Promise<void>;
+  };
   data: {
     load(): Promise<State | null>;
     save(state: State): Promise<{ ok: true } | { ok: false; error: string }>;

@@ -3,10 +3,18 @@
  * 这里不含任何业务逻辑。
  */
 import type { Appearance, State } from "@/core/types";
+import type { LanAddress, ShareResult } from "@/core/poster-share-types";
 
 export const isApp = typeof window !== "undefined" && !!window.tw;
 
 export const platform = {
+  posterShare: {
+    async addresses(): Promise<LanAddress[]> { return isApp ? window.tw!.posterShare.addresses() : []; },
+    async start(dataUrl: string, address?: string): Promise<ShareResult> {
+      return isApp ? window.tw!.posterShare.start(dataUrl, address) : { ok: false, error: "浏览器版请保存到电脑，扫码传图需要桌面版" };
+    },
+    async stop(sessionId?: string): Promise<void> { if (isApp) await window.tw!.posterShare.stop(sessionId); },
+  },
   /** macOS 系统强调色，取不到返回 null */
   async systemAccent(): Promise<string | null> {
     if (!isApp) return null;

@@ -7,11 +7,13 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, systemPr
 import fs from "node:fs";
 import path from "node:path";
 import { SqliteStore } from "./db/store";
+import { PosterShare } from "./poster-share";
 import { adoptOrphanWal, dataDir, dbFile, setupUserData, wallpaperFile } from "./datadir";
 
 const IS_MAC = process.platform === "darwin";
 let win: BrowserWindow | null = null;
 let store: SqliteStore | null = null;
+const posterShare = new PosterShare();
 
 
 /* ============================== 窗口 ============================== */
@@ -39,6 +41,9 @@ function createWindow() {
     },
   });
   win.once("ready-to-show", () => win?.show());
+  win.on("closed", () => { void posterShare.stop(); win = null; });
+  win.webContents.on("render-process-gone", () => { void posterShare.stop(); });
+  win.webContents.on("did-start-navigation", () => { void posterShare.stop(); });
 
   if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL);
   else win.loadFile(path.join(__dirname, "../renderer/index.html"));
@@ -170,6 +175,14 @@ async function doImport(): Promise<unknown | null> {
 /* ============================== IPC ============================== */
 
 function wireIpc() {
+  ipcMain.handle("poster:addresses", (e) => e.sender === win?.webContents ? posterShare.addresses() : []);
+  ipcMain.handle("poster:start", (e, dataUrl: unknown, address: unknown) => {
+    if (e.sender !== win?.webContents || (address !== undefined && typeof address !== "string")) return { ok: false, error: "分享请求无效" };
+    return posterShare.start(dataUrl, address);
+  });
+  ipcMain.handle("poster:stop", (e, sessionId: unknown) => {
+    if (e.sender === win?.webContents && (sessionId === undefined || typeof sessionId === "string")) return posterShare.stop(sessionId);
+  });
   ipcMain.handle("data:load", () => store?.load() ?? null);
   ipcMain.handle("data:save", (_e, state) => {
     try {
@@ -281,5 +294,5 @@ if (!app.requestSingleInstanceLock()) {
   app.on("window-all-closed", () => {
     if (!IS_MAC) app.quit();
   });
-  app.on("before-quit", () => store?.close());
+  app.on("before-quit", () => { void posterShare.stop(); store?.close(); });
 }

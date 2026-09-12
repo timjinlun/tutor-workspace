@@ -2,6 +2,11 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 const bridge = {
+  posterShare: {
+    addresses: () => ipcRenderer.invoke("poster:addresses"),
+    start: (dataUrl: string, address?: string) => ipcRenderer.invoke("poster:start", dataUrl, address),
+    stop: (sessionId?: string) => ipcRenderer.invoke("poster:stop", sessionId),
+  },
   data: {
     load: () => ipcRenderer.invoke("data:load"),
     save: (state: unknown) => ipcRenderer.invoke("data:save", state),

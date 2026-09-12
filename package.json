@@ -68,6 +68,7 @@
     "dmg": {
       "title": "${productName} ${version}"
     },
+    "afterSign": "build/after-sign.js",
     "publish": null
   },
   "dependencies": {

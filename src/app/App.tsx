@@ -50,9 +50,11 @@ export function App() {
   const bg = settings.background === "custom" && !wallpaper ? "aurora" : settings.background;
   useEffect(() => {
     document.documentElement.dataset.bg = bg;
+    try { localStorage.setItem("tw.bg", bg); } catch { /* 隐私模式下写不了，无所谓 */ }
   }, [bg]);
 
-  if (!ready) return null;
+  /* 数据还在读的那几十毫秒：把壳先画出来，别让窗口空着 */
+  if (!ready) return <Shell />;
   const Page = PAGES[route.page];
   return (
     <div className="layout">
@@ -85,6 +87,23 @@ export function App() {
   );
 }
 
+/** 数据就绪前的骨架：背景和侧栏跟正式界面一致，所以看不出"加载中" */
+function Shell() {
+  return (
+    <div className="layout">
+      <div className="bg-layer" aria-hidden="true"><i className="blob b1" /><i className="blob b2" /><i className="blob b3" /></div>
+      <aside className="sidebar">
+        <nav className="nav">
+          {NAV.map((n) => (
+            <span key={n.page} className="nav-item" aria-hidden="true">{n.icon}{n.label}</span>
+          ))}
+        </nav>
+      </aside>
+      <main className="main" />
+    </div>
+  );
+}
+
 /** 深浅色与强调色落到 <html data-appearance data-accent>，并告诉壳层同步毛玻璃 */
 function useAppearance(appearance: string, accent: string) {
   useEffect(() => {
@@ -94,6 +113,7 @@ function useAppearance(appearance: string, accent: string) {
       const dark = appearance === "dark" || (appearance === "system" && mq.matches);
       root.dataset.appearance = dark ? "dark" : "light";
     };
+    try { localStorage.setItem("tw.appearance", appearance); } catch { /* 同上 */ }
     apply();
     mq.addEventListener("change", apply);
     platform.setAppearance(appearance as "system" | "light" | "dark");
@@ -103,6 +123,7 @@ function useAppearance(appearance: string, accent: string) {
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.accent = accent;
+    try { localStorage.setItem("tw.accent", accent); } catch { /* 同上 */ }
     if (accent !== "system") return;
     void platform.systemAccent().then((hex) => hex && root.style.setProperty("--accent-system", hex));
     return platform.onSystemAccentChange((hex) => root.style.setProperty("--accent-system", hex));

@@ -4,6 +4,8 @@
  * UI 不能直接 set 状态，只能调 action。
  */
 import { create } from "zustand";
+import { incomeInMonth } from "@/core/finance";
+import type { FeedbackPoint } from "@/core/lesson-feedback";
 import { incomeChanges, jarSettings } from "@/core/jar";
 import type { AuditEntry, Class, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
 import { emptyState, normalizeState } from "@/core/types";
@@ -22,7 +24,7 @@ export interface Route {
   studentId?: ID;
 }
 
-export interface JarFeedback { seq: number; changes: { id: string; amount: number }[] }
+export interface JarFeedback { origin?: FeedbackPoint; monthDelta?: number; seq: number; changes: { id: string; amount: number }[] }
 export interface Store {
   jarFeedback: JarFeedback;
   refreshJarSettings(): void;
@@ -39,7 +41,7 @@ export interface Store {
   /* 导航 */
   go(route: Route): void;
   /* 课 */
-  complete(item: DayItem): void;
+  complete(item: DayItem, origin?: FeedbackPoint): void;
   undo(lessonId: ID): void;
   cancel(item: DayItem): void;
   log(input: LogLessonInput): void;
@@ -48,7 +50,7 @@ export interface Store {
   /* 班课 */
   scheduleClass(input: ClassLessonInput): void;
   logClass(input: ClassLessonInput): void;
-  completeClass(items: DayItem[], attendance: Attendance): void;
+  completeClass(items: DayItem[], attendance: Attendance, origin?: FeedbackPoint): void;
   cancelGroup(items: DayItem[]): void;
   addClass(input: Omit<Class, "id" | "active">): { ok: true; cls: Class } | { ok: false; reason: string };
   updateClass(id: ID, patch: Partial<Class>): { ok: true } | { ok: false; reason: string };
@@ -118,11 +120,11 @@ function recordAudit(entry: AuditEntry) {
 
 export const useStore = create<Store>((set, get) => {
   /** 所有变更走这里：更新状态 + 触发持久化 */
-  const commit = (patch: Partial<State>) => {
+  const commit = (patch: Partial<State>, origin?: FeedbackPoint) => {
     const changes = patch.lessons ? incomeChanges(get().s.lessons, patch.lessons) : [];
     const next = { ...get().s, ...patch };
     next.settings = { ...next.settings, ...jarSettings(next, todayISO()) };
-    set({ s: next, ...(changes.length ? { jarFeedback: { seq: get().jarFeedback.seq + 1, changes } } : {}) });
+    set({ s: next, ...(changes.length ? { jarFeedback: { seq: get().jarFeedback.seq + 1, changes, origin, monthDelta: incomeInMonth(next, todayISO().slice(0, 7)) - incomeInMonth(get().s, todayISO().slice(0, 7)) } } : {}) });
     persist(get, set);
   };
   const audited = (entry: AuditEntry) => {
@@ -157,13 +159,13 @@ export const useStore = create<Store>((set, get) => {
 
     go: (route) => set({ route }),
 
-    complete(item) {
+    complete(item, origin) {
       const existing = get().s.lessons.find((l) => item.virtual ? l.templateId === item.templateId && l.date === item.date && l.studentId === item.studentId : l.id === item.id);
       if (existing && existing.status !== "scheduled") return;
       if (existing) item = { ...existing, virtual: false };
       if (item.status !== "scheduled") return;
       const { lessons, audit } = completeLesson(get().s, item);
-      commit({ lessons });
+      commit({ lessons }, origin);
       audited(audit);
     },
     undo(lessonId) {
@@ -205,14 +207,14 @@ export const useStore = create<Store>((set, get) => {
       commit({ lessons: r.lessons });
       audited(r.audit);
     },
-    completeClass(items, attendance) {
+    completeClass(items, attendance, origin) {
       items = items.map((item) => {
         const existing = get().s.lessons.find((l) => item.virtual ? l.templateId === item.templateId && l.date === item.date && l.studentId === item.studentId : l.id === item.id);
         return existing ? { ...existing, virtual: false } : item;
       });
       const r = completeClass(get().s, items, attendance);
       if (!r) return;
-      commit({ lessons: r.lessons });
+      commit({ lessons: r.lessons }, origin);
       audited(r.audit);
     },
     cancelGroup(items) {

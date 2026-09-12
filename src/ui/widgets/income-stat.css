@@ -1,0 +1,2 @@
+.income-flight { position: fixed; left: 0; top: 0; z-index: 110; pointer-events: none; color: var(--accent); font: 700 18px var(--font-num); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .income-flight { display: none; } }

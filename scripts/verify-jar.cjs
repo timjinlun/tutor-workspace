@@ -29,15 +29,19 @@ app.whenReady().then(async()=>{
    fs.writeFileSync(path.join(output,`${name}.png`),(await win.webContents.capturePage()).toPNG());
   }
   await win.webContents.executeJavaScript(`window.__rafCount=0; const original=window.requestAnimationFrame;window.requestAnimationFrame=(fn)=>{window.__rafCount++;return original(fn)};Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='上完了').click()`);
-  await pause(1500);
+  await pause(150);
+  const flightCount = await win.webContents.executeJavaScript(`document.querySelectorAll('.income-flight').length`);
+  fs.writeFileSync(path.join(output,'feedback-flight.png'),(await win.webContents.capturePage()).toPNG());
+  await pause(1550);
+  const finalIncome = await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('.stat')).find(e=>e.textContent.includes('本月确认收入')).textContent`);
   const start = await win.webContents.executeJavaScript(`({count:window.__rafCount,animating:document.querySelector('.savings-jar canvas').dataset.animating})`);
   await pause(1000);
   const end=await win.webContents.executeJavaScript(`window.__rafCount`);
   const knownBaselineErrors=errors.filter(e=>e.includes('Executing inline script violates'));
   const unexpectedErrors=errors.filter(e=>!knownBaselineErrors.includes(e));
-  const result={start,oneSecondLater:end,idleRafDelta:end-start.count,knownBaselineErrors,unexpectedErrors};
+  const result={flightCount,finalIncome,start,oneSecondLater:end,idleRafDelta:end-start.count,knownBaselineErrors,unexpectedErrors};
   fs.writeFileSync(path.join(output,'evidence.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify(result));
-  if(start.animating!=='false'||end!==start.count||unexpectedErrors.length)process.exitCode=1;
+  if(flightCount!==1||!finalIncome.includes('5,280')||start.animating!=='false'||end!==start.count||unexpectedErrors.length)process.exitCode=1;
  }catch(e){console.error(e);process.exitCode=1;}finally{win.destroy();app.exit(process.exitCode||0);}
 });

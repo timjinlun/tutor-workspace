@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "@/store";
+import { feedbackTiming } from "@/core/lesson-feedback";
 import { jarState } from "@/core/jar";
 import { fmtMoney } from "@/core/finance";
 import { addCoins, createWorld, stepWorld, type Coin } from "@/core/jar-physics";
@@ -30,6 +31,7 @@ export function SavingsJar() {
     base.width = 320; base.height = 280;
     const b = base.getContext("2d");
     if (!b) return;
+    let delayTimer: ReturnType<typeof setTimeout> | undefined;
     let raf = 0, start = 0, last = 0, emitted = 0;
     let world = createWorld();
     let groups: { count: number; radius: number }[] = [];
@@ -72,7 +74,7 @@ export function SavingsJar() {
       ctx.beginPath(); ctx.roundRect(57, 23, 46, 3, 1.5); ctx.stroke();
       ctx.strokeStyle = highlight; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.ellipse(80, 25, 55, 13, 0, Math.PI * 1.12, Math.PI * 1.6); ctx.stroke();
     };
-    const stop = () => { cancelAnimationFrame(raf); raf = 0; world = createWorld(); canvas.dataset.animating = "false"; };
+    const stop = () => { clearTimeout(delayTimer); cancelAnimationFrame(raf); raf = 0; world = createWorld(); canvas.dataset.animating = "false"; };
     const finish = () => { stop(); rebuild(); draw(); };
     const tick = (now: number) => {
       const elapsed = now - start;
@@ -112,7 +114,10 @@ export function SavingsJar() {
           }
         }
         world = createWorld(Math.max(40, 124 - current.fill * 82));
-        emitted = 0; start = last = performance.now(); canvas.dataset.animating = "true"; raf = requestAnimationFrame(tick);
+        emitted = 0; canvas.dataset.animating = "true";
+        const delay = feedbackTiming(next.jarFeedback.monthDelta ?? 0, !!next.jarFeedback.origin, reduce.matches).jarDelay;
+        draw();
+        delayTimer = setTimeout(() => { start = last = performance.now(); raf = requestAnimationFrame(tick); }, delay);
       } else { finish(); }
     });
     const redraw = () => { stop(); resize(); colors(); rebuild(); draw(); };

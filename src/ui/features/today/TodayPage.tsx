@@ -11,12 +11,14 @@ import { classById, groupItems, groupStatus, type Attendance, type DayGroup } fr
 import { isOtherTeacher, teacherOfLesson } from "@/core/teacher";
 import { AttendanceChips } from "@/ui/widgets/AttendanceChips";
 import { ClassLessonSheet } from "@/ui/widgets/ClassLessonSheet";
-import { balance, doneLessonsInWeek, incomeInMonth, lowBalanceStudents, fmtMoney } from "@/core/finance";
-import { formatCN, monthKey, nowHHMM, todayISO } from "@/core/date";
+import { balance, doneLessonsInWeek, lowBalanceStudents, fmtMoney } from "@/core/finance";
+import { formatCN, nowHHMM, todayISO } from "@/core/date";
 import type { Lesson } from "@/core/types";
 import { Avatar, Button, Chip, Empty, Num, Stamp, TeacherTag } from "@/ui/primitives";
 import { LogLessonSheet } from "@/ui/widgets/LogLessonSheet";
 import { UndoLessonSheet } from "@/ui/widgets/UndoLessonSheet";
+import { IncomeStat } from "@/ui/widgets/IncomeStat";
+import type { FeedbackPoint } from "@/core/lesson-feedback";
 import { platform } from "@/platform";
 import "./today.css";
 
@@ -44,8 +46,8 @@ export function TodayPage() {
   const now = nowHHMM();
   const nextUp = pending.find((g) => g.time >= now) ?? pending[0];
 
-  const onComplete = (item: DayItem) => {
-    complete(item);
+  const onComplete = (item: DayItem, origin: FeedbackPoint) => {
+    complete(item, origin);
     setFresh(`${item.studentId}|${item.time}`);
   };
   const remind = async (name: string, remaining: number) => {
@@ -72,7 +74,7 @@ export function TodayPage() {
       <div className="stat-row">
         <div className="stat">今天 <b>{doneCount}/{groups.filter((g) => groupStatus(g) !== "cancelled").length}</b> 节</div>
         <div className="stat">本周已上 <b>{doneLessonsInWeek(s, today)}</b> 节</div>
-        <div className="stat">本月确认收入 <b>{fmtMoney(incomeInMonth(s, monthKey(today)))}</b></div>
+        <IncomeStat />
         {low.length > 0 && <div className={`stat ${low.some((l) => l.level === "danger") ? "danger" : "warn"}`}>该提醒续费 <b>{low.length}</b> 人</div>}
       </div>
 
@@ -119,7 +121,7 @@ export function TodayPage() {
                     {status === "scheduled" && (
                       <>
                         <Button variant="ghost" size="sm" icon={<X />} onClick={() => cancelGroup(g.items)} title="这次班课不上了" />
-                        <Button variant="primary" icon={<Check strokeWidth={3} />} onClick={() => { completeClass(g.items, att); setFresh(g.key); }}>
+                        <Button variant="primary" icon={<Check strokeWidth={3} />} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); completeClass(g.items, att, { x: r.x + r.width / 2, y: r.y + r.height / 2 }); setFresh(g.key); }}>
                           上完了{absent > 0 && ` · 缺 ${absent}`}
                         </Button>
                       </>
@@ -155,7 +157,7 @@ export function TodayPage() {
                   {item.status === "scheduled" && (
                     <>
                       <Button variant="ghost" size="sm" icon={<X />} onClick={() => cancel(item)} title="今天不上了" />
-                      <Button variant="primary" icon={<Check strokeWidth={3} />} onClick={() => onComplete(item)}>
+                      <Button variant="primary" icon={<Check strokeWidth={3} />} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); onComplete(item, { x: r.x + r.width / 2, y: r.y + r.height / 2 }); }}>
                         上完了
                       </Button>
                     </>

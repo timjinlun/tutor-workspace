@@ -1,0 +1,23 @@
+.timeline { padding: 6px 20px; margin-bottom: 16px; }
+.lesson { display: flex; align-items: center; gap: 14px; padding: 14px 0; position: relative; }
+.lesson + .lesson { border-top: 1px solid var(--line); }
+.lesson-time { width: 52px; font-size: 15px; font-weight: 600; color: var(--label); flex-shrink: 0; }
+.lesson-rail { width: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.lesson-rail .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--fill-2); box-shadow: 0 0 0 3px var(--surface); }
+.lesson.done .lesson-rail .dot { background: var(--green); }
+.lesson.next .lesson-rail .dot { background: var(--accent); box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--accent-soft); }
+.next-tag { display: block; font-family: var(--font-ui); font-size: 10.5px; font-weight: 600; color: var(--accent); letter-spacing: .02em; margin-top: 1px; }
+.lesson.cancelled { opacity: .5; }
+.lesson.cancelled .lesson-title { text-decoration: line-through; }
+.lesson-main { flex: 1; min-width: 0; }
+.lesson-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.lesson-course { font-weight: 500; color: var(--label-2); }
+.lesson-meta { font-size: 12.5px; color: var(--label-2); margin-top: 2px; }
+.lesson-actions { display: flex; align-items: center; gap: 6px; }
+.timeline-done { text-align: center; color: var(--label-2); font-size: 13px; padding: 12px 0 8px; }
+.check { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--fill-2); display: flex; align-items: center; justify-content: center; color: transparent; flex-shrink: 0; transition: background .12s, border-color .12s; }
+.check svg { width: 12px; height: 12px; }
+.check:hover { border-color: var(--accent); }
+.check.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--label); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 200; animation: toast-in .2s var(--spring); }
+@keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }

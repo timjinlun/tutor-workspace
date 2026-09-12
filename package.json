@@ -1,26 +1,43 @@
 {
   "name": "tutor-workspace",
   "productName": "独立老师工作台",
-  "version": "1.0.0",
-  "description": "1对1辅导老师的学员课时 / 考勤 / 收支 / 招生工作台（本地 SQLite，数据不上传）",
+  "version": "3.0.0-alpha.1",
+  "description": "给独立老师的本地优先桌面工作台：今天 / 学员 / 课表 / 收支。macOS 原生质感，数据存本机 SQLite。",
   "author": "Tim",
   "license": "MIT",
   "private": true,
-  "main": "electron/main.js",
+  "main": "out/main/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/timjinlun/tutor-workspace"
+  },
   "scripts": {
-    "sync": "node scripts/sync-renderer.mjs",
-    "start": "npm run sync && electron .",
-    "dev": "npm run sync && electron . --enable-logging",
-    "pack": "npm run sync && electron-builder --dir",
-    "build:mac": "npm run sync && electron-builder --mac",
-    "build:win": "npm run sync && electron-builder --win",
-    "build:all": "npm run sync && electron-builder --mac --win",
-    "test": "node scripts/test-db.mjs",
-    "test:e2e": "npm run sync && electron scripts/test-e2e.js"
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite build && electron .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src electron --ext .ts,.tsx",
+    "pack": "electron-vite build && electron-builder --dir",
+    "build:mac": "electron-vite build && electron-builder --mac"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
     "electron": "^43.4.1",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "eslint": "^10.10.0",
+    "eslint-plugin-boundaries": "^7.2.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vite": "^7.3.6",
+    "vitest": "^5.0.0"
   },
   "build": {
     "appId": "com.tim.tutorworkspace",
@@ -31,12 +48,12 @@
       "buildResources": "build"
     },
     "files": [
-      "electron/**/*",
-      "renderer/**/*",
+      "out/**/*",
       "!**/*.map"
     ],
     "mac": {
       "category": "public.app-category.education",
+      "darkModeSupport": true,
       "target": [
         {
           "target": "dmg",
@@ -50,28 +67,13 @@
     },
     "dmg": {
       "title": "${productName} ${version}"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "${productName}-${version}-安装包.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "独立老师工作台"
     }
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/timjinlun/tutor-workspace"
+  "dependencies": {
+    "lucide-react": "^1.45.0",
+    "motion": "^13.2.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
   }
 }

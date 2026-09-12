@@ -1,0 +1,19 @@
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.day { padding: 12px; min-height: 220px; }
+.day.today { box-shadow: 0 0 0 2px var(--accent), var(--shadow-card); }
+.day-head { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13.5px; margin-bottom: 10px; white-space: nowrap; }
+.day-head .add { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--label-2); }
+.day-head .add:hover { background: var(--surface-2); color: var(--accent); }
+.day-empty { color: var(--label-3); text-align: center; padding: 20px 0; }
+.slot { padding: 8px 0; border-top: 1px solid var(--line); }
+.slot:first-of-type { border-top: none; }
+.slot-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.slot-body { display: flex; align-items: center; gap: 8px; }
+.slot-time { font-size: 12.5px; font-weight: 600; color: var(--label-2); }
+.slot-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-course { font-size: 11.5px; color: var(--label-2); }
+.slot-del { opacity: 0; color: var(--label-3); padding: 4px; border-radius: 6px; }
+.slot:hover .slot-del { opacity: 1; }
+.slot-del:hover { color: var(--red); background: var(--red-soft); }
+@media (max-width: 1100px) { .week { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 800px) { .week { grid-template-columns: repeat(2, 1fr); } }

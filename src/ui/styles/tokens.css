@@ -1,0 +1,70 @@
+/* =====================================================================
+   设计 token。三条原则：系统字体、一个强调色、深浅色都由这里定义。
+   强调色三选一：珊瑚（默认）/ 靛蓝 / 跟随系统（macOS 强调色，由 platform 写入 --accent-system）
+   ===================================================================== */
+:root {
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", system-ui, sans-serif;
+  --font-num: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "PingFang SC", system-ui, sans-serif;
+
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-2: #f2f2f7;
+  --fill: #e5e5ea;
+  --fill-2: #d1d1d6;
+  --line: rgba(60, 60, 67, 0.12);
+  --line-strong: rgba(60, 60, 67, 0.22);
+  --label: #1d1d1f;
+  --label-2: rgba(60, 60, 67, 0.6);
+  --label-3: rgba(60, 60, 67, 0.32);
+  --sidebar: rgba(246, 246, 248, 0.62);
+  --sidebar-solid: #ececf0;
+
+  --accent-coral: #ff6b4a;
+  --accent-indigo: #4f6bff;
+  --accent-system: #0a84ff;
+  --accent: var(--accent-coral);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-text: #ffffff;
+
+  --green: #34c759;
+  --orange: #ff9f0a;
+  --red: #ff3b30;
+  --green-soft: color-mix(in srgb, var(--green) 14%, transparent);
+  --orange-soft: color-mix(in srgb, var(--orange) 16%, transparent);
+  --red-soft: color-mix(in srgb, var(--red) 12%, transparent);
+
+  --radius-lg: 16px;
+  --radius: 12px;
+  --radius-sm: 9px;
+  --shadow-sheet: 0 24px 80px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04);
+
+  --spring: cubic-bezier(0.2, 0.9, 0.3, 1.15);
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+:root[data-accent="indigo"] { --accent: var(--accent-indigo); }
+:root[data-accent="system"] { --accent: var(--accent-system); }
+
+:root[data-appearance="dark"] {
+  --bg: #1e1e20;
+  --surface: #2a2a2d;
+  --surface-2: #232326;
+  --fill: #3a3a3d;
+  --fill-2: #48484b;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --label: #f5f5f7;
+  --label-2: rgba(235, 235, 245, 0.62);
+  --label-3: rgba(235, 235, 245, 0.32);
+  --sidebar: rgba(30, 30, 32, 0.55);
+  --sidebar-solid: #252528;
+  --accent-coral: #ff7a5c;
+  --accent-indigo: #6b82ff;
+  --green: #30d158;
+  --orange: #ffa32b;
+  --red: #ff453a;
+  --shadow-sheet: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}

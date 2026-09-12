@@ -1,6 +1,6 @@
 node_modules/
+out/
 dist/
-renderer/index.html
+renderer/
 *.log
 .DS_Store
-renderer/fonts/

@@ -8,7 +8,7 @@ const TODAY = "2026-09-11"; // 周五
 function base(): State {
   const s = emptyState();
   s.courses = [{ id: "c1", name: "数学", price: 280, unitsPerLesson: 1 }];
-  s.students = [{ id: "s1", name: "张明", courseIds: ["c1"], note: "", createdAt: "2026-01-01", archived: false }];
+  s.students = [{ id: "s1", name: "张明", courseIds: ["c1"], note: "", createdAt: "2026-01-01", archived: false, sortOrder: 0 }];
   s.templates = [{ id: "tp1", studentId: "s1", courseId: "c1", weekday: weekdayOf(TODAY), time: "16:00", active: true }];
   return s;
 }
@@ -93,5 +93,18 @@ describe("一节课的生命周期", () => {
     expect(added).toHaveLength(1);
     expect(added[0]).toMatchObject({ date: TODAY, time: "16:00", status: "scheduled", source: "manual" });
     expect(copyFromLastWeek({ ...s, lessons: [...s.lessons, ...added] }, TODAY)).toHaveLength(0);
+  });
+});
+
+describe("课时时长", () => {
+  it("时长 = 课时数 × 每课时分钟（课程覆盖全局）", async () => {
+    const { lessonMinutes, addMinutes } = await import("@/core/lesson");
+    const s = base();
+    s.settings.unitMinutes = 60;
+    s.courses.push({ id: "c2", name: "物理", price: 150, unitsPerLesson: 2, unitMinutes: 45 });
+    expect(lessonMinutes(s, { courseId: "c1", units: 1 })).toBe(60);
+    expect(lessonMinutes(s, { courseId: "c2", units: 2 })).toBe(90);
+    expect(addMinutes("16:00", 90)).toBe("17:30");
+    expect(addMinutes("23:30", 60)).toBe("00:30");
   });
 });

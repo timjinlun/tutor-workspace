@@ -8,6 +8,19 @@ import type { AuditEntry, ID, ISODate, Lesson, LessonTemplate, State } from "./t
 import { addDays, weekdayOf } from "./date";
 import { uid } from "./id";
 
+/** 一节课多少分钟：课时数 × （课程自己的 1 课时分钟数，或全局默认） */
+export function lessonMinutes(state: State, l: Pick<Lesson, "courseId" | "units">): number {
+  const c = state.courses.find((x) => x.id === l.courseId);
+  return l.units * (c?.unitMinutes ?? state.settings.unitMinutes);
+}
+
+/** "16:00" + 90 → "17:30" */
+export function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const t = ((h ?? 0) * 60 + (m ?? 0) + minutes) % (24 * 60);
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
 /** 「今天」列表里的一项：可能是尚未落库的模板课（virtual） */
 export type DayItem = Lesson & { virtual?: boolean };
 

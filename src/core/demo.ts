@@ -9,15 +9,16 @@ export function demoState(today = todayISO()): State {
   s.teachers = [{ id: "t1", name: "王老师", color: "#FF6B4A" }];
   s.courses = [
     { id: "c1", name: "数学", price: 280, unitsPerLesson: 1 },
-    { id: "c2", name: "英语", price: 260, unitsPerLesson: 1 },
-    { id: "c3", name: "物理", price: 300, unitsPerLesson: 1 },
+    { id: "c2", name: "英语", price: 260, unitsPerLesson: 1, unitMinutes: 45 },
+    { id: "c3", name: "物理", price: 150, unitsPerLesson: 2, unitMinutes: 45 },
   ];
   const d = (n: number) => addDays(today, n);
   s.students = [
-    { id: "s1", name: "张明", courseIds: ["c1"], note: "初二，二次函数偏弱", createdAt: d(-120), archived: false },
-    { id: "s2", name: "李华", courseIds: ["c2"], note: "备考 FCE", createdAt: d(-90), archived: false },
-    { id: "s3", name: "刘洋", courseIds: ["c3"], note: "", createdAt: d(-60), archived: false },
-    { id: "s4", name: "陈晨", courseIds: ["c1"], note: "家长要求每周反馈", createdAt: d(-45), archived: false },
+    { id: "s1", name: "张明", courseIds: ["c1"], note: "初二，二次函数偏弱", createdAt: d(-120), archived: false, sortOrder: 0 },
+    { id: "s2", name: "李华", courseIds: ["c2"], note: "备考 FCE", createdAt: d(-90), archived: false, sortOrder: 1 },
+    { id: "s3", name: "刘洋", courseIds: ["c3"], note: "", createdAt: d(-60), archived: false, sortOrder: 2 },
+    { id: "s4", name: "陈晨", courseIds: ["c1"], note: "家长要求每周反馈", createdAt: d(-45), archived: false, sortOrder: 3 },
+    { id: "s5", name: "周雨", courseIds: ["c2"], note: "已结课，暑假班", createdAt: d(-200), archived: true, sortOrder: 4 },
   ];
   s.payments = [
     { id: "p1", studentId: "s1", date: d(-120), amount: 5600, hours: 20, note: "" },

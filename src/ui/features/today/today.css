@@ -1,7 +1,8 @@
 .timeline { padding: 6px 20px; margin-bottom: 16px; }
 .lesson { display: flex; align-items: center; gap: 14px; padding: 14px 0; position: relative; }
 .lesson + .lesson { border-top: 1px solid var(--line); }
-.lesson-time { width: 52px; font-size: 15px; font-weight: 600; color: var(--label); flex-shrink: 0; }
+.lesson-end { display: block; font-size: 11px; font-weight: 500; color: var(--label-3); }
+.lesson-time { width: 64px; font-size: 15px; font-weight: 600; color: var(--label); flex-shrink: 0; }
 .lesson-rail { width: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .lesson-rail .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--fill-2); box-shadow: 0 0 0 3px var(--surface); }
 .lesson.done .lesson-rail .dot { background: var(--green); }

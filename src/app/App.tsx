@@ -1,6 +1,6 @@
 /** 壳：侧栏 + 当前页。外观（深浅、强调色）也在这里落到 <html> 上。 */
 import { useEffect, type ReactElement } from "react";
-import { Sun, Users, CalendarDays, Wallet, LayoutGrid } from "lucide-react";
+import { Sun, Users, CalendarDays, BookOpen, Wallet, LayoutGrid } from "lucide-react";
 import { useStore, type Page } from "@/store";
 import { lowBalanceStudents } from "@/core/finance";
 import { Avatar } from "@/ui/primitives";
@@ -8,6 +8,7 @@ import { platform, isApp } from "@/platform";
 import { TodayPage } from "@/ui/features/today/TodayPage";
 import { StudentsPage } from "@/ui/features/students/StudentsPage";
 import { SchedulePage } from "@/ui/features/schedule/SchedulePage";
+import { CoursesPage } from "@/ui/features/courses/CoursesPage";
 import { FinancePage } from "@/ui/features/finance/FinancePage";
 import { MorePage } from "@/ui/features/more/MorePage";
 import { SettingsPage } from "@/ui/features/settings/SettingsPage";
@@ -19,6 +20,7 @@ const NAV: { page: Page; label: string; icon: ReactElement }[] = [
   { page: "today", label: "今天", icon: <Sun /> },
   { page: "students", label: "学员", icon: <Users /> },
   { page: "schedule", label: "课表", icon: <CalendarDays /> },
+  { page: "courses", label: "课程", icon: <BookOpen /> },
   { page: "finance", label: "收支", icon: <Wallet /> },
   { page: "more", label: "更多", icon: <LayoutGrid /> },
 ];
@@ -27,6 +29,7 @@ const PAGES: Record<Page, () => ReactElement> = {
   today: TodayPage,
   students: StudentsPage,
   schedule: SchedulePage,
+  courses: CoursesPage,
   finance: FinancePage,
   more: MorePage,
   settings: SettingsPage,

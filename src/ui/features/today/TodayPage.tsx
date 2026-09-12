@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Plus, Copy, CalendarPlus, Bell, Check, Undo2, X } from "lucide-react";
 import { useStore } from "@/store";
-import { lessonsOn, suggestionsFor, type DayItem } from "@/core/lesson";
+import { addMinutes, lessonMinutes, lessonsOn, suggestionsFor, type DayItem } from "@/core/lesson";
 import { balance, doneLessonsInWeek, incomeInMonth, lowBalanceStudents, fmtMoney } from "@/core/finance";
 import { formatCN, monthKey, nowHHMM, todayISO } from "@/core/date";
 import type { Lesson } from "@/core/types";
@@ -89,7 +89,7 @@ export function TodayPage() {
             const key = `${item.studentId}|${item.time}`;
             return (
               <div key={item.id} className={`lesson ${item.status} ${nextUp && nextUp.id === item.id ? "next" : ""}`}>
-                <div className="lesson-time num">{item.time}{nextUp && nextUp.id === item.id && <span className="next-tag">接下来</span>}</div>
+                <div className="lesson-time num">{item.time}<span className="lesson-end">– {addMinutes(item.time, lessonMinutes(s, item))}</span>{nextUp && nextUp.id === item.id && <span className="next-tag">接下来</span>}</div>
                 <div className="lesson-rail"><span className="dot" /></div>
                 <Avatar name={st?.name ?? "?"} />
                 <div className="lesson-main">

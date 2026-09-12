@@ -17,6 +17,25 @@ export interface Course {
   price: number;
   /** 一节课折算几个课时，默认 1 */
   unitsPerLesson: number;
+  /** 这门课 1 课时多少分钟；不填用 Settings.unitMinutes */
+  unitMinutes?: number;
+}
+
+/**
+ * 班级（小班课）。打卡仍然按人落 Lesson 记录（各扣各的课时），班级只负责成员、定价和缺席规则。
+ * UI 在 3.3 做，模型先定好。
+ */
+export interface Class {
+  id: ID;
+  name: string;
+  courseId: ID;
+  teacherId?: ID;
+  studentIds: ID[];
+  /** 每人每课时价格；不填用课程单价 */
+  pricePerUnit?: number;
+  /** 缺席的学员是否也扣课时 */
+  deductOnAbsence: boolean;
+  active: boolean;
 }
 
 export interface Student {
@@ -27,7 +46,10 @@ export interface Student {
   /** 推荐人（转介绍） */
   referrerId?: ID;
   createdAt: ISODate;
+  /** 已结课：排到最后，可恢复 */
   archived: boolean;
+  /** 手动排序位次 */
+  sortOrder: number;
 }
 
 export interface Payment {
@@ -43,7 +65,9 @@ export interface Payment {
 /** 固定课表：每周几、几点、谁、什么课 */
 export interface LessonTemplate {
   id: ID;
+  /** 一对一：学员；班课：classId，studentId 留空 */
   studentId: ID;
+  classId?: ID;
   courseId: ID;
   teacherId?: ID;
   /** 0 = 周日 … 6 = 周六，与 Date#getDay 一致 */
@@ -71,6 +95,9 @@ export interface Lesson {
   price: number;
   source: LessonSource;
   templateId?: ID;
+  /** 班课：属于哪个班；同一次班课的各学员记录共享 groupId */
+  classId?: ID;
+  groupId?: ID;
   doneAt?: string;
   createdAt: string;
   note?: string;
@@ -146,6 +173,8 @@ export interface Settings {
   accent: Accent;
   appearance: Appearance;
   background: Background;
+  /** 默认 1 课时 = 多少分钟 */
+  unitMinutes: number;
   /** 剩余课时 ≤ 该值：红色提醒 */
   lowBalanceThreshold: number;
   /** 剩余课时 ≤ 阈值 + 该值：黄色提醒 */
@@ -158,6 +187,7 @@ export interface State {
   teachers: Teacher[];
   courses: Course[];
   students: Student[];
+  classes: Class[];
   payments: Payment[];
   templates: LessonTemplate[];
   lessons: Lesson[];
@@ -174,10 +204,20 @@ export const DEFAULT_SETTINGS: Settings = {
   accent: "coral",
   appearance: "system",
   background: "aurora",
+  unitMinutes: 60,
   lowBalanceThreshold: 4,
   remindAhead: 2,
   onboarded: false,
 };
+
+/** 读入旧存档时补齐新字段；每次加字段都在这里补默认值，别处不用管 */
+export function normalizeState(raw: Partial<State> | null | undefined): State {
+  const base = emptyState();
+  const s: State = { ...base, ...(raw ?? {}), version: 3, settings: { ...DEFAULT_SETTINGS, ...(raw?.settings ?? {}) } };
+  s.classes = Array.isArray(s.classes) ? s.classes : [];
+  s.students = s.students.map((st, i) => ({ ...st, sortOrder: typeof st.sortOrder === "number" ? st.sortOrder : i, archived: !!st.archived }));
+  return s;
+}
 
 export function emptyState(): State {
   return {
@@ -185,6 +225,7 @@ export function emptyState(): State {
     teachers: [],
     courses: [],
     students: [],
+    classes: [],
     payments: [],
     templates: [],
     lessons: [],

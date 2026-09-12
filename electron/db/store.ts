@@ -27,6 +27,7 @@ const COLLECTIONS: Record<string, [string?, string?]> = {
   teachers: [],
   courses: [],
   students: ["archived"],
+  classes: ["courseId"],
   payments: ["studentId", "date"],
   templates: ["studentId", "weekday"],
   lessons: ["studentId", "date"],

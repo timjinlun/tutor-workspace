@@ -33,13 +33,14 @@ export function readV2State(db: DatabaseSync): StateLike | null {
   };
   const courses = all("courses").map((r) => ({ id: s(r.id), name: s(r.name), price: n(r.price), unitsPerLesson: n(r.units_per_session) || 1 }));
   const sc = all("student_courses");
-  const students = all("students").map((r) => ({
+  const students = all("students").map((r, i) => ({
     id: s(r.id),
     name: s(r.name),
     courseIds: sc.filter((x) => x.student_id === r.id).map((x) => s(x.course_id)),
     note: s(r.note),
     createdAt: "",
     archived: false,
+    sortOrder: i,
   }));
   if (students.length === 0 && courses.length === 0) return null;
 
@@ -99,6 +100,7 @@ export function readV2State(db: DatabaseSync): StateLike | null {
     teachers,
     courses,
     students,
+    classes: [],
     payments,
     templates: [],
     lessons,

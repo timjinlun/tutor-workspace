@@ -8,8 +8,8 @@ function s() {
   st.settings.lowBalanceThreshold = 4;
   st.settings.remindAhead = 2;
   st.students = [
-    { id: "a", name: "A", courseIds: [], note: "", createdAt: "2026-01-01", archived: false },
-    { id: "b", name: "B", courseIds: [], note: "", createdAt: "2026-01-01", archived: false },
+    { id: "a", name: "A", courseIds: [], note: "", createdAt: "2026-01-01", archived: false, sortOrder: 0 },
+    { id: "b", name: "B", courseIds: [], note: "", createdAt: "2026-01-01", archived: false, sortOrder: 0 },
   ];
   st.payments = [
     { id: "p1", studentId: "a", date: "2026-09-01", amount: 5600, hours: 20, note: "" },

@@ -16,7 +16,7 @@ export type Feature =
   | "scorecard.templates"
   | "scorecard.noWatermark";
 
-export type Limit = "teachers" | "leads";
+export type Limit = "teachers" | "leads" | "classes" | "classSize";
 
 const FEATURE_TIER: Record<Feature, Tier> = {
   "recruit.kanban": "pro",
@@ -30,8 +30,8 @@ const FEATURE_TIER: Record<Feature, Tier> = {
 };
 
 const LIMITS: Record<Tier, Record<Limit, number>> = {
-  free: { teachers: 5, leads: 50 },
-  pro: { teachers: Infinity, leads: Infinity },
+  free: { teachers: 5, leads: 50, classes: 3, classSize: 8 },
+  pro: { teachers: Infinity, leads: Infinity, classes: Infinity, classSize: Infinity },
 };
 
 const RANK: Record<Tier, number> = { free: 0, pro: 1 };
@@ -60,4 +60,6 @@ export function createEntitlements(tier: Tier): Entitlements {
 const UPGRADE_COPY: Record<Limit, (lim: number) => string> = {
   teachers: (lim) => `免费版最多 ${lim} 位老师。多老师团队请使用商业版。`,
   leads: (lim) => `免费版最多记录 ${lim} 条潜在学员。`,
+  classes: (lim) => `免费版最多开 ${lim} 个班。`,
+  classSize: (lim) => `免费版每班最多 ${lim} 人。`,
 };

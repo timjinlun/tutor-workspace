@@ -5,7 +5,7 @@
  */
 import { create } from "zustand";
 import type { AuditEntry, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
-import { DEFAULT_SETTINGS, emptyState } from "@/core/types";
+import { emptyState, normalizeState } from "@/core/types";
 import { uid } from "@/core/id";
 import { todayISO } from "@/core/date";
 import { demoState } from "@/core/demo";
@@ -14,7 +14,7 @@ import { createEntitlements, type Entitlements, type Tier } from "@/entitlements
 import type { Repository } from "@/data/repository";
 import { platform } from "@/platform";
 
-export type Page = "today" | "students" | "schedule" | "finance" | "more" | "settings" | "leads" | "materials" | "referral";
+export type Page = "today" | "students" | "schedule" | "courses" | "finance" | "more" | "settings" | "leads" | "materials" | "referral";
 export interface Route {
   page: Page;
   studentId?: ID;
@@ -43,6 +43,8 @@ export interface Store {
   addStudent(input: Pick<Student, "name" | "courseIds" | "note">): Student;
   updateStudent(id: ID, patch: Partial<Student>): void;
   removeStudent(id: ID): void;
+  /** 按给定 id 顺序重排（只影响传入的那些） */
+  reorderStudents(ids: ID[]): void;
   addPayment(input: Omit<Payment, "id">): void;
   removePayment(id: ID): void;
   /* 课表 / 课程 / 老师 */
@@ -51,6 +53,7 @@ export interface Store {
   removeTemplate(id: ID): void;
   addCourse(input: Omit<Course, "id">): Course;
   updateCourse(id: ID, patch: Partial<Course>): void;
+  removeCourse(id: ID): { ok: true } | { ok: false; reason: string };
   addTeacher(input: Omit<Teacher, "id">): { ok: true } | { ok: false; reason: string };
   /* 收支 */
   addExpense(input: Omit<Expense, "id">): void;
@@ -119,7 +122,7 @@ export const useStore = create<Store>((set, get) => {
     async hydrate(r) {
       repo = r;
       const loaded = await r.load();
-      const s = loaded ? { ...emptyState(), ...loaded, settings: { ...DEFAULT_SETTINGS, ...loaded.settings } } : demoState();
+      const s = loaded ? normalizeState(loaded) : demoState();
       set({ s, ready: true });
       if (!loaded) persist(get, set);
       void platform.wallpaper.get().then((w) => w && set({ wallpaper: w }));
@@ -155,7 +158,8 @@ export const useStore = create<Store>((set, get) => {
     },
 
     addStudent(input) {
-      const st: Student = { id: uid("s"), ...input, createdAt: todayISO(), archived: false };
+      const order = get().s.students.reduce((m, x) => Math.max(m, x.sortOrder), -1) + 1;
+      const st: Student = { id: uid("s"), ...input, createdAt: todayISO(), archived: false, sortOrder: order };
       commit({ students: [...get().s.students, st] });
       return st;
     },
@@ -172,6 +176,11 @@ export const useStore = create<Store>((set, get) => {
         templates: s.templates.filter((x) => x.studentId !== id),
       });
       audited({ id: uid("a"), at: new Date().toISOString(), kind: "student.remove", summary: `删除学员 ${st?.name ?? id}`, payload: { studentId: id } });
+    },
+    reorderStudents(ids) {
+      const pos = new Map(ids.map((id, i) => [id, i]));
+      const base = Math.min(...get().s.students.filter((x) => pos.has(x.id)).map((x) => x.sortOrder));
+      commit({ students: get().s.students.map((x) => (pos.has(x.id) ? { ...x, sortOrder: base + pos.get(x.id)! } : x)) });
     },
     addPayment(input) {
       const p: Payment = { id: uid("p"), ...input };
@@ -201,6 +210,13 @@ export const useStore = create<Store>((set, get) => {
     },
     updateCourse(id, patch) {
       commit({ courses: get().s.courses.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
+    },
+    removeCourse(id) {
+      const s = get().s;
+      const users = s.students.filter((x) => x.courseIds.includes(id)).length;
+      if (users > 0) return { ok: false, reason: `还有 ${users} 位学员在上这门课，先改学员的课程再删。` };
+      commit({ courses: s.courses.filter((c) => c.id !== id), templates: s.templates.filter((t) => t.courseId !== id) });
+      return { ok: true };
     },
     addTeacher(input) {
       const check = get().ent.check("teachers", get().s.teachers.length);
@@ -254,7 +270,7 @@ export const useStore = create<Store>((set, get) => {
       commit({ settings: { ...get().s.settings, ...patch } });
     },
     replaceState(next, reason) {
-      set({ s: { ...emptyState(), ...next, version: 3 } });
+      set({ s: normalizeState(next) });
       persist(get, set);
       audited({ id: uid("a"), at: new Date().toISOString(), kind: reason, summary: reason === "data.import" ? "导入数据" : "重置数据", payload: {} });
     },

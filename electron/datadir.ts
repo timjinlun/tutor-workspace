@@ -65,11 +65,18 @@ export function setupUserData(): { movedFrom?: string } {
         fs.cpSync(src, dst, { recursive: true });
       }
     }
-    /* 顺手把库文件名也改成固定的 ASCII 名 */
+    /*
+     * 把库文件名改成固定的 ASCII 名。
+     * ⚠️ SQLite 的 WAL 模式下，<db>-wal 里可能有还没 checkpoint 的事务，
+     *    只改主库名会让它变成孤儿——库还在，但最近的改动全部读不到。
+     *    三个文件必须一起改。
+     */
     for (const old of LEGACY_DB_FILES) {
-      const oldPath = path.join(target, "data", old);
-      if (fs.existsSync(oldPath) && !fs.existsSync(path.join(target, "data", DB_FILE))) {
-        fs.renameSync(oldPath, path.join(target, "data", DB_FILE));
+      const dir = path.join(target, "data");
+      if (!fs.existsSync(path.join(dir, old)) || fs.existsSync(path.join(dir, DB_FILE))) continue;
+      for (const suffix of ["", "-wal", "-shm"]) {
+        const from2 = path.join(dir, old + suffix);
+        if (fs.existsSync(from2)) fs.renameSync(from2, path.join(dir, DB_FILE + suffix));
       }
     }
     /* 搬空了就把旧目录删掉；只有空目录才删得掉，删不掉就留着，不冒险 */
@@ -77,4 +84,24 @@ export function setupUserData(): { movedFrom?: string } {
     return { movedFrom: from };
   }
   return {};
+}
+
+/**
+ * 修复 3.5.0 留下的孤儿 WAL：那一版只改了主库名，把 <旧名>-wal / -shm 落在原地，
+ * 导致最近一次 checkpoint 之后的改动读不出来。这里把它们认回去。
+ * 只在主库没有自己的 -wal 时才做，避免覆盖正在用的那份。
+ */
+export function adoptOrphanWal(): boolean {
+  const dir = dataDir();
+  if (!fs.existsSync(path.join(dir, DB_FILE)) || fs.existsSync(path.join(dir, DB_FILE + "-wal"))) return false;
+  for (const old of LEGACY_DB_FILES) {
+    const orphan = path.join(dir, old + "-wal");
+    if (!fs.existsSync(orphan)) continue;
+    for (const suffix of ["-wal", "-shm"]) {
+      const from = path.join(dir, old + suffix);
+      if (fs.existsSync(from)) fs.renameSync(from, path.join(dir, DB_FILE + suffix));
+    }
+    return true;
+  }
+  return false;
 }

@@ -7,7 +7,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, systemPr
 import fs from "node:fs";
 import path from "node:path";
 import { SqliteStore } from "./db/store";
-import { dataDir, dbFile, setupUserData, wallpaperFile } from "./datadir";
+import { adoptOrphanWal, dataDir, dbFile, setupUserData, wallpaperFile } from "./datadir";
 
 const IS_MAC = process.platform === "darwin";
 let win: BrowserWindow | null = null;
@@ -254,6 +254,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     try {
+      if (adoptOrphanWal()) console.log("[datadir] 认回了 3.5.0 遗留的 WAL");
       store = new SqliteStore(dbFile());
       const loaded = store.load();
       if (loaded) store.snapshot(loaded, "launch");

@@ -67,6 +67,14 @@ export const platform = {
         input.click();
       });
     },
+    async saveImage(dataUrl: string, filename: string): Promise<boolean> {
+      if (isApp) return (await window.tw!.data.savePng(dataUrl, filename)).ok;
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = filename;
+      a.click();
+      return true;
+    },
     revealFolder() {
       if (isApp) void window.tw!.data.reveal();
     },

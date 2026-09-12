@@ -4,7 +4,7 @@
  * UI 不能直接 set 状态，只能调 action。
  */
 import { create } from "zustand";
-import type { AuditEntry, Course, ID, ISODate, LessonTemplate, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
+import type { AuditEntry, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
 import { emptyState } from "@/core/types";
 import { uid } from "@/core/id";
 import { todayISO } from "@/core/date";
@@ -13,7 +13,7 @@ import { cancelLesson, completeLesson, copyFromLastWeek, logLesson, undoLesson, 
 import { createEntitlements, type Entitlements, type Tier } from "@/entitlements";
 import type { Repository } from "@/data/repository";
 
-export type Page = "today" | "students" | "schedule" | "finance" | "more" | "settings";
+export type Page = "today" | "students" | "schedule" | "finance" | "more" | "settings" | "leads" | "materials" | "referral";
 export interface Route {
   page: Page;
   studentId?: ID;
@@ -48,6 +48,18 @@ export interface Store {
   addCourse(input: Omit<Course, "id">): Course;
   updateCourse(id: ID, patch: Partial<Course>): void;
   addTeacher(input: Omit<Teacher, "id">): { ok: true } | { ok: false; reason: string };
+  /* 收支 */
+  addExpense(input: Omit<Expense, "id">): void;
+  removeExpense(id: ID): void;
+  addOtherIncome(input: Omit<OtherIncome, "id">): void;
+  removeOtherIncome(id: ID): void;
+  /* 潜在学员 / 资料 */
+  addLead(input: Omit<Lead, "id" | "createdAt" | "lastFollow">): { ok: true } | { ok: false; reason: string };
+  updateLead(id: ID, patch: Partial<Lead>): void;
+  removeLead(id: ID): void;
+  addMaterial(input: Omit<Material, "id" | "createdAt">): void;
+  updateMaterial(id: ID, patch: Partial<Material>): void;
+  removeMaterial(id: ID): void;
   /* 待办 */
   toggleTodo(id: ID): void;
   addTodo(input: Omit<Todo, "id" | "done">): void;
@@ -189,6 +201,40 @@ export const useStore = create<Store>((set, get) => {
       return { ok: true };
     },
 
+    addExpense(input) {
+      commit({ expenses: [...get().s.expenses, { id: uid("e"), ...input }] });
+    },
+    removeExpense(id) {
+      commit({ expenses: get().s.expenses.filter((x) => x.id !== id) });
+    },
+    addOtherIncome(input) {
+      commit({ otherIncomes: [...get().s.otherIncomes, { id: uid("i"), ...input }] });
+    },
+    removeOtherIncome(id) {
+      commit({ otherIncomes: get().s.otherIncomes.filter((x) => x.id !== id) });
+    },
+    addLead(input) {
+      const check = get().ent.check("leads", get().s.leads.length);
+      if (!check.ok) return { ok: false, reason: check.reason };
+      const t = todayISO();
+      commit({ leads: [...get().s.leads, { id: uid("ld"), createdAt: t, lastFollow: t, ...input }] });
+      return { ok: true };
+    },
+    updateLead(id, patch) {
+      commit({ leads: get().s.leads.map((l) => (l.id === id ? { ...l, ...patch, lastFollow: todayISO() } : l)) });
+    },
+    removeLead(id) {
+      commit({ leads: get().s.leads.filter((l) => l.id !== id) });
+    },
+    addMaterial(input) {
+      commit({ materials: [...get().s.materials, { id: uid("m"), createdAt: todayISO(), ...input }] });
+    },
+    updateMaterial(id, patch) {
+      commit({ materials: get().s.materials.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
+    },
+    removeMaterial(id) {
+      commit({ materials: get().s.materials.filter((m) => m.id !== id) });
+    },
     toggleTodo(id) {
       commit({ todos: get().s.todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) });
     },

@@ -12,6 +12,7 @@ const bridge = {
     exportJSON: (state: unknown) => ipcRenderer.invoke("data:exportJSON", state),
     importJSON: () => ipcRenderer.invoke("data:importJSON"),
     reveal: () => ipcRenderer.invoke("data:reveal"),
+    savePng: (dataUrl: string, filename: string) => ipcRenderer.invoke("data:savePng", dataUrl, filename),
     onImported: (fn: (state: unknown) => void) => {
       const h = (_e: unknown, state: unknown) => fn(state);
       ipcRenderer.on("data:imported", h);

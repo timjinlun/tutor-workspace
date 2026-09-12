@@ -3,8 +3,10 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useStore } from "@/store";
 import { WEEKDAY_CN } from "@/core/date";
-import { Avatar, Button, Empty, Field, Input, Select, Sheet } from "@/ui/primitives";
+import { Avatar, Button, Empty, Field, Input, Segmented, Select, Sheet } from "@/ui/primitives";
+import { MonthView } from "./MonthView";
 import "./schedule.css";
+import "./month.css";
 
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
 
@@ -13,18 +15,22 @@ export function SchedulePage() {
   const removeTemplate = useStore((x) => x.removeTemplate);
   const [open, setOpen] = useState(false);
   const [presetWd, setPresetWd] = useState(1);
+  const [view, setView] = useState<"week" | "month">("week");
   const todayWd = new Date().getDay();
 
   return (
     <div className="page">
       <div className="page-head">
         <h1>课表</h1>
-        <div className="sub">固定周课表 · {s.templates.filter((t) => t.active).length} 节/周</div>
+        <div className="sub">{view === "week" ? `固定周课表 · ${s.templates.filter((t) => t.active).length} 节/周` : "考勤一览"}</div>
         <div className="actions">
-          <Button variant="primary" icon={<Plus />} onClick={() => { setPresetWd(todayWd); setOpen(true); }}>加一节固定课</Button>
+          <Segmented value={view} options={[{ value: "week", label: "周课表" }, { value: "month", label: "月视图" }]} onChange={setView} />
+          {view === "week" && <Button variant="primary" icon={<Plus />} onClick={() => { setPresetWd(todayWd); setOpen(true); }}>加一节固定课</Button>}
         </div>
       </div>
-      {s.templates.length === 0 ? (
+      {view === "month" ? (
+        <MonthView />
+      ) : s.templates.length === 0 ? (
         <div className="card">
           <Empty title="还没有固定课表" desc="有固定上课时间的学员在这里设一次，之后「今天」会自动列出当天的课。没有固定时间的，直接在「今天」记就行。" actions={<Button variant="primary" icon={<Plus />} onClick={() => setOpen(true)}>加一节固定课</Button>} />
         </div>

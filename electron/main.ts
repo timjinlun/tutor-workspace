@@ -186,6 +186,16 @@ function wireIpc() {
   ipcMain.handle("data:exportJSON", (_e, state) => exportJSON(state));
   ipcMain.handle("data:importJSON", () => doImport());
   ipcMain.handle("data:reveal", () => shell.openPath(dataDir()));
+  ipcMain.handle("data:savePng", async (_e, dataUrl: string, filename: string) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(win!, { title: "保存图片", defaultPath: filename, filters: [{ name: "PNG 图片", extensions: ["png"] }] });
+    if (canceled || !filePath) return { ok: false, cancelled: true };
+    try {
+      fs.writeFileSync(filePath, Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ""), "base64"));
+      return { ok: true, path: filePath };
+    } catch (e) {
+      return { ok: false, error: String(e instanceof Error ? e.message : e) };
+    }
+  });
 
   ipcMain.handle("system:accentColor", () => accentHex());
   ipcMain.handle("system:setAppearance", (_e, a: string) => {

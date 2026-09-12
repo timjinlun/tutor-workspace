@@ -5,6 +5,7 @@
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
+import { archiveV2Tables, isV2, readV2State } from "./migrate-v2";
 
 /* 与 src/core/types.ts 的 State 对齐；主进程不 import 渲染层代码，这里只需要形状 */
 type Row = { id: string; [k: string]: unknown };
@@ -43,16 +44,41 @@ export class SqliteStore {
   private db: DatabaseSync;
   readonly path: string;
 
+  /** 迁移中转换过来的 v2 数据（没有则为 null） */
+  migratedFromV2: StateLike | null = null;
+
   constructor(file: string) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     this.path = file;
     this.db = new DatabaseSync(file);
+    this.db.exec("PRAGMA journal_mode = WAL");
+    this.db.exec(`CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
+    this.upgradeFromV2();
     this.migrate();
+    if (this.migratedFromV2) {
+      this.save(this.migratedFromV2);
+      this.snapshot(this.migratedFromV2, "migrated-from-v2");
+    }
+  }
+
+  /** v2 库（schema_version=1，全列表）：读出数据、旧表改名保留，再让 migrate() 建 v3 表 */
+  private upgradeFromV2() {
+    if (!isV2(this.db)) return;
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.migratedFromV2 = readV2State(this.db);
+      archiveV2Tables(this.db);
+      this.db.prepare("INSERT OR REPLACE INTO meta(k,v) VALUES('schema_version','3')").run();
+      this.db.prepare("INSERT OR REPLACE INTO meta(k,v) VALUES('migrated_from','v2')").run();
+      this.db.prepare("DELETE FROM meta WHERE k='has_state'").run();
+      this.db.exec("COMMIT");
+    } catch (e) {
+      this.db.exec("ROLLBACK");
+      throw e;
+    }
   }
 
   private migrate() {
-    this.db.exec("PRAGMA journal_mode = WAL");
-    this.db.exec(`CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
     this.db.exec(`CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
     for (const [name, keys] of Object.entries(COLLECTIONS)) {
       this.db.exec(`CREATE TABLE IF NOT EXISTS ${name}(id TEXT PRIMARY KEY, k1 TEXT, k2 TEXT, data TEXT NOT NULL, updated_at TEXT NOT NULL)`);
@@ -64,6 +90,7 @@ export class SqliteStore {
     this.db.exec(`CREATE TABLE IF NOT EXISTS snapshots(id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, reason TEXT NOT NULL, payload TEXT NOT NULL)`);
     const v = this.db.prepare("SELECT v FROM meta WHERE k='schema_version'").get() as { v: string } | undefined;
     if (!v) this.db.prepare("INSERT INTO meta(k,v) VALUES('schema_version','3')").run();
+    else if (v.v !== "3") throw new Error(`不认识的数据版本 ${v.v}，请升级 App`);
   }
 
   hasState(): boolean {

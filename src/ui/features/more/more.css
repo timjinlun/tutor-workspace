@@ -1,0 +1,9 @@
+.more-item { display: flex; gap: 14px; align-items: center; text-align: left; width: 100%; transition: transform .12s, box-shadow .12s; }
+.more-item:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.08), var(--shadow-card); }
+.more-item:active { transform: none; }
+.more-icon { width: 44px; height: 44px; border-radius: 13px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.more-icon svg { width: 22px; height: 22px; }
+.more-name { font-weight: 700; font-size: 15.5px; }
+.more-desc { font-size: 13px; color: var(--label-2); margin-top: 2px; }
+.more-pro { margin-top: 6px; }
+.more-arrow { color: var(--label-3); flex-shrink: 0; }

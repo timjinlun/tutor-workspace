@@ -13,6 +13,7 @@ export interface TutorBridge {
     importJSON(): Promise<State | null>;
     reveal(): Promise<void>;
     onImported(fn: (state: State) => void): () => void;
+    savePng(dataUrl: string, filename: string): Promise<{ ok: true; path: string } | { ok: false; cancelled?: boolean; error?: string }>;
   };
   system: {
     accentColor(): Promise<string | null>;

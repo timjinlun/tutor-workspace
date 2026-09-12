@@ -63,6 +63,7 @@ body:not(.app) .sidebar { background: var(--sidebar-solid); padding-top: 20px; }
 /* ---------- 卡片 / 列表 ---------- */
 .card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 18px 20px; }
 .card + .card, .section + .section { margin-top: 16px; }
+.grid-2 > .card, .grid-3 > .card, .grid-4 > .card { margin-top: 0; }
 .section-title { font-size: 13px; font-weight: 600; color: var(--label-2); letter-spacing: .01em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 .section-title .right { margin-left: auto; font-weight: 500; }
 .list { display: flex; flex-direction: column; }
@@ -147,6 +148,8 @@ textarea.input { height: auto; padding: 10px 12px; min-height: 80px; resize: ver
 .sheet .sheet-sub { color: var(--label-2); font-size: 13.5px; margin-bottom: 18px; }
 .sheet-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
 .sheet-actions .btn { min-width: 88px; }
+
+.report-pre { white-space: pre-wrap; font-family: var(--font-ui); font-size: 13.5px; line-height: 1.7; background: var(--surface-2); border-radius: var(--radius-sm); padding: 14px 16px; max-height: 360px; overflow-y: auto; margin: 4px 0 6px; user-select: text; }
 
 /* ---------- 打卡章 ---------- */
 .stamp { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 12px 0 9px; border-radius: 999px; background: var(--green-soft); color: var(--green); font-weight: 700; font-size: 13px; }

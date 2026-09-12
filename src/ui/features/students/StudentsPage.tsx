@@ -10,6 +10,7 @@ import { Avatar, Button, Chip, Empty, Field, Input, Num, Select, Sheet } from "@
 import { LogLessonSheet } from "@/ui/widgets/LogLessonSheet";
 import { UndoLessonSheet } from "@/ui/widgets/UndoLessonSheet";
 import { ConfirmSheet } from "@/ui/widgets/ConfirmSheet";
+import { ParentReportSheet } from "@/ui/widgets/ReportSheets";
 import { platform } from "@/platform";
 import "./students.css";
 
@@ -78,6 +79,7 @@ function Profile({ student }: { student: Student }) {
   const [logOpen, setLogOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [undoTarget, setUndoTarget] = useState<Lesson | null>(null);
   const [note, setNote] = useState(student.note);
   const b = balance(s, student.id);
@@ -114,7 +116,7 @@ function Profile({ student }: { student: Student }) {
         <Button variant="primary" icon={<Plus />} onClick={() => setLogOpen(true)}>记一节课</Button>
         <Button onClick={() => setPayOpen(true)}>缴费</Button>
         <Button icon={<Bell />} onClick={remind}>续费提醒</Button>
-        <Button icon={<Share2 />} onClick={() => go({ page: "more" })} title="家长报告在下一版">家长报告</Button>
+        <Button icon={<Share2 />} onClick={() => setReportOpen(true)}>家长报告</Button>
         <span style={{ flex: 1 }} />
         <Button variant="ghost" icon={<Trash2 />} onClick={() => setDelOpen(true)} title="删除学员" />
       </div>
@@ -161,14 +163,25 @@ function Profile({ student }: { student: Student }) {
         </div>
       </div>
 
-      <div className="card">
-        <div className="section-title">备注</div>
-        <textarea className="input" value={note} placeholder="学习情况、家长要求…" onChange={(e) => setNote(e.target.value)} onBlur={() => note !== student.note && updateStudent(student.id, { note })} />
+      <div className="grid-2">
+        <div className="card">
+          <div className="section-title">备注</div>
+          <textarea className="input" value={note} placeholder="学习情况、家长要求…" onChange={(e) => setNote(e.target.value)} onBlur={() => note !== student.note && updateStudent(student.id, { note })} />
+        </div>
+        <div className="card">
+          <div className="section-title">推荐人</div>
+          <Select value={student.referrerId ?? ""} onChange={(e) => updateStudent(student.id, { referrerId: e.target.value || undefined })}>
+            <option value="">不是转介绍</option>
+            {s.students.filter((x) => x.id !== student.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </Select>
+          <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>填了之后「更多 → 转介绍」会自动汇总每位老学员推荐了几人。</div>
+        </div>
       </div>
 
       <LogLessonSheet key={student.id} open={logOpen} onClose={() => setLogOpen(false)} presetStudentId={student.id} />
       <PaymentSheet open={payOpen} onClose={() => setPayOpen(false)} studentId={student.id} onSubmit={addPayment} />
       <UndoLessonSheet lesson={undoTarget} onClose={() => setUndoTarget(null)} />
+      <ParentReportSheet key={student.id} open={reportOpen} onClose={() => setReportOpen(false)} studentId={student.id} />
       <ConfirmSheet open={delOpen} onClose={() => setDelOpen(false)} onConfirm={() => { removeStudent(student.id); go({ page: "students" }); }} title={`删除 ${student.name}？`} confirmLabel="删除">
         <p className="muted">会一并删除这位学员的缴费和打卡记录，无法恢复。想保留记录的话，改成「已结课」更合适。</p>
         <div style={{ marginTop: 10 }}><Button size="sm" onClick={() => { updateStudent(student.id, { archived: true }); setDelOpen(false); go({ page: "students" }); }}>改为已结课</Button></div>

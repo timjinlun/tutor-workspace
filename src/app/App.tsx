@@ -11,6 +11,9 @@ import { SchedulePage } from "@/ui/features/schedule/SchedulePage";
 import { FinancePage } from "@/ui/features/finance/FinancePage";
 import { MorePage } from "@/ui/features/more/MorePage";
 import { SettingsPage } from "@/ui/features/settings/SettingsPage";
+import { LeadsPage } from "@/ui/features/leads/LeadsPage";
+import { MaterialsPage } from "@/ui/features/materials/MaterialsPage";
+import { ReferralPage } from "@/ui/features/referral/ReferralPage";
 
 const NAV: { page: Page; label: string; icon: ReactElement }[] = [
   { page: "today", label: "今天", icon: <Sun /> },
@@ -27,6 +30,9 @@ const PAGES: Record<Page, () => ReactElement> = {
   finance: FinancePage,
   more: MorePage,
   settings: SettingsPage,
+  leads: LeadsPage,
+  materials: MaterialsPage,
+  referral: ReferralPage,
 };
 
 export function App() {
@@ -45,7 +51,7 @@ export function App() {
       <aside className="sidebar">
         <nav className="nav">
           {NAV.map((n) => (
-            <button key={n.page} className={`nav-item ${route.page === n.page ? "on" : ""}`} onClick={() => go({ page: n.page })}>
+            <button key={n.page} className={`nav-item ${route.page === n.page || (n.page === "more" && ["leads", "materials", "referral"].includes(route.page)) ? "on" : ""}`} onClick={() => go({ page: n.page })}>
               {n.icon}
               {n.label}
               {n.page === "students" && lowCount > 0 && <span className="nav-badge">{lowCount}</span>}

@@ -1,0 +1,30 @@
+.month-nav { display: flex; align-items: center; gap: 4px; padding-bottom: 5px; }
+.month-nav span { font-size: 14px; font-weight: 600; color: var(--label-2); min-width: 100px; text-align: center; }
+.month-nav button { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--label-2); }
+.month-nav button:hover { background: color-mix(in srgb, var(--label) 8%, transparent); color: var(--label); }
+.month-nav button:disabled { opacity: .3; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.fin-cards { margin-bottom: 16px; }
+.fin-card { padding: 14px 16px; }
+.fin-card .lbl { font-size: 12.5px; color: var(--label-2); }
+.fin-card .val { font-size: 26px; font-weight: 700; margin-top: 2px; letter-spacing: -0.02em; }
+.fin-card .val.neg { color: var(--red); }
+.fin-card .hint { font-size: 12px; color: var(--label-3); margin-top: 2px; }
+.legend { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+.legend .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.legend .sw.accent { background: var(--accent); }
+.legend .sw.gray { background: var(--fill-2); }
+.barchart { display: block; overflow: visible; }
+.barchart .grid { stroke: var(--line); stroke-dasharray: 3 3; }
+.barchart .base { stroke: var(--line-strong); }
+.barchart .bar.accent { fill: var(--accent); }
+.barchart .bar.gray { fill: var(--fill-2); }
+.barchart .lab { font-size: 11px; fill: var(--label-2); font-family: var(--font-ui); }
+.cat-row { padding: 8px 0; }
+.cat-head { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 500; margin-bottom: 6px; }
+.cat-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.cat-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.amt { font-weight: 700; font-size: 14.5px; }
+.amt.neg { color: var(--label); }
+.amt.pos { color: var(--green); }
+@media (max-width: 1000px) { .grid-4 { grid-template-columns: 1fr 1fr; } }

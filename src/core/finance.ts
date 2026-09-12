@@ -74,6 +74,40 @@ export function expenseInMonth(state: State, ym: string): number {
   return state.expenses.filter((e) => monthKey(e.date) === ym).reduce((a, e) => a + e.amount, 0);
 }
 
+export interface MonthPoint {
+  ym: string;
+  label: string;
+  income: number;
+  cash: number;
+  expense: number;
+}
+
+/** 最近 N 个月（含本月）的确认收入 / 到账 / 支出 */
+export function monthlySeries(state: State, today: ISODate, months = 6): MonthPoint[] {
+  const [y, m] = today.split("-").map(Number);
+  const out: MonthPoint[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(y ?? 2026, (m ?? 1) - 1 - i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    out.push({ ym, label: `${d.getMonth() + 1}月`, income: incomeInMonth(state, ym), cash: cashInMonth(state, ym), expense: expenseInMonth(state, ym) });
+  }
+  return out;
+}
+
+/** 支出按分类汇总（ym 为空则全部） */
+export function expenseByCategory(state: State, ym?: string): { category: string; amount: number; share: number }[] {
+  const map = new Map<string, number>();
+  for (const e of state.expenses) {
+    if (ym && monthKey(e.date) !== ym) continue;
+    map.set(e.category || "其他", (map.get(e.category || "其他") ?? 0) + e.amount);
+  }
+  const total = [...map.values()].reduce((a, b) => a + b, 0);
+  return [...map.entries()].map(([category, amount]) => ({ category, amount, share: total ? amount / total : 0 })).sort((a, b) => b.amount - a.amount);
+}
+
+export const EXPENSE_CATEGORIES = ["房租", "广告投放", "教材物料", "交通", "餐饮", "平台佣金", "其他"] as const;
+export const INCOME_SOURCES = ["资料售卖", "课程咨询", "其他"] as const;
+
 /** −¥150 / ¥1,040 */
 export function fmtMoney(n: number): string {
   const v = Math.abs(Math.round(n)).toLocaleString("zh-CN");

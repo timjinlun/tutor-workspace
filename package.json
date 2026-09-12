@@ -63,7 +63,7 @@
           ]
         }
       ],
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "TutorWorkspace-${version}-${arch}.${ext}"
     },
     "dmg": {
       "title": "${productName} ${version}"

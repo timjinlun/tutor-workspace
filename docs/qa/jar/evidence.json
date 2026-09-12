@@ -1,0 +1,12 @@
+{
+  "start": {
+    "count": 110,
+    "animating": "false"
+  },
+  "oneSecondLater": 110,
+  "idleRafDelta": 0,
+  "knownBaselineErrors": [
+    "Executing inline script violates the following Content Security Policy directive 'default-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-tpbH5xxWIRstFS+NJlBETWz8/Fj77xYGMQlWGwcVYjU='), or a nonce ('nonce-...') is required to enable inline execution. Note also that 'script-src' was not explicitly set, so 'default-src' is used as a fallback. The action has been blocked."
+  ],
+  "unexpectedErrors": []
+}

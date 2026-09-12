@@ -4,6 +4,7 @@
  * UI 不能直接 set 状态，只能调 action。
  */
 import { create } from "zustand";
+import { incomeChanges, jarSettings } from "@/core/jar";
 import type { AuditEntry, Class, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
 import { emptyState, normalizeState } from "@/core/types";
 import { uid } from "@/core/id";
@@ -21,7 +22,10 @@ export interface Route {
   studentId?: ID;
 }
 
+export interface JarFeedback { seq: number; changes: { id: string; amount: number }[] }
 export interface Store {
+  jarFeedback: JarFeedback;
+  refreshJarSettings(): void;
   s: State;
   ready: boolean;
   saveError: string | null;
@@ -115,7 +119,10 @@ function recordAudit(entry: AuditEntry) {
 export const useStore = create<Store>((set, get) => {
   /** 所有变更走这里：更新状态 + 触发持久化 */
   const commit = (patch: Partial<State>) => {
-    set({ s: { ...get().s, ...patch } });
+    const changes = patch.lessons ? incomeChanges(get().s.lessons, patch.lessons) : [];
+    const next = { ...get().s, ...patch };
+    next.settings = { ...next.settings, ...jarSettings(next, todayISO()) };
+    set({ s: next, ...(changes.length ? { jarFeedback: { seq: get().jarFeedback.seq + 1, changes } } : {}) });
     persist(get, set);
   };
   const audited = (entry: AuditEntry) => {
@@ -125,6 +132,12 @@ export const useStore = create<Store>((set, get) => {
 
   return {
     s: emptyState(),
+    jarFeedback: { seq: 0, changes: [] },
+    refreshJarSettings() {
+      const s = get().s;
+      const patch = jarSettings(s, todayISO());
+      if (patch.coinValue !== s.settings.coinValue || patch.jarCapacity !== s.settings.jarCapacity) commit({ settings: { ...s.settings, ...patch } });
+    },
     ready: false,
     saveError: null,
     route: { page: "today" },
@@ -136,14 +149,19 @@ export const useStore = create<Store>((set, get) => {
       repo = r;
       const loaded = await r.load();
       const s = loaded ? normalizeState(loaded) : demoState();
-      set({ s, ready: true });
-      if (!loaded) persist(get, set);
+      s.settings = { ...s.settings, ...jarSettings({ ...s, settings: { ...s.settings, jarCapacity: loaded?.settings.jarCapacity ?? 0 } }, todayISO()) };
+      set({ s, ready: true, jarFeedback: { seq: 0, changes: [] } });
+      persist(get, set);
       void platform.wallpaper.get().then((w) => w && set({ wallpaper: w }));
     },
 
     go: (route) => set({ route }),
 
     complete(item) {
+      const existing = get().s.lessons.find((l) => item.virtual ? l.templateId === item.templateId && l.date === item.date && l.studentId === item.studentId : l.id === item.id);
+      if (existing && existing.status !== "scheduled") return;
+      if (existing) item = { ...existing, virtual: false };
+      if (item.status !== "scheduled") return;
       const { lessons, audit } = completeLesson(get().s, item);
       commit({ lessons });
       audited(audit);
@@ -188,6 +206,10 @@ export const useStore = create<Store>((set, get) => {
       audited(r.audit);
     },
     completeClass(items, attendance) {
+      items = items.map((item) => {
+        const existing = get().s.lessons.find((l) => item.virtual ? l.templateId === item.templateId && l.date === item.date && l.studentId === item.studentId : l.id === item.id);
+        return existing ? { ...existing, virtual: false } : item;
+      });
       const r = completeClass(get().s, items, attendance);
       if (!r) return;
       commit({ lessons: r.lessons });
@@ -361,7 +383,9 @@ export const useStore = create<Store>((set, get) => {
       commit({ settings: { ...get().s.settings, ...patch } });
     },
     replaceState(next, reason) {
-      set({ s: normalizeState(next) });
+      const s = normalizeState(next);
+      s.settings = { ...s.settings, ...jarSettings(s, todayISO()) };
+      set({ s, jarFeedback: { seq: get().jarFeedback.seq + 1, changes: [] } });
       persist(get, set);
       audited({ id: uid("a"), at: new Date().toISOString(), kind: reason, summary: reason === "data.import" ? "导入数据" : "重置数据", payload: {} });
     },

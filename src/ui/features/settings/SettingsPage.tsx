@@ -71,6 +71,17 @@ export function SettingsPage() {
       </div>
 
       <div className="card">
+        <div className="section-title">储蓄罐</div>
+        <Field label="罐子容量">
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[5000, 10000, 20000].map((n, i) => <Button key={n} variant={s.settings.jarCapacity === n ? "primary" : "secondary"} onClick={() => updateSettings({ jarCapacity: n })}>{["小罐", "中罐", "大罐"][i]} · ¥{n.toLocaleString("zh-CN")}</Button>)}
+          </div>
+        </Field>
+        <Field label="自定义金额（元）"><Input type="number" min={1} step={1} value={s.settings.jarCapacity} onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n) && n >= 1) updateSettings({ jarCapacity: Math.round(n) }); }} /></Field>
+        <p className="muted">本月每枚币约 ¥{s.settings.coinValue.amount}。罐内金额按已上课收入累计，撤销时同步扣回。</p>
+      </div>
+
+      <div className="card">
         <div className="section-title">你的数据</div>
         <p className="muted" style={{ marginBottom: 12, fontSize: 13.5 }}>
           {isApp ? <>全部数据存在这台电脑上，每次改动自动保存，另有 {info?.snapshots ?? 0} 份自动快照。{info && <> 文件 {(info.sizeBytes / 1024).toFixed(0)} KB。</>}</> : <>浏览器版的数据存在这个浏览器里，记得定期导出。</>}

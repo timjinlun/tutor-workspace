@@ -3,6 +3,7 @@ import { useEffect, type ReactElement } from "react";
 import { Sun, Users, CalendarDays, BookOpen, Wallet, LayoutGrid } from "lucide-react";
 import { useStore, type Page } from "@/store";
 import { lowBalanceStudents } from "@/core/finance";
+import { SavingsJar } from "@/ui/widgets/SavingsJar";
 import { Avatar } from "@/ui/primitives";
 import { platform, isApp } from "@/platform";
 import { TodayPage } from "@/ui/features/today/TodayPage";
@@ -71,6 +72,7 @@ export function App() {
             </button>
           ))}
         </nav>
+        <SavingsJar />
         <button className={`sidebar-foot ${route.page === "settings" ? "on" : ""}`} onClick={() => go({ page: "settings" })}>
           <Avatar name={settings.teacherName || "师"} size="sm" />
           <div>

@@ -177,6 +177,8 @@ export type Appearance = "system" | "light" | "dark";
 export type Background = "none" | "aurora" | "mesh" | "custom";
 
 export interface Settings {
+  coinValue: { amount: number; month: string };
+  jarCapacity: number;
   teacherName: string;
   accent: Accent;
   appearance: Appearance;
@@ -208,6 +210,8 @@ export interface State {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  coinValue: { amount: 10, month: "" },
+  jarCapacity: 10000,
   teacherName: "老师",
   accent: "coral",
   appearance: "system",

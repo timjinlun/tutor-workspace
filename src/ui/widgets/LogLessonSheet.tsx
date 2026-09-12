@@ -5,6 +5,7 @@
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { classMembers } from "@/core/klass";
+import { selfTeacher } from "@/core/teacher";
 import { Button, Field, Input, Select, Sheet } from "@/ui/primitives";
 import { useStore } from "@/store";
 import { balance } from "@/core/finance";
@@ -25,7 +26,7 @@ export function LogLessonSheet({ open, onClose, presetStudentId, presetDate, pre
   const [time, setTime] = useState(presetTime ?? nowHHMM());
   const [units, setUnits] = useState("");
   const course = s.courses.find((c) => c.id === effectiveCourse);
-  const teacherId = s.teachers[0]?.id;
+  const [teacherId, setTeacherId] = useState(selfTeacher(s)?.id ?? s.teachers[0]?.id);
   const scheduling = mode === "schedule";
 
   const submit = () => {
@@ -60,6 +61,13 @@ export function LogLessonSheet({ open, onClose, presetStudentId, presetDate, pre
           )}
         </Select>
       </Field>
+      {!cls && s.teachers.length > 1 && (
+        <Field label="谁上的">
+          <Select value={teacherId ?? ""} onChange={(e) => setTeacherId(e.target.value)}>
+            {s.teachers.map((t) => <option key={t.id} value={t.id}>{t.name}{t.self ? "（我）" : ""}</option>)}
+          </Select>
+        </Field>
+      )}
       {cls && <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>班课：{classMembers(s, cls).map((m) => m.name).join("、")}。{scheduling ? "到时候" : "记为已上后"}每人各扣一节。</div>}
       {!cls && <div className="grid-2">
         <Field label="课程">

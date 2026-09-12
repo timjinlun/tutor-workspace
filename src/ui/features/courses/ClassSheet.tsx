@@ -7,6 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useStore } from "@/store";
 import type { Class } from "@/core/types";
 import { Avatar, Button, Field, Input, Select, Sheet } from "@/ui/primitives";
+import { selfTeacher } from "@/core/teacher";
 
 export function ClassSheet({ open, onClose, editing }: { open: boolean; onClose: () => void; editing?: Class }) {
   const s = useStore((x) => x.s);
@@ -17,6 +18,7 @@ export function ClassSheet({ open, onClose, editing }: { open: boolean; onClose:
   const [price, setPrice] = useState(editing?.pricePerUnit != null ? String(editing.pricePerUnit) : "");
   const [deduct, setDeduct] = useState(editing?.deductOnAbsence ?? true);
   const [members, setMembers] = useState<string[]>(editing?.studentIds ?? []);
+  const [teacherId, setTeacherId] = useState(editing?.teacherId ?? selfTeacher(s)?.id ?? s.teachers[0]?.id);
   const [err, setErr] = useState("");
   const course = s.courses.find((c) => c.id === courseId);
   const candidates = s.students.filter((st) => !st.archived).sort((a, b) => a.sortOrder - b.sortOrder);
@@ -26,7 +28,7 @@ export function ClassSheet({ open, onClose, editing }: { open: boolean; onClose:
   const submit = () => {
     if (!name.trim() || !courseId) return;
     const p = parseFloat(price);
-    const patch = { name: name.trim(), courseId, studentIds: members, pricePerUnit: Number.isFinite(p) && p >= 0 && price !== "" ? p : undefined, deductOnAbsence: deduct, teacherId: s.teachers[0]?.id };
+    const patch = { name: name.trim(), courseId, studentIds: members, pricePerUnit: Number.isFinite(p) && p >= 0 && price !== "" ? p : undefined, deductOnAbsence: deduct, teacherId };
     const r = editing ? updateClass(editing.id, patch) : addClass(patch);
     if (!r.ok) { setErr(r.reason); return; }
     onClose();
@@ -52,6 +54,13 @@ export function ClassSheet({ open, onClose, editing }: { open: boolean; onClose:
           </Select>
         </Field>
       </div>
+      {s.teachers.length > 1 && (
+        <Field label="谁上的">
+          <Select value={teacherId ?? ""} onChange={(e) => setTeacherId(e.target.value)}>
+            {s.teachers.map((t) => <option key={t.id} value={t.id}>{t.name}{t.self ? "（我）" : ""}</option>)}
+          </Select>
+        </Field>
+      )}
       <Field label={`成员 · ${members.length}${Number.isFinite(max) ? ` / ${max}` : ""} 人`}>
         {candidates.length === 0 ? (
           <div className="muted" style={{ fontSize: 13 }}>还没有在读学员，先去「学员」添加。</div>

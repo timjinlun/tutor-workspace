@@ -9,8 +9,9 @@ import { useStore } from "@/store";
 import { addMinutes, lessonMinutes, type DayItem } from "@/core/lesson";
 import { balance, fmtMoney } from "@/core/finance";
 import { formatCN } from "@/core/date";
+import { isOtherTeacher, teacherOfLesson } from "@/core/teacher";
 import type { Lesson } from "@/core/types";
-import { Avatar, Button, Chip, Field, Input, Sheet, Stamp } from "@/ui/primitives";
+import { Avatar, Button, Chip, Field, Input, Sheet, Stamp, TeacherTag } from "@/ui/primitives";
 import { UndoLessonSheet } from "./UndoLessonSheet";
 
 const SOURCE_LABEL = { template: "固定课表", manual: "临时排的", backfill: "补记" } as const;
@@ -40,6 +41,7 @@ function Body({ item, onClose }: { item: DayItem; onClose: () => void }) {
             <div className="lesson-sheet-meta">{item.units} 课时 · {fmtMoney(item.units * item.price)}{st && ` · 剩 ${balance(s, st.id)} 课时`}</div>
             <div className="lesson-sheet-chips">
               <Chip>{SOURCE_LABEL[item.source]}</Chip>
+              {isOtherTeacher(s, item) && <TeacherTag name={teacherOfLesson(s, item)!.name} color={teacherOfLesson(s, item)!.color} />}
               {item.status === "done" && <Stamp />}
               {item.status === "cancelled" && <Chip>已取消</Chip>}
             </div>

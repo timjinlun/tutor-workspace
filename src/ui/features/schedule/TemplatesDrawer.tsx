@@ -11,6 +11,7 @@ import { WEEKDAY_CN } from "@/core/date";
 import { Avatar, Button, Field, Input, Select, Sheet } from "@/ui/primitives";
 import { Users } from "lucide-react";
 import { classMembers } from "@/core/klass";
+import { selfTeacher, isOtherTeacher } from "@/core/teacher";
 
 export function TemplatesDrawer({ open, onClose, presetWeekday }: { open: boolean; onClose: () => void; presetWeekday?: number }) {
   const s = useStore((x) => x.s);
@@ -25,12 +26,13 @@ export function TemplatesDrawer({ open, onClose, presetWeekday }: { open: boolea
   const effCourse = courses.some((c) => c.id === courseId) ? courseId : (courses[0]?.id ?? "");
   const [wd, setWd] = useState(presetWeekday ?? 1);
   const [time, setTime] = useState("18:00");
+  const [teacherId, setTeacherId] = useState(selfTeacher(s)?.id ?? s.teachers[0]?.id);
   const sid = cls ? `class:${cls.id}` : (student?.id ?? "");
   const active = s.templates.filter((t) => t.active).length;
 
   const submit = () => {
     if (!sid || !effCourse) return;
-    addTemplate({ studentId: cls ? "" : sid, classId: cls?.id, courseId: effCourse, teacherId: s.teachers[0]?.id, weekday: wd, time });
+    addTemplate({ studentId: cls ? "" : sid, classId: cls?.id, courseId: effCourse, teacherId, weekday: wd, time });
   };
 
   return (
@@ -50,7 +52,7 @@ export function TemplatesDrawer({ open, onClose, presetWeekday }: { open: boolea
                   <div key={t.id} className={`row tpl-row ${t.active ? "" : "paused"}`}>
                     <span className="num tpl-time">{t.time}</span>
                     {k ? <div className="klass-badge" style={{ width: 28, height: 28, borderRadius: 8 }}><Users size={13} /></div> : <Avatar name={st?.name ?? "?"} size="sm" />}
-                    <div className="grow"><div className="title">{k ? k.name : (st?.name ?? "已删除")}</div><div className="meta">{c?.name}{k && ` · 班课 ${classMembers(s, k).length} 人`}{!t.active && " · 已暂停"}</div></div>
+                    <div className="grow"><div className="title">{k ? k.name : (st?.name ?? "已删除")}</div><div className="meta">{c?.name}{k && ` · 班课 ${classMembers(s, k).length} 人`}{isOtherTeacher(s, t) && ` · ${s.teachers.find((x) => x.id === t.teacherId)?.name}`}{!t.active && " · 已暂停"}</div></div>
                     <Button variant="ghost" size="sm" icon={t.active ? <Pause /> : <Play />} title={t.active ? "暂停（比如放假）" : "恢复"} onClick={() => updateTemplate(t.id, { active: !t.active })} />
                     <Button variant="ghost" size="sm" icon={<Trash2 />} title="删除" onClick={() => removeTemplate(t.id)} />
                   </div>
@@ -84,6 +86,13 @@ export function TemplatesDrawer({ open, onClose, presetWeekday }: { open: boolea
           </Field>
           <Field label="时间"><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></Field>
         </div>
+        {s.teachers.length > 1 && (
+          <Field label="谁上的">
+            <Select value={teacherId ?? ""} onChange={(e) => setTeacherId(e.target.value)}>
+              {s.teachers.map((t) => <option key={t.id} value={t.id}>{t.name}{t.self ? "（我）" : ""}</option>)}
+            </Select>
+          </Field>
+        )}
         <div className="sheet-actions">
           <Button onClick={onClose}>完成</Button>
           <Button variant="primary" icon={<Plus />} onClick={submit} disabled={!sid || !effCourse}>加入固定课表</Button>

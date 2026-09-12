@@ -8,12 +8,13 @@ import { Plus, Copy, CalendarPlus, Bell, Check, Undo2, X, Users } from "lucide-r
 import { useStore } from "@/store";
 import { addMinutes, lessonMinutes, lessonsOn, suggestionsFor, type DayItem } from "@/core/lesson";
 import { classById, groupItems, groupStatus, type Attendance, type DayGroup } from "@/core/klass";
+import { isOtherTeacher, teacherOfLesson } from "@/core/teacher";
 import { AttendanceChips } from "@/ui/widgets/AttendanceChips";
 import { ClassLessonSheet } from "@/ui/widgets/ClassLessonSheet";
 import { balance, doneLessonsInWeek, incomeInMonth, lowBalanceStudents, fmtMoney } from "@/core/finance";
 import { formatCN, monthKey, nowHHMM, todayISO } from "@/core/date";
 import type { Lesson } from "@/core/types";
-import { Avatar, Button, Chip, Empty, Num, Stamp } from "@/ui/primitives";
+import { Avatar, Button, Chip, Empty, Num, Stamp, TeacherTag } from "@/ui/primitives";
 import { LogLessonSheet } from "@/ui/widgets/LogLessonSheet";
 import { UndoLessonSheet } from "@/ui/widgets/UndoLessonSheet";
 import { platform } from "@/platform";
@@ -109,6 +110,7 @@ export function TodayPage() {
                       <button className="link-plain" onClick={() => setClassPick(g)}>{cls?.name ?? "班课"}</button>
                       <span className="lesson-course">{c?.name}</span>
                       <Chip tone="accent">班课 · {g.items.length} 人</Chip>
+                      {isOtherTeacher(s, first) && <TeacherTag name={teacherOfLesson(s, first)!.name} color={teacherOfLesson(s, first)!.color} />}
                     </div>
                     <div className="lesson-meta">每人 {first.units} 课时 · {fmtMoney(first.price)}/课时{cls && ` · 缺席${cls.deductOnAbsence ? "照扣" : "不扣"}`}</div>
                     <AttendanceChips items={g.items} attendance={att} onToggle={status === "scheduled" ? (sid) => toggleAtt(g.key, sid) : undefined} />
@@ -142,6 +144,7 @@ export function TodayPage() {
                     {st?.name ?? "已删除学员"}
                     <span className="lesson-course">{c?.name}</span>
                     {item.source === "backfill" && <Chip>补记</Chip>}
+                    {isOtherTeacher(s, item) && <TeacherTag name={teacherOfLesson(s, item)!.name} color={teacherOfLesson(s, item)!.color} />}
                   </div>
                   <div className="lesson-meta">
                     {item.units} 课时 · {fmtMoney(item.units * item.price)}

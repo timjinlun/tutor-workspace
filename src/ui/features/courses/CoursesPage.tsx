@@ -6,6 +6,7 @@ import { useStore } from "@/store";
 import { Button, Chip, Empty, Field, Input, Sheet } from "@/ui/primitives";
 import type { Class } from "@/core/types";
 import { classPrice } from "@/core/klass";
+import { nextTeacherColor, TEACHER_COLORS } from "@/core/teacher";
 import { ConfirmSheet } from "@/ui/widgets/ConfirmSheet";
 import { ClassSheet } from "./ClassSheet";
 import "./courses.css";
@@ -13,7 +14,7 @@ import "./courses.css";
 export function CoursesPage() {
   const s = useStore((x) => x.s);
   const ent = useStore((x) => x.ent);
-  const { updateCourse, removeCourse, addTeacher, updateSettings, updateClass, removeClass } = useStore(useShallow((x) => ({ updateCourse: x.updateCourse, removeCourse: x.removeCourse, addTeacher: x.addTeacher, updateSettings: x.updateSettings, updateClass: x.updateClass, removeClass: x.removeClass })));
+  const { updateCourse, removeCourse, addTeacher, updateTeacher, removeTeacher, updateSettings, updateClass, removeClass, go } = useStore(useShallow((x) => ({ updateCourse: x.updateCourse, removeCourse: x.removeCourse, addTeacher: x.addTeacher, updateTeacher: x.updateTeacher, removeTeacher: x.removeTeacher, updateSettings: x.updateSettings, updateClass: x.updateClass, removeClass: x.removeClass, go: x.go })));
   const [addOpen, setAddOpen] = useState(false);
   const [classOpen, setClassOpen] = useState<{ editing?: Class } | null>(null);
   const [delClass, setDelClass] = useState<Class | null>(null);
@@ -91,16 +92,34 @@ export function CoursesPage() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <div className="section-title">老师 <Chip>免费版最多 {ent.limit("teachers")} 位</Chip></div>
+        <div className="section-title"><Users size={14} /> 老师 <Chip>免费版最多 {ent.limit("teachers")} 位（含你自己）</Chip></div>
+        <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+          加了合作老师之后，排课和打卡可以指定「谁上的」，收支页会按人算该结多少课时费。
+        </div>
+        <div className="teacher-head"><span>老师</span><span>颜色</span><span>课时费（每课时给他）</span><span /></div>
         {s.teachers.map((t) => (
-          <div className="row" key={t.id}>
-            <span style={{ width: 10, height: 10, borderRadius: "50%", background: t.color }} />
-            <div className="grow title">{t.name}</div>
+          <div className="teacher-row" key={t.id}>
+            {t.self ? (
+              <div className="with-unit"><span className="dot" style={{ background: t.color }} /><b>{t.name || "我"}</b><Chip>我</Chip></div>
+            ) : (
+              <Input value={t.name} onChange={(e) => updateTeacher(t.id, { name: e.target.value })} />
+            )}
+            <div className="color-pick">
+              {TEACHER_COLORS.map((c) => (
+                <button key={c} className={`swatch ${t.color === c ? "on" : ""}`} style={{ background: c }} onClick={() => updateTeacher(t.id, { color: c })} aria-label="换颜色" />
+              ))}
+            </div>
+            {t.self ? (
+              <span className="muted" style={{ fontSize: 12.5 }}>课都是你自己的，不用结算。称呼在<button className="link" onClick={() => go({ page: "settings" })}>设置</button>里改。</span>
+            ) : (
+              <div className="with-unit"><span>¥</span><Input type="number" min={0} value={t.payPerUnit ?? ""} placeholder="不结算" onChange={(e) => updateTeacher(t.id, { payPerUnit: e.target.value ? Math.max(0, Number(e.target.value)) : undefined })} /><span>/ 课时</span></div>
+            )}
+            {t.self ? <span /> : <Button variant="ghost" size="sm" icon={<Trash2 />} title="删除" onClick={() => { const r = removeTeacher(t.id); setErr(r.ok ? "" : r.reason); }} />}
           </div>
         ))}
         <div className="row">
-          <div className="grow"><Input placeholder="老师姓名" value={newTeacher} onChange={(e) => setNewTeacher(e.target.value)} /></div>
-          <Button icon={<Plus />} disabled={!newTeacher.trim()} onClick={() => { const r = addTeacher({ name: newTeacher.trim(), color: "#4f6bff" }); setErr(r.ok ? "" : r.reason); if (r.ok) setNewTeacher(""); }}>添加</Button>
+          <div className="grow"><Input placeholder="合作老师姓名" value={newTeacher} onChange={(e) => setNewTeacher(e.target.value)} /></div>
+          <Button icon={<Plus />} disabled={!newTeacher.trim()} onClick={() => { const r = addTeacher({ name: newTeacher.trim(), color: nextTeacherColor(s) }); setErr(r.ok ? "" : r.reason); if (r.ok) setNewTeacher(""); }}>添加</Button>
         </div>
       </div>
 

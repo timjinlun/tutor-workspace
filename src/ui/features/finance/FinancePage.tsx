@@ -1,10 +1,11 @@
 /** 收支：本月四个数、近 6 个月对比、支出分类、明细录入、月度经营报告。 */
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { Plus, Trash2, FileText, Users } from "lucide-react";
 import { useStore } from "@/store";
 import { cashInMonth, expenseByCategory, expenseInMonth, EXPENSE_CATEGORIES, fmtMoney, incomeInMonth, INCOME_SOURCES, monthlySeries, doneUnitsInMonth } from "@/core/finance";
 import { monthKey, todayISO } from "@/core/date";
+import { payRecorded, teacherMonth, TEACHER_PAY_CATEGORY } from "@/core/teacher";
 import { Button, Chip, Field, Input, MonthPicker, Select, Sheet } from "@/ui/primitives";
 import { MonthlyReportSheet } from "@/ui/widgets/ReportSheets";
 import "./finance.css";
@@ -24,6 +25,7 @@ export function FinancePage() {
   const series = useMemo(() => monthlySeries(s, `${ym}-01`, 6), [s, ym]);
   const cats = useMemo(() => expenseByCategory(s, ym), [s, ym]);
   const expenses = useMemo(() => s.expenses.filter((e) => monthKey(e.date) === ym).sort((a, b) => b.date.localeCompare(a.date)), [s.expenses, ym]);
+  const teachers = useMemo(() => teacherMonth(s, ym), [s, ym]);
   const incomes = useMemo(() => s.otherIncomes.filter((e) => monthKey(e.date) === ym).sort((a, b) => b.date.localeCompare(a.date)), [s.otherIncomes, ym]);
   const cards = [
     { l: "确认收入", v: income, hint: `${doneUnitsInMonth(s, ym)} 课时 × 单价` },
@@ -74,6 +76,31 @@ export function FinancePage() {
       </div>
 
       <div className="grid-2" style={{ marginTop: 16 }}>
+        {teachers.length > 1 && (
+          <div className="card" style={{ gridColumn: "1 / -1" }}>
+            <div className="section-title"><Users size={14} /> 老师课时费</div>
+            <div className="teacher-pay-head"><span>老师</span><span>上课</span><span>学费收入</span><span>该结</span><span /></div>
+            {teachers.map((t) => (
+              <div className="teacher-pay-row" key={t.teacher.id}>
+                <div className="with-unit"><span className="dot" style={{ background: t.teacher.color }} /><b>{t.teacher.name}</b>{t.teacher.self && <Chip>我</Chip>}</div>
+                <span className="num muted">{t.lessons} 节 · {t.units} 课时</span>
+                <span className="num">{fmtMoney(t.income)}</span>
+                <span className="num pay">
+                  {t.teacher.self ? <span className="muted">—</span> : t.teacher.payPerUnit ? fmtMoney(t.pay) : <span className="muted">没设课时费</span>}
+                </span>
+                {!t.teacher.self && t.pay > 0 && (
+                  payRecorded(s, ym, t.teacher.name)
+                    ? <Chip tone="green">已记支出</Chip>
+                    : <Button size="sm" onClick={() => addExpense({ date: todayISO(), category: TEACHER_PAY_CATEGORY, amount: t.pay, note: `${t.teacher.name} ${ym} · ${t.units} 课时` })}>记为支出</Button>
+                )}
+                {(t.teacher.self || !t.pay) && <span />}
+              </div>
+            ))}
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
+              课时费在「课程 → 老师」里给每位合作老师单独设。「记为支出」会按这个月的实际课时生成一笔支出，改了课时之后可以删掉重记。
+            </div>
+          </div>
+        )}
         <div className="card">
           <div className="section-title">支出明细 <button className="right link" onClick={() => setExpOpen(true)}>+ 记一笔</button></div>
           {expenses.length === 0 ? (

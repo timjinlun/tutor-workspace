@@ -10,3 +10,13 @@
 .member:hover { border-color: var(--fill-2); }
 .member.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .row.paused { opacity: .55; }
+
+.teacher-head, .teacher-row { display: grid; grid-template-columns: minmax(120px, 1.1fr) 148px minmax(180px, 1.3fr) 34px; gap: 10px; align-items: center; }
+.teacher-head { font-size: 11.5px; color: var(--label-3); font-weight: 600; padding: 0 0 8px; letter-spacing: .03em; }
+.teacher-row { padding: 8px 0; border-top: 1px solid var(--line); }
+.teacher-row .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.color-pick { display: flex; gap: 5px; }
+.swatch { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; transition: transform .1s; }
+.swatch:hover { transform: scale(1.15); }
+.swatch.on { border-color: var(--label); }
+@media (max-width: 1000px) { .teacher-head { display: none; } .teacher-row { grid-template-columns: 1fr 1fr; } }

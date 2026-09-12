@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useStore } from "@/store";
 import { lessonMinutes, lessonsOn } from "@/core/lesson";
 import { classById, groupItems, groupStatus, type DayGroup } from "@/core/klass";
+import { isOtherTeacher, teacherOfLesson } from "@/core/teacher";
 import { gridBounds, placeBlocks, timeToMin } from "@/core/calendar";
 import { WEEKDAY_CN, nowHHMM, todayISO, weekdayOf } from "@/core/date";
 import type { ISODate } from "@/core/types";
@@ -73,20 +74,21 @@ export function WeekView({ days, onPick, onEmpty }: { days: ISODate[]; onPick: (
                 const st = students.find((x) => x.id === item.studentId);
                 const c = courses.find((x) => x.id === item.courseId);
                 const name = cls ? `${cls.name} · ${b.group.items.length} 人` : (st?.name ?? "已删除");
+                const other = isOtherTeacher(s, item) ? teacherOfLesson(s, item) : undefined;
                 const top = ((b.start - lo * 60) / 60) * HOUR;
                 const h = Math.max(22, ((b.end - b.start) / 60) * HOUR - 2);
                 const w = 100 / b.cols;
                 return (
                   <button
                     key={b.id}
-                    className={`blk ${status} ${item.source === "template" ? "tpl" : ""} ${cls ? "klass" : ""} ${h < 44 ? "short" : ""}`}
-                    style={{ top, height: h, left: `calc(${w * b.col}% + 2px)`, width: `calc(${w}% - 4px)` }}
+                    className={`blk ${status} ${item.source === "template" ? "tpl" : ""} ${cls ? "klass" : ""} ${other ? "other" : ""} ${h < 44 ? "short" : ""}`}
+                    style={{ top, height: h, left: `calc(${w * b.col}% + 2px)`, width: `calc(${w}% - 4px)`, ...(other ? ({ "--tc": other.color } as React.CSSProperties) : {}) }}
                     onClick={() => onPick(b.group)}
-                    title={`${item.time} ${name} ${c?.name ?? ""}`}
+                    title={`${item.time} ${name} ${c?.name ?? ""}${other ? ` · ${other.name}` : ""}`}
                   >
                     <span className="t num">{item.time}</span>
                     <span className="n">{name}</span>
-                    <span className="c">{c?.name}</span>
+                    <span className="c">{other ? other.name : c?.name}</span>
                   </button>
                 );
               })}

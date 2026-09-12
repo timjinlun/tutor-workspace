@@ -6,7 +6,10 @@ import { addDays, todayISO, weekdayOf } from "./date";
 export function demoState(today = todayISO()): State {
   const s = emptyState();
   s.settings = { ...s.settings, teacherName: "王老师", onboarded: true };
-  s.teachers = [{ id: "t1", name: "王老师", color: "#FF6B4A" }];
+  s.teachers = [
+    { id: "t1", name: "王老师", color: "#ff6b4a", self: true },
+    { id: "t2", name: "李老师", color: "#4f6bff", payPerUnit: 90 },
+  ];
   s.courses = [
     { id: "c1", name: "数学", price: 280, unitsPerLesson: 1 },
     { id: "c2", name: "英语", price: 260, unitsPerLesson: 1, unitMinutes: 45 },
@@ -33,7 +36,7 @@ export function demoState(today = todayISO()): State {
   s.templates = [
     { id: "tp1", studentId: "s1", courseId: "c1", teacherId: "t1", weekday: wd, time: "16:00", active: true },
     { id: "tp2", studentId: "s2", courseId: "c2", teacherId: "t1", weekday: wd, time: "18:00", active: true },
-    { id: "tp3", studentId: "s3", courseId: "c3", teacherId: "t1", weekday: (wd + 2) % 7, time: "19:30", active: true },
+    { id: "tp3", studentId: "s3", courseId: "c3", teacherId: "t2", weekday: (wd + 2) % 7, time: "19:30", active: true },
     { id: "tp4", studentId: "s4", courseId: "c1", teacherId: "t1", weekday: (wd + 4) % 7, time: "10:00", active: true },
     { id: "tp5", studentId: "", classId: "k1", courseId: "c1", teacherId: "t1", weekday: wd, time: "20:00", active: true },
   ];

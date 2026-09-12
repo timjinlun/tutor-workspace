@@ -30,3 +30,8 @@
 .week-grid[style*="--n: 14"] .wg-day b { font-size: 14px; width: 24px; height: 24px; line-height: 24px; }
 .week-grid[style*="--n: 14"] .blk .c { display: none; }
 .blk.klass { border-left-style: double; border-left-width: 5px; }
+/* 别人上的课：用那位老师的颜色，不抢我自己的强调色 */
+.blk.other { border-left-color: var(--tc); background: color-mix(in srgb, var(--tc) 14%, transparent); }
+.blk.other .t { color: var(--tc); }
+.blk.other.done { background: var(--tc); color: #fff; border-left-color: transparent; }
+.blk.other.done .t, .blk.other.done .c { color: rgba(255,255,255,.82); }

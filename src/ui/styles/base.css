@@ -166,3 +166,6 @@ textarea.input { height: auto; padding: 10px 12px; min-height: 80px; resize: ver
 /* 班课的标识：一对一是头像，班课是一个方圆角的"人群"角标 */
 .klass-badge { width: 36px; height: 36px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .klass-badge.lg { width: 48px; height: 48px; border-radius: 14px; }
+
+.teacher-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.teacher-tag i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }

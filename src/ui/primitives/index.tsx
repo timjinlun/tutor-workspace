@@ -82,6 +82,16 @@ export function Avatar({ name, size }: { name: string; size?: "sm" | "lg" }) {
   );
 }
 
+/* ---------- TeacherTag（别人上的课，用他自己的颜色标一下） ---------- */
+export function TeacherTag({ name, color }: { name: string; color: string }) {
+  return (
+    <span className="teacher-tag" style={{ background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
+      <i style={{ background: color }} />
+      {name}
+    </span>
+  );
+}
+
 /* ---------- Num ---------- */
 export function Num({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <span className={`num ${className}`}>{children}</span>;

@@ -66,6 +66,8 @@ export interface Store {
   updateCourse(id: ID, patch: Partial<Course>): void;
   removeCourse(id: ID): { ok: true } | { ok: false; reason: string };
   addTeacher(input: Omit<Teacher, "id">): { ok: true } | { ok: false; reason: string };
+  updateTeacher(id: ID, patch: Partial<Teacher>): void;
+  removeTeacher(id: ID): { ok: true } | { ok: false; reason: string };
   /* 收支 */
   addExpense(input: Omit<Expense, "id">): void;
   removeExpense(id: ID): void;
@@ -294,6 +296,23 @@ export const useStore = create<Store>((set, get) => {
       return { ok: true };
     },
 
+    updateTeacher(id, patch) {
+      commit({ teachers: get().s.teachers.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
+    },
+    removeTeacher(id) {
+      const s = get().s;
+      const t = s.teachers.find((x) => x.id === id);
+      if (t?.self) return { ok: false, reason: "这是你自己，删不掉。改称呼请去设置。" };
+      /* 已经上过的课留着（那是真实发生的），只把以后的排课改回我自己 */
+      const self = s.teachers.find((x) => x.self)?.id;
+      commit({
+        teachers: s.teachers.filter((x) => x.id !== id),
+        templates: s.templates.map((x) => (x.teacherId === id ? { ...x, teacherId: self } : x)),
+        classes: s.classes.map((x) => (x.teacherId === id ? { ...x, teacherId: self } : x)),
+      });
+      return { ok: true };
+    },
+
     addExpense(input) {
       commit({ expenses: [...get().s.expenses, { id: uid("e"), ...input }] });
     },
@@ -336,6 +355,9 @@ export const useStore = create<Store>((set, get) => {
     },
 
     updateSettings(patch) {
+      if (patch.teacherName !== undefined) {
+        commit({ teachers: get().s.teachers.map((t) => (t.self ? { ...t, name: patch.teacherName! } : t)) });
+      }
       commit({ settings: { ...get().s.settings, ...patch } });
     },
     replaceState(next, reason) {

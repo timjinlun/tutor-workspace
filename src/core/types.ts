@@ -8,6 +8,10 @@ export interface Teacher {
   id: ID;
   name: string;
   color: string;
+  /** 本人。一个库里只有一位，名字跟着设置里的「称呼」走，课时费不结算 */
+  self?: boolean;
+  /** 给这位合作老师的每课时费用；不填就只统计课时、不算钱 */
+  payPerUnit?: number;
 }
 
 export interface Course {
@@ -218,6 +222,13 @@ export function normalizeState(raw: Partial<State> | null | undefined): State {
   const s: State = { ...base, ...(raw ?? {}), version: 3, settings: { ...DEFAULT_SETTINGS, ...(raw?.settings ?? {}) } };
   s.classes = Array.isArray(s.classes) ? s.classes : [];
   s.students = s.students.map((st, i) => ({ ...st, sortOrder: typeof st.sortOrder === "number" ? st.sortOrder : i, archived: !!st.archived }));
+  /* 永远有且只有一位「我」：老库里把第一位老师认作我，空库就建一位 */
+  if (!s.teachers.some((t) => t.self)) {
+    s.teachers = s.teachers.length
+      ? s.teachers.map((t, i) => (i === 0 ? { ...t, self: true } : t))
+      : [{ id: "t-self", name: s.settings.teacherName, color: "#ff6b4a", self: true }];
+  }
+  s.teachers = s.teachers.map((t) => (t.self ? { ...t, name: s.settings.teacherName || "我", payPerUnit: undefined } : t));
   return s;
 }
 

@@ -7,10 +7,11 @@ import { Check, X, Undo2, Users } from "lucide-react";
 import { useStore } from "@/store";
 import { addMinutes, lessonMinutes } from "@/core/lesson";
 import { classById, groupStatus, type Attendance, type DayGroup } from "@/core/klass";
+import { isOtherTeacher, teacherOfLesson } from "@/core/teacher";
 import { fmtMoney } from "@/core/finance";
 import { formatCN } from "@/core/date";
 import type { Lesson } from "@/core/types";
-import { Button, Chip, Sheet, Stamp } from "@/ui/primitives";
+import { Button, Chip, Sheet, Stamp, TeacherTag } from "@/ui/primitives";
 import { AttendanceChips } from "./AttendanceChips";
 import { UndoLessonSheet } from "./UndoLessonSheet";
 
@@ -42,6 +43,7 @@ function Body({ group, onClose }: { group: DayGroup; onClose: () => void }) {
             <div className="lesson-sheet-meta">{group.items.length} 人 · 每人 {first.units} 课时 · {fmtMoney(first.price)}/课时{cls && ` · 缺席${cls.deductOnAbsence ? "照扣" : "不扣"}`}</div>
             <div className="lesson-sheet-chips">
               <Chip tone="accent">班课</Chip>
+              {isOtherTeacher(s, first) && <TeacherTag name={teacherOfLesson(s, first)!.name} color={teacherOfLesson(s, first)!.color} />}
               {status === "done" && <Stamp />}
               {status === "cancelled" && <Chip>已取消</Chip>}
               {status === "done" && <span className="muted" style={{ fontSize: 12.5 }}>确认收入 {fmtMoney(income)}</span>}

@@ -67,7 +67,8 @@
     },
     "dmg": {
       "title": "${productName} ${version}"
-    }
+    },
+    "publish": null
   },
   "dependencies": {
     "lucide-react": "^1.45.0",

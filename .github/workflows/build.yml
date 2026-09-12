@@ -35,7 +35,7 @@ jobs:
 
       - run: npm run ${{ matrix.script }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 只打包不发布；发布由下面的 release job 做
           # 还没买证书之前，先关掉签名，让打包能跑通。
           # 买了 Apple 证书之后：删掉这一行，改成把 .p12 放进 CSC_LINK / CSC_KEY_PASSWORD secrets。
           CSC_IDENTITY_AUTO_DISCOVERY: false

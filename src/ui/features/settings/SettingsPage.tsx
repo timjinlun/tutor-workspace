@@ -90,7 +90,7 @@ export function SettingsPage() {
 
       <div className="card">
         <div className="section-title">关于</div>
-        <div className="muted" style={{ fontSize: 13.5 }}>独立老师工作台 v3 · 开源免费版 · MIT · <button className="link" onClick={() => platform.openExternal("https://github.com/timjinlun/tutor-workspace")}>GitHub</button></div>
+        <div className="muted" style={{ fontSize: 13.5 }}>记一课 v3 · 开源免费版 · MIT · <button className="link" onClick={() => platform.openExternal("https://github.com/timjinlun/tutor-workspace")}>GitHub</button></div>
       </div>
 
       <ConfirmSheet open={confirm === "demo"} onClose={() => setConfirm(null)} onConfirm={loadDemo} title="用示例数据覆盖当前数据？" confirmLabel="覆盖"><p className="muted">当前的学员、缴费、打卡都会被替换。导入前会自动存一份快照。</p></ConfirmSheet>

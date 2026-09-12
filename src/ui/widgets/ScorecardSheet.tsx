@@ -118,7 +118,7 @@ function draw(canvas: HTMLCanvasElement, d: ScorecardData, accent: string, water
     ctx.fillStyle = "rgba(255,255,255,0.55)";
     ctx.font = font(500, 26);
     ctx.textAlign = "right";
-    ctx.fillText("独立老师工作台", W - 80, H - 60);
+    ctx.fillText("记一课", W - 80, H - 60);
     ctx.textAlign = "left";
   }
 }

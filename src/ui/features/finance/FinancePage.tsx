@@ -5,7 +5,7 @@ import { Plus, Trash2, FileText, Users } from "lucide-react";
 import { useStore } from "@/store";
 import { cashInMonth, expenseByCategory, expenseInMonth, EXPENSE_CATEGORIES, fmtMoney, incomeInMonth, INCOME_SOURCES, monthlySeries, doneUnitsInMonth } from "@/core/finance";
 import { monthKey, todayISO } from "@/core/date";
-import { payRecorded, teacherMonth, TEACHER_PAY_CATEGORY } from "@/core/teacher";
+import { payRecorded, payRef, teacherMonth, TEACHER_PAY_CATEGORY } from "@/core/teacher";
 import { Button, Chip, Field, Input, MonthPicker, Select, Sheet } from "@/ui/primitives";
 import { MonthlyReportSheet } from "@/ui/widgets/ReportSheets";
 import "./finance.css";
@@ -89,9 +89,9 @@ export function FinancePage() {
                   {t.teacher.self ? <span className="muted">—</span> : t.teacher.payPerUnit ? fmtMoney(t.pay) : <span className="muted">没设课时费</span>}
                 </span>
                 {!t.teacher.self && t.pay > 0 && (
-                  payRecorded(s, ym, t.teacher.name)
+                  payRecorded(s, ym, t.teacher)
                     ? <Chip tone="green">已记支出</Chip>
-                    : <Button size="sm" onClick={() => addExpense({ date: todayISO(), category: TEACHER_PAY_CATEGORY, amount: t.pay, note: `${t.teacher.name} ${ym} · ${t.units} 课时` })}>记为支出</Button>
+                    : <Button size="sm" onClick={() => addExpense({ date: todayISO(), category: TEACHER_PAY_CATEGORY, amount: t.pay, note: `${t.teacher.name} ${ym} · ${t.units} 课时`, ref: payRef(t.teacher.id, ym) })}>记为支出</Button>
                 )}
                 {(t.teacher.self || !t.pay) && <span />}
               </div>

@@ -132,6 +132,8 @@ export interface Expense {
   category: string;
   amount: number;
   note: string;
+  /** 这笔支出对应什么（如 `teacher:<id>:2026-09`）。用来判重，跟显示名无关，改名不影响 */
+  ref?: string;
 }
 
 export interface OtherIncome {

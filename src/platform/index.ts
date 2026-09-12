@@ -93,7 +93,7 @@ export const platform = {
       const blob = new Blob([JSON.stringify({ version: 3, exportedAt: new Date().toISOString(), data: state }, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `独立老师工作台_${state.settings.teacherName}_${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `记一课_${state.settings.teacherName}_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       return { ok: true as const };
     },

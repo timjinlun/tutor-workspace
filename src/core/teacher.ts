@@ -73,7 +73,18 @@ export function payableInMonth(state: State, ym: string): number {
 
 export const TEACHER_PAY_CATEGORY = "老师课时费";
 
-/** 这个月的老师课时费是不是已经记过支出了（按分类 + 备注里的月份认） */
-export function payRecorded(state: State, ym: string, teacherName: string): boolean {
-  return state.expenses.some((e) => e.category === TEACHER_PAY_CATEGORY && monthKey(e.date) === ym && e.note.includes(teacherName));
+/** 这笔课时费支出的身份：跟老师的 id 和月份绑定，改名字不影响 */
+export function payRef(teacherId: ID, ym: string): string {
+  return `teacher:${teacherId}:${ym}`;
+}
+
+/**
+ * 这个月这位老师的课时费是不是已经记过支出了。
+ * 认 ref；3.4 及更早记的那批没有 ref，退回按名字匹配，免得老用户重复记账。
+ */
+export function payRecorded(state: State, ym: string, teacher: Teacher): boolean {
+  const ref = payRef(teacher.id, ym);
+  return state.expenses.some(
+    (e) => e.ref === ref || (!e.ref && e.category === TEACHER_PAY_CATEGORY && monthKey(e.date) === ym && e.note.includes(teacher.name)),
+  );
 }

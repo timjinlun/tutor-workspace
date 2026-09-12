@@ -51,3 +51,23 @@ describe("老师与课时费", () => {
     expect(b.teachers[0]).toMatchObject({ id: "x", self: true, name: "张老师" });
   });
 });
+
+describe("课时费判重", () => {
+  it("认 ref，不认名字：老师改名之后仍然算已记过", async () => {
+    const { payRecorded, payRef, TEACHER_PAY_CATEGORY } = await import("@/core/teacher");
+    const s = base();
+    const li = s.teachers[1]!;
+    s.expenses = [{ id: "e1", date: "2026-09-30", category: TEACHER_PAY_CATEGORY, amount: 360, note: "李老师 2026-09 · 4 课时", ref: payRef(li.id, "2026-09") }];
+    expect(payRecorded(s, "2026-09", li)).toBe(true);
+    expect(payRecorded(s, "2026-09", { ...li, name: "李老师（周末）" })).toBe(true); // 改名后照样认出来
+    expect(payRecorded(s, "2026-08", li)).toBe(false);
+  });
+
+  it("3.4 及更早没有 ref 的老数据，退回按名字认，不会重复记", async () => {
+    const { payRecorded, TEACHER_PAY_CATEGORY } = await import("@/core/teacher");
+    const s = base();
+    const li = s.teachers[1]!;
+    s.expenses = [{ id: "e1", date: "2026-09-30", category: TEACHER_PAY_CATEGORY, amount: 360, note: "李老师 2026-09 · 4 课时" }];
+    expect(payRecorded(s, "2026-09", li)).toBe(true);
+  });
+});

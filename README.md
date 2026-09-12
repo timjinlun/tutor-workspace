@@ -1,4 +1,4 @@
-# 独立老师工作台 · Tutor Workspace
+# 记一课 · Lesson Log
 
 给独立老师的 macOS 工作台：今天几节课、谁、几点、上完点一下就记好。学员、课表、课程、缴费、收支都在本机 SQLite 里，不上传任何服务器。
 
@@ -24,7 +24,7 @@ A local-first macOS app for independent tutors. React + TypeScript + Electron, S
 
 ## 数据
 
-| 存哪 | `~/Library/Application Support/独立老师工作台/data/工作台.db` |
+| 存哪 | `~/Library/Application Support/LessonLog/data/data.db` |
 |---|---|
 | 怎么保 | 每次改动自动写入 · 每小时自动快照（留 30 份）· 设置里一键备份 / 导出 JSON |
 | 流水 | 每次打卡、撤销、缴费都进 `audit_log`，只增不删 |
@@ -76,7 +76,7 @@ electron/          主进程、preload、SQLite
 - 或者在终端跑一句，去掉下载标记：
 
 ```bash
-xattr -cr /Applications/独立老师工作台.app
+xattr -cr /Applications/记一课.app
 ```
 
 数据在你自己的电脑上，App 不联网，拦截只是因为没交签名费。

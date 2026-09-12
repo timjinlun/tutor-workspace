@@ -1,19 +1,18 @@
 /**
  * 主进程：窗口、菜单、平台能力、数据库。
- * 数据在 ~/Library/Application Support/独立老师工作台/data/工作台.db，与浏览器缓存无关。
+ * 数据在 ~/Library/Application Support/LessonLog/data/data.db，与浏览器缓存无关。
+ * 目录名和显示名是两件事，见 datadir.ts。
  */
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, systemPreferences } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { SqliteStore } from "./db/store";
+import { dataDir, dbFile, setupUserData, wallpaperFile } from "./datadir";
 
 const IS_MAC = process.platform === "darwin";
 let win: BrowserWindow | null = null;
 let store: SqliteStore | null = null;
 
-const dataDir = () => path.join(app.getPath("userData"), "data");
-const dbFile = () => path.join(dataDir(), "工作台.db");
-const wallpaperFile = () => path.join(app.getPath("userData"), "wallpaper.txt");
 
 /* ============================== 窗口 ============================== */
 
@@ -23,7 +22,7 @@ function createWindow() {
     height: 820,
     minWidth: 920,
     minHeight: 600,
-    title: "独立老师工作台",
+    title: "记一课",
     show: false,
     /* 苹果感的三件事：隐藏标题栏、侧栏毛玻璃、跟随深浅色 */
     titleBarStyle: IS_MAC ? "hiddenInset" : "default",
@@ -59,7 +58,7 @@ function buildMenu() {
           {
             label: app.name,
             submenu: [
-              { role: "about" as const, label: "关于 独立老师工作台" },
+              { role: "about" as const, label: "关于 记一课" },
               { type: "separator" as const },
               { role: "hide" as const, label: "隐藏" },
               { role: "hideOthers" as const, label: "隐藏其他" },
@@ -117,7 +116,7 @@ async function doBackup() {
   const stamp = new Date().toISOString().slice(0, 10);
   const { canceled, filePath } = await dialog.showSaveDialog(win!, {
     title: "备份你的数据",
-    defaultPath: `独立老师工作台备份_${stamp}.db`,
+    defaultPath: `记一课备份_${stamp}.db`,
     filters: [{ name: "数据库备份", extensions: ["db"] }],
   });
   if (canceled || !filePath) return { ok: false as const, cancelled: true };
@@ -133,7 +132,7 @@ async function exportJSON(state: unknown) {
   const stamp = new Date().toISOString().slice(0, 10);
   const { canceled, filePath } = await dialog.showSaveDialog(win!, {
     title: "导出 JSON",
-    defaultPath: `独立老师工作台_${stamp}.json`,
+    defaultPath: `记一课_${stamp}.json`,
     filters: [{ name: "JSON", extensions: ["json"] }],
   });
   if (canceled || !filePath) return { ok: false as const, cancelled: true };
@@ -240,6 +239,9 @@ function accentHex(): string | null {
 
 /* ============================== 生命周期 ============================== */
 
+/* 必须在任何人读 userData 之前：钉住数据目录，并把旧目录搬过来 */
+const moved = setupUserData();
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -260,6 +262,7 @@ if (!app.requestSingleInstanceLock()) {
       app.exit(1);
       return;
     }
+    if (moved.movedFrom) console.log(`[datadir] 已从 ${moved.movedFrom} 搬到 ${app.getPath("userData")}`);
     wireIpc();
     buildMenu();
     createWindow();

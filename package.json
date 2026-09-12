@@ -1,0 +1,77 @@
+{
+  "name": "tutor-workspace",
+  "productName": "独立老师工作台",
+  "version": "1.0.0",
+  "description": "1对1辅导老师的学员课时 / 考勤 / 收支 / 招生工作台（本地 SQLite，数据不上传）",
+  "author": "Tim",
+  "license": "MIT",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "sync": "node scripts/sync-renderer.mjs",
+    "start": "npm run sync && electron .",
+    "dev": "npm run sync && electron . --enable-logging",
+    "pack": "npm run sync && electron-builder --dir",
+    "build:mac": "npm run sync && electron-builder --mac",
+    "build:win": "npm run sync && electron-builder --win",
+    "build:all": "npm run sync && electron-builder --mac --win",
+    "test": "node scripts/test-db.mjs",
+    "test:e2e": "npm run sync && electron scripts/test-e2e.js"
+  },
+  "devDependencies": {
+    "electron": "^43.4.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.tim.tutorworkspace",
+    "productName": "独立老师工作台",
+    "copyright": "Copyright © 2026 Tim",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "!**/*.map"
+    ],
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "${productName} ${version}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-安装包.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "独立老师工作台"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/timjinlun/tutor-workspace"
+  }
+}

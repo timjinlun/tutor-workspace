@@ -1,0 +1,6 @@
+node_modules/
+dist/
+renderer/index.html
+*.log
+.DS_Store
+renderer/fonts/

@@ -1,0 +1,64 @@
+# 推一个 v* tag，就同时用 macOS 和 Windows 的机器打包，产物挂到 Release 上。
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# 为什么必须用 CI：Mac 上打不出能正常安装的 Windows 包，Windows 上也打不出 .dmg。
+# 各自用自己平台的机器打，是唯一稳的做法。
+name: build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            script: build:mac
+          - os: windows-latest
+            script: build:win
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - run: npm run ${{ matrix.script }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 还没买证书之前，先关掉签名，让打包能跑通。
+          # 买了 Apple 证书之后：删掉这一行，改成把 .p12 放进 CSC_LINK / CSC_KEY_PASSWORD secrets。
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-installer
+          path: |
+            dist/*.dmg
+            dist/*.exe
+          if-no-files-found: warn
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/**/*
+          generate_release_notes: true

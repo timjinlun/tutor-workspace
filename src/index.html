@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="ledger">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>独立老师工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="font-plex" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link id="font-wenkai" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/style.css">
+<style>
+/* =====================================================================
+   独立老师工作台 · 视觉系统「点名册」
+   三个色相：纸/墨、青（主）、朱（印章与警示）。三种字体角色：
+   display 楷体（课本字）· num 衬线等宽数字（账本数）· ui 无衬线（一切说明）。
+   主题靠 data-theme 切 token，骨架不动。
+   ===================================================================== */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --paper:#F8F6F1; --sheet:#FFFEFB; --sheet-2:#F3F0E9; --sheet-3:#ECE8DF;
+  --rule:#E2DDD2; --rule-2:#EEEAE1;
+  --ink:#1B2430; --ink-2:#4B5563; --ink-3:#8B909A;
+  --qing:#1E5A6B; --qing-2:#E1EDEF; --qing-3:#174A58;
+  --zhu:#C2412C; --zhu-2:#F9E9E5;
+  --amber:#A66A12; --amber-2:#FAF0DC;
+  --stamp:var(--zhu); --stamp-text:"到";
+  --f-display:"LXGW WenKai Screen","Kaiti SC","STKaiti","KaiTi","Noto Serif SC",serif;
+  --f-num:"IBM Plex Serif","Songti SC","Noto Serif SC",Georgia,serif;
+  --f-ui:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",Inter,sans-serif;
+  --r:3px; --r-cell:2px;
+  --grid-alpha:.55;
+  --sp:1; /* density multiplier */
+  --spine-w:64px;
+  --shadow-modal:0 24px 60px rgba(27,36,48,.18);
+}
+:root[data-theme="slate"]{
+  --paper:#0F1216; --sheet:#151920; --sheet-2:#1B2027; --sheet-3:#222932;
+  --rule:#262C35; --rule-2:#1F252D;
+  --ink:#E6E9EF; --ink-2:#A9B1BE; --ink-3:#737C8A;
+  --qing:#E8A33D; --qing-2:rgba(232,163,61,.14); --qing-3:#D3922F;
+  --zhu:#E5574A; --zhu-2:rgba(229,87,74,.14);
+  --amber:#E8A33D; --amber-2:rgba(232,163,61,.12);
+  --stamp:var(--qing);
+  --grid-alpha:.22;
+  --shadow-modal:0 24px 60px rgba(0,0,0,.6);
+}
+:root[data-theme="clean"]{
+  --paper:#F5F7F6; --sheet:#FFFFFF; --sheet-2:#EEF2F0; --sheet-3:#E4EAE7;
+  --rule:#E1E7E4; --rule-2:#EDF1EF;
+  --ink:#16281F; --ink-2:#4A5D54; --ink-3:#8FA098;
+  --qing:#2D6A4F; --qing-2:#E4EFE9; --qing-3:#245740;
+  --zhu:#D9534F; --zhu-2:#FBE9E8;
+  --amber:#B7791F; --amber-2:#FBF1DD;
+  --stamp:var(--qing); --stamp-text:"";
+  --f-display:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC",sans-serif;
+  --r:8px; --r-cell:6px;
+  --grid-alpha:0;
+}
+:root[data-density="compact"]{--sp:.72}
+
+html{background:var(--paper)}
+body{
+  font-family:var(--f-ui);background:var(--paper);color:var(--ink);
+  line-height:1.5;-webkit-font-smoothing:antialiased;font-size:14px;
+  font-variant-numeric:tabular-nums;
+}
+/* 手帐格纸底纹：虚线格，交叉处成十字，静 */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    repeating-linear-gradient(0deg,transparent 0 3px,var(--rule-2) 3px 4px,transparent 4px 24px),
+    repeating-linear-gradient(90deg,transparent 0 3px,var(--rule-2) 3px 4px,transparent 4px 24px);
+  background-size:24px 24px;opacity:var(--grid-alpha);
+}
+::-webkit-scrollbar{height:8px;width:8px}::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px;border:2px solid var(--paper)}
+::selection{background:var(--qing-2)}
+input,select,button,textarea{font-family:inherit;color:inherit}
+button{cursor:pointer;transition:background .12s,border-color .12s,color .12s,transform .08s}
+button:active{transform:translateY(1px)}
+:focus-visible{outline:2px solid var(--qing);outline-offset:2px}
+code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--sheet-2);padding:1px 5px;border-radius:2px}
+.num,.kpi-value,.sum-val,.amt,td.sum,.stu-stats strong{font-family:var(--f-num);font-variant-numeric:tabular-nums lining-nums}
+
+/* ---------- 布局：书脊 + 主页 ---------- */
+.layout{display:flex;min-height:100vh;position:relative;z-index:1}
+.sidebar{
+  width:var(--spine-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow:visible;z-index:30;
+  background:var(--sheet-2);border-right:1px solid var(--rule);
+  display:flex;flex-direction:column;align-items:stretch;
+}
+.brand{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 0 12px}
+.brand-logo{
+  width:34px;height:34px;border-radius:50%;background:var(--stamp);color:var(--sheet);
+  display:flex;align-items:center;justify-content:center;font-family:var(--f-display);font-size:16px;
+  transform:rotate(-8deg);box-shadow:inset 0 0 0 1.5px var(--sheet),inset 0 0 0 2.5px var(--stamp);
+}
+.brand-name,.brand-sub{display:none}
+.nav{flex:1;display:flex;flex-direction:column;gap:6px;padding:6px 0 6px 10px;overflow:visible}
+.nav-more-wrap{position:relative;display:flex;justify-content:flex-end}
+.nav-flyout{position:absolute;left:calc(100% + 8px);top:0;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);box-shadow:var(--shadow-modal);padding:6px;min-width:150px;z-index:40;animation:sheet-in .12s ease-out}
+.nav-flyout::before{content:"";position:absolute;left:-6px;top:16px;width:10px;height:10px;background:var(--sheet);border-left:1px solid var(--rule);border-bottom:1px solid var(--rule);transform:rotate(45deg)}
+.nav-flyout button{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;border-radius:2px;font-size:13px;color:var(--ink-2);text-align:left;white-space:nowrap}
+.nav-flyout button svg{width:16px;height:16px;flex-shrink:0}
+.nav-flyout button:hover{background:var(--sheet-2);color:var(--qing)}
+.nav-flyout button.on{color:var(--qing);font-weight:600}
+.nav-badge.static{position:static;margin-left:auto;border:none;transform:none}
+.nav-item{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-display);font-size:14px;line-height:1;color:var(--ink-2);
+  background:var(--sheet);border:1px solid var(--rule);border-right:none;
+  border-radius:var(--r) 0 0 var(--r);padding:11px 0;width:44px;margin-left:auto;
+  transition:width .14s ease,background .12s,color .12s;
+}
+.nav-label{display:flex;flex-direction:column;align-items:center;gap:5px}
+.nav-label i{font-style:normal;display:block;line-height:1}
+.nav-item svg{display:none}
+.nav-item:hover{background:var(--qing-2);color:var(--qing-3);width:48px}
+.nav-item.active{background:var(--qing);color:var(--sheet);border-color:var(--qing);width:54px;font-weight:600}
+.nav-badge{
+  position:absolute;top:-5px;left:-5px;writing-mode:horizontal-tb;
+  background:var(--zhu);color:#fff;font-family:var(--f-num);font-size:10px;font-weight:600;
+  min-width:17px;height:17px;padding:0 4px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--sheet-2);letter-spacing:0;
+}
+.side-foot{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--ink-3);padding:10px 0 14px;line-height:1}
+.side-foot i{font-style:normal;display:block}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  display:flex;align-items:center;gap:12px;padding:calc(14px*var(--sp)) 22px;
+  background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:20;
+}
+.topbar h1{font-family:var(--f-display);font-size:21px;font-weight:600;letter-spacing:.02em;color:var(--ink)}
+.topbar .sub{font-size:12px;color:var(--ink-3)}
+.topbar-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.content{max-width:1180px;margin:0 auto;padding:calc(20px*var(--sp)) 22px 96px;width:100%}
+.bottom-nav{display:none}
+
+/* ---------- 纸张与分区 ---------- */
+.section{
+  background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);
+  padding:calc(18px*var(--sp)) calc(20px*var(--sp));margin-bottom:calc(16px*var(--sp));
+}
+.section-title{
+  font-family:var(--f-display);font-size:16px;font-weight:600;letter-spacing:.02em;
+  margin-bottom:calc(12px*var(--sp));display:flex;align-items:center;gap:8px;color:var(--ink);
+}
+.section-title::before{content:"";width:3px;height:14px;background:var(--qing);border-radius:1px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:calc(12px*var(--sp));gap:10px;flex-wrap:wrap}
+.section-head .section-title{margin-bottom:0}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:calc(12px*var(--sp))}
+.divider{border:none;border-top:1px dashed var(--rule);margin:calc(14px*var(--sp)) 0}
+.empty-state{
+  padding:28px;text-align:center;color:var(--ink-3);font-size:13px;
+  background:transparent;border-radius:var(--r);border:1px dashed var(--rule);font-family:var(--f-display);letter-spacing:.04em;
+}
+
+/* ---------- 按钮 ---------- */
+.btn{
+  padding:8px 14px;border-radius:var(--r);border:1px solid var(--qing);background:var(--qing);color:var(--sheet);
+  font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;line-height:1.2;letter-spacing:.01em;
+}
+.btn:hover{background:var(--qing-3);border-color:var(--qing-3)}
+.btn.ghost{background:var(--sheet);border-color:var(--rule);color:var(--ink-2)}
+.btn.ghost:hover{border-color:var(--qing);color:var(--qing);background:var(--sheet)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn.danger{background:var(--sheet);border-color:var(--zhu);color:var(--zhu)}
+.btn.danger:hover{background:var(--zhu-2)}
+.btn.warn{background:var(--sheet);border-color:var(--amber);color:var(--amber)}
+.btn.warn:hover{background:var(--amber-2)}
+.btn.green{background:var(--qing);border-color:var(--qing);color:var(--sheet)}
+.btn svg{width:14px;height:14px}
+
+/* ---------- KPI：账本汇总带 ---------- */
+.kpi-row{
+  display:flex;flex-wrap:wrap;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);
+  margin-bottom:calc(16px*var(--sp));overflow:hidden;
+}
+.kpi-card{
+  flex:1 1 150px;padding:calc(13px*var(--sp)) 18px;border-left:1px solid var(--rule-2);border-top:none;
+  background:transparent;box-shadow:none;border-radius:0;min-width:0;
+}
+.kpi-card:first-child{border-left:none}
+.kpi-label{font-size:11px;color:var(--ink-3);letter-spacing:.06em;margin-bottom:4px;white-space:nowrap}
+.kpi-value{font-size:24px;line-height:1.1;font-weight:500;color:var(--ink);white-space:nowrap}
+.kpi-value.qing{color:var(--qing)}.kpi-value.zhu{color:var(--zhu)}.kpi-value.amber{color:var(--amber)}
+.cur{font-weight:400;color:var(--ink-3);margin-right:1px;font-size:.78em}
+.kpi-unit{font-family:var(--f-ui);font-size:11px;font-weight:400;margin-left:3px;color:var(--ink-3)}
+
+/* ---------- 提示条：左侧一根色线，不铺大色块 ---------- */
+.tip-bar{
+  background:var(--sheet);border:1px solid var(--rule);border-left:3px solid var(--amber);color:var(--ink-2);
+  font-size:12.5px;padding:10px 14px;border-radius:var(--r);margin-bottom:calc(14px*var(--sp));line-height:1.55;
+}
+.tip-bar.red{border-left-color:var(--zhu)}
+.tip-bar.green{border-left-color:var(--qing)}
+.tip-bar b{color:var(--ink)}
+
+/* ---------- 标签 / 徽章 / 小片 ---------- */
+.badge{padding:2px 8px;border-radius:2px;font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid transparent}
+.badge-ok{background:var(--qing-2);color:var(--qing)}
+.badge-low{background:var(--amber-2);color:var(--amber)}
+.badge-danger{background:var(--zhu-2);color:var(--zhu)}
+.badge-done{background:var(--sheet-2);color:var(--ink-3)}
+.chip{font-size:11px;padding:3px 9px;border-radius:2px;font-weight:600;white-space:nowrap;border:1px solid var(--rule);background:var(--sheet);color:var(--ink-2)}
+.chip.red{border-color:var(--zhu);color:var(--zhu)}.chip.amber{border-color:var(--amber);color:var(--amber)}.chip.blue{border-color:var(--qing);color:var(--qing)}
+button.chip:hover{background:var(--sheet-2)}
+.tag{font-size:11px;padding:1px 7px;border-radius:2px;background:var(--sheet-2);color:var(--ink-2)}
+.tag.overdue{background:var(--zhu-2);color:var(--zhu)}
+.prio{padding:1px 6px;border-radius:2px;font-size:10.5px;font-weight:700;font-family:var(--f-num);letter-spacing:.04em}
+.prio-P0{background:var(--zhu);color:#fff}.prio-P1{background:var(--amber-2);color:var(--amber)}.prio-P2{background:var(--sheet-2);color:var(--ink-2)}
+.domain-badge{font-size:10px;padding:1px 6px;border-radius:2px;font-weight:600}
+.domain-公域{background:var(--qing-2);color:var(--qing)}.domain-私域{background:var(--amber-2);color:var(--amber)}
+
+/* ---------- 表单 ---------- */
+.fi{
+  width:100%;padding:9px 11px;border-radius:var(--r);border:1px solid var(--rule);font-size:14px;margin-bottom:10px;outline:none;
+  background:var(--sheet);color:var(--ink);transition:border-color .12s,box-shadow .12s;
+}
+.fi:hover{border-color:var(--ink-3)}
+.fi:focus{border-color:var(--qing);box-shadow:0 0 0 3px var(--qing-2)}
+.fi::placeholder{color:var(--ink-3)}
+select.fi{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:30px}
+.flabel{font-size:11.5px;color:var(--ink-2);margin-bottom:5px;display:block;font-weight:500;letter-spacing:.03em}
+.check-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.check-item{display:flex;align-items:center;gap:6px;padding:8px 11px;border:1px solid var(--rule);border-radius:var(--r);font-size:13px;cursor:pointer;background:var(--sheet);user-select:none}
+.check-item input{width:15px;height:15px;cursor:pointer;margin:0;accent-color:var(--qing)}
+.check-item:has(input:checked){border-color:var(--qing);background:var(--qing-2);color:var(--qing);font-weight:600}
+.color-input{height:40px;padding:3px}
+textarea.fi{line-height:1.5;resize:vertical}
+
+/* ---------- 弹窗 ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(27,36,48,.42);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px;backdrop-filter:blur(2px)}
+:root[data-theme="slate"] .modal-overlay{background:rgba(0,0,0,.6)}
+.modal-box{
+  background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:22px 24px;width:100%;max-width:440px;
+  box-shadow:var(--shadow-modal);max-height:90vh;overflow-y:auto;animation:sheet-in .16s ease-out;
+}
+.modal-box.wide{max-width:580px}
+.modal-title{font-family:var(--f-display);font-size:19px;font-weight:600;letter-spacing:.02em;margin-bottom:14px;padding-bottom:10px;border-bottom:1px dashed var(--rule)}
+.modal-actions{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+@keyframes sheet-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- 待办 ---------- */
+.todo-item{display:flex;align-items:flex-start;gap:12px;padding:calc(12px*var(--sp)) 14px;border:1px solid var(--rule);border-radius:var(--r);margin-bottom:8px;background:var(--sheet)}
+.todo-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--ink-3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--sheet);font-weight:700;margin-top:1px;cursor:pointer}
+.todo-check.on{background:var(--qing);border-color:var(--qing)}
+.todo-main{flex:1;min-width:0}
+.todo-title{font-size:14px;font-weight:600}
+.todo-title.done{text-decoration:line-through;text-decoration-color:var(--zhu);color:var(--ink-3)}
+.todo-meta{font-size:12px;color:var(--ink-3);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* ---------- 收支 ---------- */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;margin-bottom:calc(16px*var(--sp));background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.sum-card{background:transparent;border-radius:0;padding:13px 16px;box-shadow:none;border-left:1px solid var(--rule-2)}
+.sum-card:first-child{border-left:none}
+.sum-label{font-size:11px;color:var(--ink-3);letter-spacing:.06em}.sum-val{font-size:22px;font-weight:500;margin-top:4px;color:var(--ink)}
+.sum-val.green{color:var(--qing)}.sum-val.red{color:var(--zhu)}
+.legend-row{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);margin-bottom:5px}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:1px;flex-shrink:0}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.rec-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+.rec-row:last-child{border-bottom:none}
+.rec-row .amt{font-weight:600}.rec-row .amt.red{color:var(--zhu)}.rec-row .amt.green{color:var(--qing)}
+
+/* ---------- 招生看板 ---------- */
+.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.kcol{background:var(--sheet-2);border-radius:var(--r);padding:10px;min-height:120px;border:1px solid var(--rule-2)}
+.kcol-head{font-family:var(--f-display);font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;letter-spacing:.04em}
+.kcol-count{background:var(--sheet);border:1px solid var(--rule);border-radius:999px;padding:0 7px;font-size:11px;color:var(--ink-3);font-family:var(--f-num)}
+.lead-card{background:var(--sheet);border-radius:var(--r);padding:10px;margin-bottom:8px;border:1px solid var(--rule)}
+.lead-name{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
+.lead-line{font-size:12px;color:var(--ink-2);margin-top:3px}
+.lead-actions{display:flex;gap:4px;margin-top:8px}
+.lead-actions button{flex:1;padding:4px 0;font-size:11px;border-radius:2px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink-2)}
+.lead-actions button:hover{border-color:var(--qing);color:var(--qing)}
+.src-list{display:flex;flex-direction:column;gap:8px}
+.src-item{display:flex;align-items:center;gap:10px;font-size:13px}
+.src-bar{height:6px;background:var(--sheet-2);border-radius:1px;flex:1;overflow:hidden}
+.src-fill{height:100%;background:var(--qing)}
+
+/* ---------- 首页 ---------- */
+.today-card{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:16px 18px;margin-bottom:calc(14px*var(--sp))}
+.today-head{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-size:16px;font-weight:600;margin-bottom:8px;letter-spacing:.02em}
+.mini{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--rule-2);font-size:13.5px}
+.mini:last-child{border-bottom:none}
+.mini .ic{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-family:var(--f-display);border:1px solid currentColor;background:transparent!important}
+.mini .mc{flex:1;min-width:0}
+.mini .mt{font-weight:600}.mini .ms{font-size:12px;color:var(--ink-3)}
+
+/* ---------- 学员卡：像一张学员档案卡 ---------- */
+.stu-card{background:var(--sheet);border-radius:var(--r);padding:15px 16px;border:1px solid var(--rule);box-shadow:none;position:relative}
+.stu-name{font-family:var(--f-display);font-size:18px;font-weight:600;letter-spacing:.04em}
+.stu-course{font-size:12px;color:var(--ink-3);margin:2px 0 10px}
+.progress-wrap{height:4px;background:var(--sheet-3);border-radius:1px;overflow:hidden;margin-bottom:8px}
+.progress-bar{height:100%;background:var(--qing);border-radius:1px}
+.stu-stats{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);margin-bottom:3px}
+.stu-stats strong{font-size:13.5px;color:var(--ink)}
+.stu-note{margin-top:6px;padding:5px 9px;background:var(--sheet-2);border-left:2px solid var(--amber);font-size:11.5px;color:var(--ink-2);border-radius:0 2px 2px 0}
+.stu-actions{display:flex;gap:6px;margin-top:10px}
+
+/* ---------- 表格（通用） ---------- */
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{padding:8px 10px;text-align:left;border-bottom:1px solid var(--rule);color:var(--ink-3);font-weight:500;font-size:11.5px;letter-spacing:.04em;white-space:nowrap}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--rule-2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--sheet-2)}
+
+/* ---------- 考勤表：点名册 ---------- */
+.roll-head{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:calc(14px*var(--sp))}
+.roll-title{font-family:var(--f-display);font-size:20px;font-weight:600;letter-spacing:.06em;min-width:190px;text-align:center}
+.roll-wrap{overflow-x:auto;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r)}
+table.roll{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:100%}
+.roll th{position:sticky;top:0;background:var(--sheet);z-index:2;padding:7px 3px;text-align:center;border-bottom:1px solid var(--rule);font-weight:400;min-width:32px}
+.roll th .d{font-family:var(--f-num);font-size:12.5px;color:var(--ink-2);line-height:1.1}
+.roll th .w{font-size:9.5px;color:var(--ink-3);margin-top:2px;letter-spacing:.04em}
+.roll th.wk .d{color:var(--ink-3)}
+.roll th.wk,.roll td.wk{background:var(--sheet-2)}
+.roll th.today .d{color:var(--qing);font-weight:600}
+.roll th.today,.roll td.today{background:var(--qing-2)}
+.roll th.nm,.roll td.nm{position:sticky;left:0;z-index:3;text-align:left;padding-left:14px;min-width:82px;background:var(--sheet)}
+.roll th.cs,.roll td.cs{position:sticky;left:82px;z-index:3;text-align:left;min-width:56px;padding-right:10px;background:var(--sheet);border-right:2px solid var(--zhu);}
+:root[data-theme="clean"] .roll th.cs,:root[data-theme="clean"] .roll td.cs{border-right-color:var(--rule)}
+.roll th.nm,.roll th.cs{z-index:4}
+.roll td{padding:0;text-align:center;height:38px;border-bottom:1px solid var(--rule-2)}
+.roll td.nm{font-family:var(--f-display);font-size:15px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
+.roll td.cs{font-size:11px;color:var(--ink-3)}
+.roll td.sum{font-family:var(--f-num);font-weight:600;font-size:13.5px;color:var(--qing);min-width:44px}
+.roll td.fee{font-family:var(--f-num);font-size:12.5px;color:var(--ink-2);min-width:70px;padding-right:12px;text-align:right}
+.roll tr:hover td:not(.wk):not(.today){background:var(--sheet-2)}
+.roll tr:hover td.nm,.roll tr:hover td.cs{background:var(--sheet-2)}
+.cell{width:24px;height:24px;margin:0 auto;border:1px dashed var(--rule);border-radius:var(--r-cell);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:border-color .1s,background .1s}
+.cell:hover{border-style:solid;border-color:var(--qing);background:var(--sheet)}
+.cell.on{border:1.5px solid var(--stamp);border-radius:50%;color:var(--stamp);font-family:var(--f-display);font-size:12px;font-weight:600;
+  transform:rotate(-8deg);mix-blend-mode:multiply;
+  box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--stamp) 40%,transparent),inset 1px 1px 2px color-mix(in srgb,var(--stamp) 22%,transparent)}
+.cell.on::after{content:var(--stamp-text)}
+:root[data-theme="slate"] .cell.on{mix-blend-mode:normal}
+:root[data-theme="clean"] .cell.on{transform:none;background:var(--stamp);color:#fff;border-color:var(--stamp);box-shadow:none;font-family:var(--f-ui)}
+.cell.on:hover{border-color:var(--stamp);background:var(--zhu-2)}
+:root[data-theme="clean"] .cell.on:hover{background:var(--qing-3)}
+.cell.on.new{animation:stamp .18s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes stamp{from{transform:scale(1.6) rotate(-16deg);opacity:0}to{transform:scale(1) rotate(-8deg);opacity:1}}
+:root[data-theme="clean"] .cell.on.new{animation:stamp-flat .16s ease-out}
+@keyframes stamp-flat{from{transform:scale(1.4);opacity:0}to{transform:none;opacity:1}}
+.cell .n{position:absolute;top:-6px;right:-7px;background:var(--ink);color:var(--sheet);font-family:var(--f-num);font-size:9px;min-width:14px;height:14px;border-radius:999px;display:flex;align-items:center;justify-content:center;transform:rotate(8deg);letter-spacing:0}
+.cell-sub{font-family:var(--f-num);font-size:9.5px;color:var(--qing);margin-top:2px;text-align:center;line-height:1;white-space:nowrap}
+.roll-foot{font-size:12px;color:var(--ink-3);margin-top:10px;text-align:center}
+.roll-foot b{color:var(--ink-2);font-weight:600}
+
+/* ---------- 图表：账本语言（虚线格、实线基线、衬线数字） ---------- */
+.chart{display:block;font-family:var(--f-num);overflow:visible;max-width:100%}
+.c-grid{stroke:var(--rule);stroke-dasharray:2 3}
+.c-base{stroke:var(--rule)}
+.c-axis{font-size:9.5px;fill:var(--ink-3)}
+.c-val{font-size:10.5px;fill:var(--ink-2);font-weight:600}
+.c-lab{font-size:10px;fill:var(--ink-2);font-family:var(--f-ui)}
+.legend-row .num{font-family:var(--f-num)}
+
+/* ---------- 打卡复核弹窗里的记录 ---------- */
+.att-rec{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--rule);border-radius:var(--r);margin-bottom:8px;background:var(--sheet-2)}
+.att-rec .cell{margin:0;cursor:default}
+.att-rec .cell:hover{background:transparent}
+
+/* ---------- 外观设置 ---------- */
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.theme-opt{border:1px solid var(--rule);border-radius:var(--r);padding:10px;cursor:pointer;background:var(--sheet);display:flex;flex-direction:column;gap:8px}
+.theme-opt.on{border-color:var(--qing);box-shadow:0 0 0 2px var(--qing-2)}
+.theme-opt .sw{height:44px;border-radius:2px;display:flex;align-items:flex-end;gap:4px;padding:6px;border:1px solid rgba(0,0,0,.06)}
+.theme-opt .sw i{display:block;height:10px;flex:1;border-radius:1px}
+.theme-opt b{font-size:13px}.theme-opt span{font-size:11.5px;color:var(--ink-3)}
+
+
+/* ---------- 页内子标签：下划线式，像书页眉的分节 ---------- */
+.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin-bottom:calc(16px*var(--sp));overflow-x:auto;scrollbar-width:none}.subtabs::-webkit-scrollbar{display:none}
+.subtab{padding:9px 14px;font-size:13.5px;font-family:var(--f-display);letter-spacing:.06em;color:var(--ink-2);background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;border-radius:0}
+.subtab:hover{color:var(--qing)}.subtab.on{color:var(--qing);border-bottom-color:var(--qing);font-weight:600}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:980px){.two-col{grid-template-columns:1fr}.kanban{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){
+  .sidebar{display:none}
+  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--sheet);border-top:1px solid var(--rule);z-index:50;padding:6px 4px calc(6px + env(safe-area-inset-bottom));justify-content:flex-start;overflow-x:auto}
+  .bn-item{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink-3);font-size:10px;border:none;background:none;flex:0 0 auto;min-width:62px;font-family:var(--f-display)}
+  .bn-item svg{width:20px;height:20px}
+  .bn-item.active{color:var(--qing)}
+  .bn-badge{position:absolute;top:0;right:50%;transform:translateX(14px);background:var(--zhu);color:#fff;font-size:9px;border-radius:999px;padding:0 4px;min-width:14px}
+  .bn-wrap{position:relative}
+  .content{padding:14px 14px 96px}
+  .topbar{padding:12px 14px}
+  .topbar h1{font-size:18px}
+}
+@media(max-width:600px){.card-grid{grid-template-columns:1fr}.kanban{grid-template-columns:1fr}.sum-grid{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ============ 基础常量与工具（复用 v8） ============ */
+const KEY="tutor-workspace-v1";
+const TEACHER_COLORS=["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#14b8a6"];
+const STATUS_TEXT={pending:"待上课",done:"已完成",cancelled:"已取消"};
+const STAGES=["线索池","跟进中","试听","成交","流失"];
+const LEAD_SOURCES=["抖音","小红书","微信朋友圈","转介绍","大众点评","地推","其他"];
+const EXPENSE_CATS=["房租","广告投放","教材物料","交通","餐饮","平台佣金","其他"];
+const uid=()=>Math.random().toString(36).slice(2,10);
+const fmt=n=>(n<0?"−¥":"¥")+Math.abs(Math.round(n)).toLocaleString("zh-CN");
+const fmtH=n=>`<span class="cur">${n<0?"−¥":"¥"}</span>${Math.abs(Math.round(n)).toLocaleString("zh-CN")}`;
+const p2=n=>String(n).padStart(2,"0");
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const ds=(y,m,d)=>`${y}-${p2(m)}-${p2(d)}`;
+const dim=(y,m)=>new Date(y,m,0).getDate();
+const dn=(y,m,d)=>["日","一","二","三","四","五","六"][new Date(y,m-1,d).getDay()];
+const addDays=(date,n)=>{const d=new Date(date+"T00:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+const todayStr=()=>new Date().toISOString().slice(0,10);
+const statusLabel=s=>STATUS_TEXT[s]||"待上课";
+const studentCourseIds=st=>st&&Array.isArray(st.courseIds)&&st.courseIds.length?st.courseIds:(st&&st.courseId?[st.courseId]:[]);
+const primaryCourseId=sid=>{const st=typeof sid==="object"?sid:sm()[sid];return studentCourseIds(st)[0]||((S.courses[0]||{}).id||"");};
+const courseNames=st=>{const C=cm();return studentCourseIds(st).map(id=>C[id]?C[id].name:"").filter(Boolean).join(" / ")||"-";};
+const courseShort=st=>{const C=cm();return studentCourseIds(st).map(id=>((C[id]||{}).name||"").replace(/1对1辅导/g,"").slice(0,4)).filter(Boolean).join("/")||"-";};
+const courseOptions=sel=>{const set=new Set((Array.isArray(sel)?sel:[sel]).filter(Boolean));return S.courses.map(c=>`<option value="${c.id}"${set.has(c.id)?" selected":""}>${esc(c.name)}</option>`).join("");};
+const courseCheckList=(name,sel)=>{const set=new Set((Array.isArray(sel)?sel:[sel]).filter(Boolean));return`<div class="check-list" id="${name}">`+S.courses.map(c=>`<label class="check-item"><input type="checkbox" value="${c.id}"${set.has(c.id)?" checked":""}><span>${esc(c.name)}</span></label>`).join("")+`</div>`;};
+const checkedValues=id=>[...document.querySelectorAll("#"+id+" input[type=checkbox]:checked")].map(c=>c.value);
+const cm=()=>Object.fromEntries(S.courses.map(c=>[c.id,c]));
+const sm=()=>Object.fromEntries(S.students.map(s=>[s.id,s]));
+const tm=()=>Object.fromEntries((S.teachers||[]).map(t=>[t.id,t]));
+
+/* ============ 默认数据（v8 业务数据 + 新模块） ============ */
+const DD={courses:[{id:"c1",name:"数学1对1辅导",price:280},{id:"c2",name:"英语1对1辅导",price:260},{id:"c3",name:"语文1对1辅导",price:240},{id:"c4",name:"物理1对1辅导",price:300}],students:[{id:"s1",name:"张明",courseId:"c1",note:"赠送一节"},{id:"s2",name:"李华",courseId:"c2",note:"包含试听课"},{id:"s3",name:"王芳",courseId:"c3",note:"已结课"},{id:"s4",name:"刘洋",courseId:"c4",note:""},{id:"s5",name:"陈晨",courseId:"c1",note:""},{id:"s6",name:"赵雷",courseId:"c2",note:""}],payments:[{id:"p1",date:"2025-02-01",studentId:"s1",amount:5600,hours:20,note:""},{id:"p2",date:"2025-02-08",studentId:"s2",amount:7800,hours:30,note:"包含一节试听课"},{id:"p3",date:"2025-03-01",studentId:"s3",amount:2400,hours:10,note:""},{id:"p4",date:"2025-03-18",studentId:"s4",amount:7200,hours:24,note:""},{id:"p5",date:"2025-04-05",studentId:"s5",amount:4480,hours:16,note:""},{id:"p6",date:"2026-01-10",studentId:"s6",amount:3120,hours:12,note:""},{id:"p7",date:"2026-01-22",studentId:"s4",amount:3000,hours:10,note:"续费"}],attendance:{s1:{"2025-02-03":1,"2025-02-10":1,"2025-02-17":1,"2025-02-24":1,"2025-03-03":1,"2025-03-10":1,"2025-03-17":1,"2025-03-24":1,"2026-01-12":1,"2026-01-19":1,"2026-01-26":1,"2026-02-02":1},s2:{"2025-02-12":1,"2025-02-19":1,"2025-02-26":1,"2025-03-05":1,"2025-03-12":1,"2025-03-19":1,"2025-03-26":1,"2025-04-02":1,"2025-04-09":1,"2025-04-16":1,"2025-04-23":1,"2025-04-30":1,"2025-05-07":1,"2025-05-14":1,"2025-05-21":1,"2025-05-28":1,"2025-06-04":1,"2025-06-11":1,"2026-01-14":1,"2026-01-21":1,"2026-01-28":1,"2026-02-04":1,"2026-02-11":1,"2026-02-18":1,"2026-02-25":1,"2026-03-04":1,"2026-03-11":1},s3:{"2025-03-06":1,"2025-03-13":1,"2025-03-20":1,"2025-03-27":1,"2025-04-03":1,"2025-04-10":1,"2025-04-17":1,"2025-04-24":1,"2025-05-01":1,"2025-05-08":1},s4:{"2025-03-21":1,"2025-03-28":1,"2025-04-04":1,"2025-04-11":1,"2025-04-18":1,"2025-04-25":1,"2026-01-16":1,"2026-01-23":1,"2026-01-30":1},s5:{"2025-04-09":1,"2025-04-16":1,"2025-04-23":1,"2025-04-30":1,"2025-05-07":1,"2026-01-13":1,"2026-01-20":1},s6:{"2026-01-17":1,"2026-01-24":1,"2026-02-01":1,"2026-02-08":1,"2026-02-15":1,"2026-02-22":1,"2026-03-01":1,"2026-03-08":1}},teachers:[{id:"t1",name:"王老师",color:"#3b82f6",note:""}],schedules:[
+{id:"sc1",teacherId:"t1",studentId:"s2",courseId:"c2",date:"2025-05-14",time:"18:00",status:"done",note:""},
+{id:"sc2",teacherId:"t1",studentId:"s4",courseId:"c4",date:"2026-01-16",time:"19:00",status:"done",note:""}
+]};
+
+/* ============ 状态归一化 ============ */
+function normalizeS(d){
+  const n=JSON.parse(JSON.stringify(d||DD));
+  if(!Array.isArray(n.courses))n.courses=[];
+  n.courses=n.courses.map(c=>({...c,unitsPerSession:(typeof c.unitsPerSession==="number"&&c.unitsPerSession>0)?c.unitsPerSession:1}));
+  const firstCourseId=(n.courses[0]||{}).id||"";
+  if(!Array.isArray(n.students))n.students=[];
+  n.students=n.students.map(st=>{
+    const ids=Array.isArray(st.courseIds)&&st.courseIds.length?st.courseIds:(st.courseId?[st.courseId]:(firstCourseId?[firstCourseId]:[]));
+    return{...st,courseIds:[...new Set(ids.filter(Boolean))],courseId:ids[0]||""};
+  });
+  if(!n.attendance||typeof n.attendance!=="object")n.attendance={};
+  if(!Array.isArray(n.teachers))n.teachers=[{id:"t1",name:"王老师",color:"var(--qing)",note:""}];
+  if(!Array.isArray(n.schedules))n.schedules=[];
+  n.teachers=n.teachers.map((t,i)=>({id:t.id||uid(),name:t.name||`老师${i+1}`,color:t.color||TEACHER_COLORS[i%TEACHER_COLORS.length],note:t.note||""}));
+  n.schedules=n.schedules.map(sc=>{
+    const st=n.students.find(x=>x.id===sc.studentId);
+    const cid=sc.courseId||(st&&st.courseIds&&st.courseIds[0])||firstCourseId;
+    return{id:sc.id||uid(),teacherId:sc.teacherId||"",studentId:sc.studentId||"",courseId:cid||"",date:sc.date||"",time:sc.time||"",status:sc.status||"pending",note:sc.note||""};
+  });
+  const _pm=Object.fromEntries(n.courses.map(c=>[c.id,c.price]));
+  Object.keys(n.attendance).forEach(sid=>{const recs=n.attendance[sid];if(!recs||typeof recs!=="object")return;const st=n.students.find(s=>s.id===sid);const defc=(st&&st.courseIds&&st.courseIds[0])||((n.courses[0]||{}).id||"");Object.keys(recs).forEach(date=>{const v=recs[date];const arr=Array.isArray(v)?v:[v];const fixed=arr.map(x=>{if(x&&typeof x==="object"&&!Array.isArray(x)){const cid=x.courseId||defc;return(typeof x.price==="number")?{...x,courseId:cid}:{...x,courseId:cid,price:_pm[cid]||0};}const cid=defc;return{time:x||1,courseId:cid,price:_pm[cid]||0};});recs[date]=fixed.length>1?fixed:fixed[0];});});
+  if(!Array.isArray(n.todos))n.todos=[];
+  if(!Array.isArray(n.expenses))n.expenses=[];
+  if(!Array.isArray(n.otherIncomes))n.otherIncomes=[];
+  if(!Array.isArray(n.leads))n.leads=[];
+  if(!Array.isArray(n.materials))n.materials=[];
+  if(!Array.isArray(n.referralRewarded))n.referralRewarded=[];
+  if(!n.settings||typeof n.settings!=="object")n.settings={};
+  n.settings=Object.assign({teacherName:"王老师",lowBalanceThreshold:4,remindAheadClasses:2,referralRewardType:"课时",referralRewardValue:2,theme:"ledger",density:"cozy"},n.settings);
+  n.todos=n.todos.map(t=>({id:t.id||uid(),title:t.title||"",due:t.due||todayStr(),priority:t.priority||"P2",done:!!t.done,note:t.note||""}));
+  n.expenses=n.expenses.map(e=>({id:e.id||uid(),date:e.date||todayStr(),category:e.category||"其他",amount:Number(e.amount)||0,note:e.note||""}));
+  n.otherIncomes=n.otherIncomes.map(e=>({id:e.id||uid(),date:e.date||todayStr(),source:e.source||"其他",amount:Number(e.amount)||0,note:e.note||""}));
+  n.leads=n.leads.map(l=>({id:l.id||uid(),name:l.name||"",phone:l.phone||"",source:l.source||"其他",domain:l.domain==="私域"?"私域":"公域",stage:STAGES.includes(l.stage)?l.stage:"线索池",intent:Number(l.intent)||0,note:l.note||"",referrer:l.referrer||"",studentId:l.studentId||"",createdAt:l.createdAt||todayStr(),lastFollow:l.lastFollow||l.createdAt||todayStr()}));
+  n.materials=n.materials.map(m=>({id:m.id||uid(),title:m.title||"未命名",courseId:m.courseId||"",studentId:m.studentId||"",type:m.type||"其他",url:m.url||"",content:m.content||"",tags:m.tags||"",attachment:m.attachment||"",fileName:m.fileName||"",createdAt:m.createdAt||todayStr()}));
+  return n;
+}
+function seedState(){
+  const base=normalizeS(JSON.parse(JSON.stringify(DD)));
+  const t=todayStr();const d=n=>addDays(t,n);
+  base.todos=[
+    {id:uid(),title:"给李华家长发送续费提醒",due:d(-2),priority:"P1",done:false,note:"剩余课时不足，需充值"},
+    {id:uid(),title:"准备周末公开课课件",due:d(0),priority:"P0",done:false,note:""},
+    {id:uid(),title:"整理本月收支台账",due:d(1),priority:"P2",done:false,note:""},
+    {id:uid(),title:"回访上周试听家长",due:d(-6),priority:"P1",done:true,note:"已报名10课时"}
+  ];
+  base.leads=[
+    {id:uid(),name:"王女士",phone:"138****001",source:"小红书",domain:"公域",stage:"线索池",intent:12000,note:"孩子初二数学偏弱",createdAt:d(-10),lastFollow:d(-3)},
+    {id:uid(),name:"张先生",phone:"139****002",source:"转介绍",domain:"私域",stage:"跟进中",intent:9600,note:"朋友推荐，价格敏感",createdAt:d(-8),lastFollow:d(-1)},
+    {id:uid(),name:"刘同学",phone:"137****003",source:"抖音",domain:"公域",stage:"试听",intent:8000,note:"已约本周试听",createdAt:d(-5),lastFollow:d(0)},
+    {id:uid(),name:"陈妈妈",phone:"136****004",source:"微信朋友圈",domain:"私域",stage:"成交",intent:15000,note:"已报名20课时",createdAt:d(-20),lastFollow:d(-2)},
+    {id:uid(),name:"赵先生",phone:"135****005",source:"大众点评",domain:"公域",stage:"流失",intent:6000,note:"对比后选择别家",createdAt:d(-15),lastFollow:d(-7)}
+  ];
+  base.expenses=[
+    {id:uid(),date:d(-20),category:"广告投放",amount:1200,note:"小红书信息流"},
+    {id:uid(),date:d(-12),category:"教材物料",amount:320,note:"打印讲义"},
+    {id:uid(),date:d(-3),category:"交通",amount:150,note:"上门陪练车费"}
+  ];
+  base.otherIncomes=[{id:uid(),date:d(-15),source:"资料售卖",amount:500,note:"冲刺讲义"}];
+  base.materials=[
+    {id:uid(),title:"初二数学期中复习提纲",courseId:"c1",studentId:"",type:"教案",url:"",content:"1. 二次函数图像与性质\n2. 圆与相似三角形\n3. 近三次错题回顾",tags:"期中,复习",attachment:"",fileName:"",createdAt:d(-5)},
+    {id:uid(),title:"英语口语常见话题卡",courseId:"c2",studentId:"",type:"课件",url:"",content:"自我介绍 / 兴趣爱好 / 校园生活 三大话题句型模板",tags:"口语,模板",attachment:"",fileName:"",createdAt:d(-3)},
+    {id:uid(),title:"李华专属错题本",courseId:"c2",studentId:"s2",type:"笔记",url:"",content:"1. 时态混淆：一般过去 vs 现在完成\n2. 介词搭配错误合集",tags:"错题",attachment:"",fileName:"",createdAt:d(-2)}
+  ];
+  base.referralRewarded=[];
+  return base;
+}
+/* ============ 持久层（双模式） ============
+   桌面 App 里（Electron）走 window.TWDB → SQLite 数据库文件；
+   直接用浏览器打开这个 HTML 时，退回原来的 localStorage。
+   两种模式下 S 的形状完全一样，所以上面所有 UI 代码都不用管自己跑在哪。 */
+const APP=(typeof window!=="undefined")&&!!window.TWDB;
+let _saveTimer=null,_savePending=false,_saveErr="";
+function scheduleSave(){
+  _savePending=true;
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(flushSave,120);
+}
+function flushSave(){
+  _saveTimer=null;
+  if(!_savePending)return Promise.resolve();
+  _savePending=false;
+  const snap=JSON.parse(JSON.stringify(S));
+  return window.TWDB.save(snap).then(r=>{
+    if(r&&r.ok){if(_saveErr){_saveErr="";re();}}
+    else{_saveErr=(r&&r.error)||"未知错误";re();}
+  }).catch(e=>{_saveErr=String(e&&e.message?e.message:e);re();});
+}
+function loadS(){
+  if(APP){
+    try{const p=window.TWDB.loadSync();if(p&&Array.isArray(p.students)&&p.students.length)return normalizeS(p);}
+    catch(e){console.error("读取数据库失败",e);}
+    return seedState();
+  }
+  try{const v=localStorage.getItem(KEY);if(v){const p=JSON.parse(v);if(p&&p.students)return normalizeS(p);}}catch(e){}
+  return seedState();
+}
+let S=loadS();
+let UI={view:"home",tab:0,calY:new Date().getFullYear(),calM:new Date().getMonth()+1,modal:null,moreOpen:false,schTeacher:"all",schStudent:"all",todoFilter:"active",recruitDomain:"all",libType:"all",libStu:"all"};
+function saveS(){if(APP){scheduleSave();return;}localStorage.setItem(KEY,JSON.stringify(S));maybeAutoBackup();}
+function ss(ns){S=normalizeS(ns);saveS();re();}
+function su(p){UI={...UI,...p};re();}
+/* 外观：主题 / 密度 都挂在 <html> 上，CSS token 跟着切 */
+function applyAppearance(){const h=document.documentElement;const st=(S&&S.settings)||{};h.dataset.theme=["ledger","slate","clean"].includes(st.theme)?st.theme:"ledger";if(st.density==="compact")h.dataset.density="compact";else delete h.dataset.density;}
+
+/* ============ v8 课时计算函数 ============ */
+function normAttRecord(sid,v){if(v&&typeof v==="object"&&!Array.isArray(v))return{time:v.time||1,courseId:v.courseId||primaryCourseId(sid),price:(typeof v.price==="number")?v.price:undefined,units:(typeof v.units==="number"&&v.units>0?v.units:1),scheduleId:v.scheduleId||"",markedAt:v.markedAt||""};return{time:v||1,courseId:primaryCourseId(sid),price:undefined,units:1,scheduleId:"",markedAt:""};}
+function attendanceRecords(sid,dt){const v=(S.attendance[sid]||{})[dt];if(!v)return[];return(Array.isArray(v)?v:[v]).map(x=>normAttRecord(sid,x));}
+function allAttendanceRecords(sid){return Object.keys(S.attendance[sid]||{}).flatMap(date=>attendanceRecords(sid,date).map(r=>({date,...r})));}
+function ah(sid,dt){return attendanceRecords(sid,dt).length>0;}
+function coursePrice(cid){const c=cm()[cid];return(c&&c.price)||0;}
+function courseUnits(cid){const c=cm()[cid];return(c&&typeof c.unitsPerSession==="number"&&c.unitsPerSession>0)?c.unitsPerSession:1;}
+function recordUnits(r){return(r&&typeof r.units==="number"&&r.units>0)?r.units:1;}
+function recordCourseId(sid,r){return(r&&r.courseId)||primaryCourseId(sid);}
+function recordFee(sid,r){const base=(r&&typeof r.price==="number")?r.price:coursePrice(recordCourseId(sid,r));return base*recordUnits(r);}
+function tl(sid){return allAttendanceRecords(sid).reduce((a,r)=>a+recordUnits(r),0);}
+function tp(sid){return S.payments.filter(p=>p.studentId===sid).reduce((a,p)=>a+p.amount,0);}
+function tb(sid){return S.payments.filter(p=>p.studentId===sid).reduce((a,p)=>a+p.hours,0);}
+function uf(sid){return allAttendanceRecords(sid).reduce((a,r)=>a+recordFee(sid,r),0);}
+function ml(y,m,sid){return allAttendanceRecords(sid).filter(r=>{const[dy,dm]=r.date.split("-").map(Number);return dy===y&&dm===m;}).reduce((a,r)=>a+recordUnits(r),0);}
+function mf(y,m,sid){return allAttendanceRecords(sid).filter(r=>{const[dy,dm]=r.date.split("-").map(Number);return dy===y&&dm===m;}).reduce((a,r)=>a+recordFee(sid,r),0);}
+function yl(sid,y){return allAttendanceRecords(sid).filter(r=>r.date.startsWith(String(y))).length;}
+function yf(sid,y){return allAttendanceRecords(sid).filter(r=>r.date.startsWith(String(y))).reduce((a,r)=>a+recordFee(sid,r),0);}
+function yp(y){return S.payments.filter(p=>p.date.startsWith(String(y))).reduce((a,p)=>a+p.amount,0);}
+
+/* ============ v8 课时变更函数 ============ */
+/* 打卡只新增，不做 toggle 删除；删除必须走 removeAttendanceRecord（二次确认流程） */
+function setAttendance(sid,date,time,courseId,units){const a={...S.attendance};const r={...(a[sid]||{})};if(r[date]){alert("该日期已有打卡记录。已确认的打卡不能直接改，请点已打卡的格子申请取消。");return false;}const cid=courseId||primaryCourseId(sid);const u=(typeof units==="number"&&units>0)?units:courseUnits(cid);r[date]={time:time||1,courseId:cid,price:coursePrice(cid),units:u,markedAt:new Date().toISOString()};a[sid]=r;UI.lastStamp=sid+"|"+date;setTimeout(()=>{UI.lastStamp=null;},400);ss({...S,attendance:a});return true;}
+/* 唯一的打卡删除入口：只能由考勤复核弹窗的二次确认调用 */
+function removeAttendanceRecord(sid,date,idx){
+  const recs=attendanceRecords(sid,date);const target=recs[idx];if(!target)return false;
+  const rest=recs.filter((_,i)=>i!==idx);
+  const a={...S.attendance},r={...(a[sid]||{})};
+  if(rest.length===0)delete r[date];else r[date]=rest.length>1?rest:rest[0];
+  a[sid]=r;
+  /* 由排课「完成」生成的打卡被取消时，把那节排课退回「待上课」，避免课表和课时对不上 */
+  let scs=S.schedules||[];
+  if(target.scheduleId)scs=scs.map(x=>x.id===target.scheduleId?{...x,status:"pending"}:x);
+  ss({...S,attendance:a,schedules:scs});return true;
+}
+function addAttendance(sid,date,time,courseId,scheduleId,units){const _cid=courseId||primaryCourseId(sid);const a={...S.attendance},r={...(a[sid]||{})},next={time:time||1,courseId:_cid,price:coursePrice(_cid),units:(typeof units==="number"&&units>0)?units:courseUnits(_cid),scheduleId:scheduleId||"",markedAt:new Date().toISOString()};const old=attendanceRecords(sid,date);if(old.some(x=>(scheduleId&&x.scheduleId===scheduleId)||((x.time||1)===(next.time||1)&&recordCourseId(sid,x)===next.courseId))){alert("该学员当天同课程同时间已有考勤记录");return false;}r[date]=old.length?[...old,next]:next;a[sid]=r;S={...S,attendance:a};return true;}
+function addStu(d){ss({...S,students:[...S.students,{id:uid(),...d,courseId:(d.courseIds||[])[0]||""}]});}
+function delStu(sid){if(!confirm("确定删除该学员？"))return;const a={...S.attendance};delete a[sid];ss({...S,students:S.students.filter(s=>s.id!==sid),payments:S.payments.filter(p=>p.studentId!==sid),attendance:a,schedules:(S.schedules||[]).filter(x=>x.studentId!==sid)});}
+function updStu(sid,d){ss({...S,students:S.students.map(s=>s.id===sid?{...s,...d,courseId:(d.courseIds||[])[0]||s.courseId}:s)});}
+function addPay(d){ss({...S,payments:[...S.payments,{id:uid(),...d}]});}
+function delPay(pid){if(confirm("确定删除？"))ss({...S,payments:S.payments.filter(p=>p.id!==pid)});}
+function updPay(pid,d){ss({...S,payments:S.payments.map(p=>p.id===pid?{...p,...d}:p)});}
+function addCou(d){ss({...S,courses:[...S.courses,{id:uid(),...d}]});}
+function delCou(cid){if(S.students.some(s=>studentCourseIds(s).includes(cid))){alert("该课程下还有学员");return;}ss({...S,courses:S.courses.filter(c=>c.id!==cid)});}
+function updCou(cid,d){ss({...S,courses:S.courses.map(c=>c.id===cid?{...c,...d}:c)});}
+function addTeacher(d){ss({...S,teachers:[...(S.teachers||[]),{id:uid(),...d}]});}
+function updTeacher(tid,d){ss({...S,teachers:(S.teachers||[]).map(t=>t.id===tid?{...t,...d}:t)});}
+function delTeacher(tid){if((S.schedules||[]).some(sc=>sc.teacherId===tid)){alert("该老师已有排课记录，不能删除");return;}if(confirm("确定删除该老师？"))ss({...S,teachers:(S.teachers||[]).filter(t=>t.id!==tid)});}
+function conflict(sc,ignoreId){return(S.schedules||[]).find(x=>x.id!==ignoreId&&x.status!=="cancelled"&&x.date===sc.date&&x.time===sc.time&&(x.teacherId===sc.teacherId||x.studentId===sc.studentId));}
+function conflictMsg(c,sc){const T=tm(),M=sm();if(!c)return"";if(c.teacherId===sc.teacherId)return`${T[sc.teacherId]?T[sc.teacherId].name:"该老师"} 在 ${sc.date} ${sc.time} 已有排课`;return`${M[sc.studentId]?M[sc.studentId].name:"该学员"} 在 ${sc.date} ${sc.time} 已有排课`;}
+function addScheduleList(list){ss({...S,schedules:[...(S.schedules||[]),...list.map(x=>({id:uid(),status:"pending",note:"",...x}))]});}
+function updSchedule(id,d){ss({...S,schedules:(S.schedules||[]).map(sc=>sc.id===id?{...sc,...d}:sc)});}
+function delSchedule(id){if(confirm("确定删除该排课？"))ss({...S,schedules:(S.schedules||[]).filter(sc=>sc.id!==id)});}
+function completeSchedule(id){const sc=(S.schedules||[]).find(x=>x.id===id);if(!sc)return;if(!addAttendance(sc.studentId,sc.date,sc.time||1,sc.courseId,id,courseUnits(sc.courseId)))return;updSchedule(id,{status:"done"});}
+
+/* ============ 备份 / 导入 / CSV ============ */
+let _fileHandle=null,_pendingHandle=null,_fsaBusy=false,_fsaPending=false;
+const FSA_OK=(typeof window!=="undefined")&&!!window.showSaveFilePicker;
+function backupPayload(){return JSON.stringify({version:5,exportedAt:new Date().toISOString(),data:normalizeS(S)},null,2);}
+function idbGet(){return new Promise(res=>{try{const o=indexedDB.open("tutor-ws",1);o.onupgradeneeded=()=>o.result.createObjectStore("kv");o.onsuccess=()=>{try{const t=o.result.transaction("kv","readonly").objectStore("kv").get("h");t.onsuccess=()=>res(t.result||null);t.onerror=()=>res(null);}catch(e){res(null);}};o.onerror=()=>res(null);}catch(e){res(null);}});}
+function idbSet(v){return new Promise(res=>{try{const o=indexedDB.open("tutor-ws",1);o.onupgradeneeded=()=>o.result.createObjectStore("kv");o.onsuccess=()=>{try{const t=o.result.transaction("kv","readwrite");t.objectStore("kv").put(v,"h");t.oncomplete=()=>res(true);t.onerror=()=>res(false);}catch(e){res(false);}};o.onerror=()=>res(false);}catch(e){res(false);}});}
+async function writeBoundFile(){if(!_fileHandle)return;if(_fsaBusy){_fsaPending=true;return;}_fsaBusy=true;try{const w=await _fileHandle.createWritable();await w.write(backupPayload());await w.close();}catch(e){} _fsaBusy=false;if(_fsaPending){_fsaPending=false;writeBoundFile();}}
+async function bindNewFile(){if(!FSA_OK){alert("当前浏览器不支持绑定本地文件，请用电脑版 Chrome 或 Edge");return;}try{_fileHandle=await window.showSaveFilePicker({suggestedName:"工作台数据.json",types:[{description:"JSON 数据",accept:{"application/json":[".json"]}}]});await writeBoundFile();await idbSet(_fileHandle);su({modal:null});alert("已绑定！以后每次修改都会自动写入这个文件。");}catch(e){if(e&&e.name!=="AbortError")alert("绑定失败："+(e.message||e));}}
+async function bindOpenFile(){if(!FSA_OK){alert("当前浏览器不支持绑定本地文件，请用电脑版 Chrome 或 Edge");return;}try{const arr=await window.showOpenFilePicker({types:[{description:"JSON 数据",accept:{"application/json":[".json"]}}]});const h=arr[0];const f=await h.getFile();const raw=JSON.parse(await f.text());const ns=normalizeS(raw.data||raw);if(!confirm("将用该文件数据替换当前数据，并绑定它，继续？"))return;_fileHandle=h;await idbSet(h);ss(ns);su({modal:null});alert("已载入并绑定该数据文件。");}catch(e){if(e&&e.name!=="AbortError")alert("打开失败："+(e.message||e));}}
+async function tryRestoreHandle(){if(!FSA_OK)return;const h=await idbGet();if(!h)return;try{const p=await h.queryPermission({mode:"readwrite"});if(p==="granted"){_fileHandle=h;const f=await h.getFile();const raw=JSON.parse(await f.text());ss(normalizeS(raw.data||raw));}else{_pendingHandle=h;su({});}}catch(e){}}
+async function reconnectHandle(){if(!_pendingHandle)return;try{const p=await _pendingHandle.requestPermission({mode:"readwrite"});if(p==="granted"){_fileHandle=_pendingHandle;_pendingHandle=null;const f=await _fileHandle.getFile();const raw=JSON.parse(await f.text());ss(normalizeS(raw.data||raw));}}catch(e){}}
+function maybeAutoBackup(){if(_fileHandle)return;try{const today=todayStr();if(localStorage.getItem("ws-last-backup")===today)return;localStorage.setItem("ws-last-backup",today);const blob=new Blob([backupPayload()],{type:"application/json;charset=utf-8;"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="工作台数据_自动备份_"+today+".json";a.click();}catch(e){}}
+function exportData(){const blob=new Blob([backupPayload()],{type:"application/json;charset=utf-8;"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`工作台数据_${todayStr()}.json`;a.click();}
+function importData(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const raw=JSON.parse(reader.result);const ns=normalizeS(raw.data||raw);if(!Array.isArray(ns.students)||!Array.isArray(ns.courses))throw new Error("shape");if(!confirm("导入数据会覆盖当前全部记录，确定继续？"))return;_fileHandle=null;ss(ns);alert("数据导入完成");}catch(e){alert("导入失败：请选择有效的工作台 JSON 数据文件");}};reader.readAsText(file,"utf-8");}
+function exportCSV(){
+  const C=cm(),M=sm(),T=tm();let w="\uFEFF【学员课时总览】\n姓名,课程,单价,购买课时,已上课时,剩余课时,累计缴费,确认收入,备注\n";
+  S.students.forEach(st=>{const ids=studentCourseIds(st);const prices=ids.map(id=>(C[id]||{}).price||0).join("/");const b=tb(st.id);const l=tl(st.id);w+=`${st.name},${courseNames(st)},${prices},${b},${l},${b-l},${tp(st.id)},${uf(st.id)},${st.note||""}\n`;});
+  w+="\n【缴费记录】\n日期,学员,课程,金额,课时,备注\n";
+  [...S.payments].sort((a,b)=>a.date.localeCompare(b.date)).forEach(p=>{const st=M[p.studentId];w+=`${p.date},${st?st.name:"已删除"},${st?courseNames(st):""},${p.amount},${p.hours},${p.note||""}\n`;});
+  w+="\n【考勤明细】\n学员,课程,日期,时间,课时\n";
+  S.students.forEach(st=>{Object.keys(S.attendance[st.id]||{}).sort().forEach(d=>{attendanceRecords(st.id,d).forEach(r=>{const c=C[recordCourseId(st.id,r)];w+=`${st.name},${c?c.name:""},${d},${r.time&&r.time!==1?r.time:""},${recordUnits(r)}\n`;});});});
+  const blob=new Blob([w],{type:"text/csv;charset=utf-8;"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`课时统计_${todayStr()}.csv`;a.click();
+}
+function exportFinanceCSV(){
+  let w="\uFEFF【收入-课时】\n日期,学员,金额,课时,备注\n";
+  [...S.payments].sort((a,b)=>a.date.localeCompare(b.date)).forEach(p=>{const st=sm()[p.studentId];w+=`${p.date},${st?st.name:"已删除"},${p.amount},${p.hours},${p.note||""}\n`;});
+  w+="\n【收入-其他】\n日期,来源,金额,备注\n";
+  [...S.otherIncomes].sort((a,b)=>a.date.localeCompare(b.date)).forEach(p=>{w+=`${p.date},${p.source},${p.amount},${p.note||""}\n`;});
+  w+="\n【支出】\n日期,分类,金额,备注\n";
+  [...S.expenses].sort((a,b)=>a.date.localeCompare(b.date)).forEach(p=>{w+=`${p.date},${p.category},${p.amount},${p.note||""}\n`;});
+  const blob=new Blob([w],{type:"text/csv;charset=utf-8;"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`收支明细_${todayStr()}.csv`;a.click();
+}
+function exportLeadCSV(){
+  let w="\uFEFF姓名,电话,来源,域,阶段,意向金额,备注,创建日期,最后跟进\n";
+  S.leads.forEach(l=>{w+=`${l.name},${l.phone},${l.source},${l.domain},${l.stage},${l.intent},${l.note||""},${l.createdAt},${l.lastFollow}\n`;});
+  const blob=new Blob([w],{type:"text/csv;charset=utf-8;"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`招生线索_${todayStr()}.csv`;a.click();
+}
+
+/* ============ 余额预警 ============ */
+function lowBalanceStudents(){
+  const th=S.settings.lowBalanceThreshold,ahead=S.settings.remindAheadClasses;
+  return S.students.map(s=>{const r=tb(s.id)-tl(s.id);return{s,remaining:r};})
+    .filter(x=>x.remaining<=th+ahead)
+    .map(x=>{const th=S.settings.lowBalanceThreshold;let level="normal";if(x.remaining<=th)level="danger";else if(x.remaining<=th+ahead)level="warn";return{...x,level};})
+    .sort((a,b)=>a.remaining-b.remaining);
+}
+function rechargeText(sid){
+  const st=sm()[sid];const r=tb(sid)-tl(sid);const name=S.settings.teacherName;
+  return`【续费提醒】${st.name}家长您好，我是${name}。孩子目前剩余课时 ${r} 课时，即将用完，建议尽快续费以免打断学习节奏～如需续费随时联系我😊`;
+}
+
+/* ============ 视图：课时统计（完整复用 v8） ============ */
+function rOverview(){
+  const C=cm();
+  const totP=S.payments.reduce((a,p)=>a+p.amount,0);
+  const totF=S.students.reduce((a,s)=>a+uf(s.id),0);
+  const totL=S.students.reduce((a,s)=>a+tl(s.id),0);
+  const active=S.students.filter(s=>tb(s.id)-tl(s.id)>0).length;
+  const y25f=S.students.reduce((a,s)=>a+yf(s.id,2025),0);
+  const y26f=S.students.reduce((a,s)=>a+yf(s.id,2026),0);
+  const y25l=S.students.reduce((a,s)=>a+yl(s.id,2025),0);
+  const y26l=S.students.reduce((a,s)=>a+yl(s.id,2026),0);
+  const bars=[];
+  for(let yr=2025;yr<=2026;yr++)for(let mo=1;mo<=12;mo++){let tot=S.students.reduce((a,s)=>a+ml(yr,mo,s.id),0);if(tot>0)bars.push({label:yr===2026?`26/${mo}月`:`${mo}月`,l:tot,y:yr});}
+  const mx=Math.max(...bars.map(b=>b.l),1);
+  const rows=S.students.map(s=>{
+    const ids=studentCourseIds(s);const prices=ids.map(id=>(C[id]||{}).price||0).join("/");const b=tb(s.id);const l=tl(s.id);const r=b-l;
+    const low=r>0&&r<=3;const done=r<=0&&b>0;
+    return`<tr style="${done?"opacity:.5":""}">
+      <td><strong>${s.name}</strong></td><td>${courseNames(s)}</td><td>${prices||"-"}</td>
+      <td>${b}课时</td><td>${l}课时</td>
+      <td style="color:${low?"var(--zhu)":done?"var(--ink-3)":"var(--qing)"};font-weight:600">${r}课时${low?" ":""}</td>
+      <td>${fmt(tp(s.id))}</td><td>${fmt(uf(s.id))}</td>
+      <td><span class="badge ${done?"badge-done":low?"badge-low":"badge-ok"}">${done?"已结课":low?"即将用完":"进行中"}</span></td>
+    </tr>`;}).join("");
+  const bh=(()=>{if(!bars.length)return'<div class="empty-state">还没有打卡记录，盖第一个章之后这里会出现趋势</div>';
+    const n=bars.length,cw=46,pl=36,pr=12,pt=22,pb=30,H=210,W=pl+pr+n*cw,ch=H-pt-pb;
+    let g="";for(let i=1;i<=3;i++){const y=pt+ch-i/3*ch;g+=`<line x1="${pl}" y1="${y.toFixed(1)}" x2="${W-pr}" y2="${y.toFixed(1)}" class="c-grid"/><text x="${pl-6}" y="${(y+3).toFixed(1)}" class="c-axis" text-anchor="end">${Math.round(mx*i/3)}</text>`;}
+    g+=`<line x1="${pl}" y1="${pt+ch}" x2="${W-pr}" y2="${pt+ch}" class="c-base"/>`;
+    const bb=bars.map((x,i)=>{const h=x.l/mx*ch,cx=pl+cw*i+cw/2,bw=14;return`<rect x="${cx-bw/2}" y="${(pt+ch-h).toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" rx="1" fill="${x.y===2026?"var(--qing)":"var(--ink-3)"}"/><text x="${cx}" y="${(pt+ch-h-5).toFixed(1)}" class="c-val" text-anchor="middle">${x.l}</text><text x="${cx}" y="${H-10}" class="c-lab" text-anchor="middle">${x.label}</text>`;}).join("");
+    return`<div style="overflow-x:auto"><svg class="chart" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${g}${bb}</svg></div>`;})();
+  return`<div class="kpi-row">
+    ${[{l:"活跃学员",v:active+"<span class='kpi-unit'>人</span>",c:"var(--qing)"},{l:"总到账收入",v:fmtH(totP),c:"var(--qing)"},{l:"总确认收入",v:fmtH(totF),c:"var(--amber)"},{l:"总课时",v:totL+"<span class='kpi-unit'>课时</span>",c:"var(--qing)"}]
+      .map(k=>`<div class="kpi-card" style="border-top-color:${k.c}"><div class="kpi-label">${k.l}</div><div class="kpi-value" style="color:${k.c}">${k.v}</div></div>`).join("")}
+  </div>
+  <div class="section"><div class="section-title">年度对比</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="border-radius:10px;padding:16px 18px;background:linear-gradient(135deg,var(--qing-2),var(--qing-2));border:1px solid var(--qing-2)"><div style="font-weight:700;margin-bottom:8px">2025年</div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:var(--ink-2)"><span>确认收入</span><strong>${fmt(y25f)}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:var(--ink-2)"><span>到账收入</span><strong>${fmt(yp(2025))}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:var(--ink-2)"><span>总课时</span><strong>${y25l} 课时</strong></div></div>
+      <div style="border-radius:10px;padding:16px 18px;background:linear-gradient(135deg,var(--qing-2),var(--qing-2));border:1px solid var(--qing-2)"><div style="font-weight:700;margin-bottom:8px">2026年</div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:var(--ink-2)"><span>确认收入</span><strong>${fmt(y26f)}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:var(--ink-2)"><span>到账收入</span><strong>${fmt(yp(2026))}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;color:var(--ink-2)"><span>总课时</span><strong>${y26l} 课时</strong></div></div>
+    </div></div>
+  <div class="section"><div class="section-title">学员课时概览</div>
+    <div style="overflow-x:auto"><table class="tbl">
+      <thead><tr>${["姓名","课程","单价","购买课时","已上课时","剩余","累计缴费","确认收入","状态"].map(h=>`<th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--rule);color:var(--ink-2);font-weight:600;font-size:12px">${h}</th>`).join("")}</tr></thead>
+      <tbody>${rows}</tbody></table></div></div>
+  <div class="section"><div class="section-title">月度课时趋势</div>
+    ${bh}
+    <div style="display:flex;gap:18px;justify-content:center;margin-top:6px;font-size:12px;color:var(--ink-2)"><span><span class="legend-dot" style="background:var(--ink-3)"></span>2025年</span><span><span class="legend-dot" style="background:var(--qing)"></span>2026年</span></div></div>`;
+}
+function rAtt(){
+  const{calY:Y,calM:M}=UI;const days=dim(Y,M);const C=cm();const today=todayStr();
+  const colCls=i=>{const d=ds(Y,M,i+1);const wd=new Date(Y,M-1,i+1).getDay();return[d===today?"today":"",(wd===0||wd===6)?"wk":""].filter(Boolean).join(" ");};
+  const srows=S.students.filter(s=>studentCourseIds(s).some(id=>C[id])).map(s=>{
+    const cells=Array.from({length:days},(_,i)=>{
+      const d=ds(Y,M,i+1);const rr=attendanceRecords(s.id,d);const has=rr.length>0;
+      const sub=has?rr.map(x=>[recordUnits(x)!==1?recordUnits(x):"",(rr.length===1&&x.time&&x.time!==1)?x.time:""].filter(Boolean).join("·")).filter(Boolean).join("/"):"";
+      const fresh=UI.lastStamp===s.id+"|"+d?" new":"";
+      return`<td class="${colCls(i)}"><div class="cell${has?" on"+fresh:""}" data-action="att" data-sid="${s.id}" data-date="${d}" title="${has?"已确认打卡 · 点击查看，需二次确认才能取消":"点击打卡"}">${rr.length>1?`<span class="n">${rr.length}</span>`:""}</div>${sub?`<div class="cell-sub">${sub}</div>`:""}</td>`;}).join("");
+    return`<tr><td class="nm">${esc(s.name)}</td><td class="cs">${courseShort(s)}</td>${cells}<td class="sum">${ml(Y,M,s.id)}</td><td class="fee">${fmt(mf(Y,M,s.id))}</td></tr>`;}).join("");
+  const hd=Array.from({length:days},(_,i)=>`<th class="${colCls(i)}"><div class="d">${i+1}</div><div class="w">${dn(Y,M,i+1)}</div></th>`).join("");
+  return`<div class="roll-head"><button class="btn sm ghost" data-action="cprev" aria-label="上个月">‹</button><span class="roll-title">${Y}年${M}月 考勤表</span><button class="btn sm ghost" data-action="cnext" aria-label="下个月">›</button></div>
+  <div class="roll-wrap"><table class="roll"><thead><tr><th class="nm">学员</th><th class="cs">课程</th>${hd}<th>课时</th><th>费用</th></tr></thead><tbody>${srows||`<tr><td colspan="${days+4}" style="padding:24px"><div class="empty-state">还没有学员，先去「学员」添加</div></td></tr>`}</tbody></table></div>
+  <div class="roll-foot">点空格打卡，可设本次消耗几个课时。<b>盖了章的格子是锁定的</b>，点它只会打开明细，再次确认才能取消。</div>`;
+}
+function rSchedule(){
+  const{calY:Y,calM:M}=UI,T=tm(),SM=sm();
+  const tOpts=`<option value="all">全部老师</option>`+(S.teachers||[]).map(t=>`<option value="${t.id}"${UI.schTeacher===t.id?" selected":""}>${esc(t.name)}</option>`).join("");
+  const sOpts=`<option value="all">全部学员</option>`+S.students.map(s=>`<option value="${s.id}"${UI.schStudent===s.id?" selected":""}>${esc(s.name)}</option>`).join("");
+  const first=new Date(Y,M-1,1).getDay(),days=dim(Y,M),cells=[];
+  for(let i=0;i<first;i++)cells.push(`<div style="min-height:110px;background:var(--sheet-2);border:1px solid var(--rule)"></div>`);
+  for(let d=1;d<=days;d++){
+    const date=ds(Y,M,d);
+    const items=(S.schedules||[]).filter(sc=>sc.date===date&&(UI.schTeacher==="all"||sc.teacherId===UI.schTeacher)&&(UI.schStudent==="all"||sc.studentId===UI.schStudent)).sort((a,b)=>a.time.localeCompare(b.time));
+    const pills=items.map(sc=>{const t=T[sc.teacherId],st=SM[sc.studentId];const color=t?t.color:"var(--qing)";const c=cm()[sc.courseId];return`<div data-action="edit-schedule" data-sid="${sc.id}" style="border:1px solid var(--rule);border-left:4px solid ${color};border-radius:7px;background:var(--sheet);padding:5px 6px;font-size:11px;line-height:1.25;color:var(--ink);cursor:pointer;box-shadow:0 1px 2px #0000000a;${sc.status==="done"?"opacity:.58;background:var(--sheet-2)":""}${sc.status==="cancelled"?"opacity:.42;background:var(--sheet-2);text-decoration:line-through":""}"><strong>${esc(sc.time)}</strong>${esc(st?st.name:"已删除")}<small style="display:block;color:var(--ink-2);margin-top:1px">${esc(t?t.name:"已删除")} · ${esc(c?c.name:"")} · ${statusLabel(sc.status)}</small></div>`;}).join("");
+    cells.push(`<div style="min-height:110px;background:var(--sheet);padding:6px;display:flex;flex-direction:column;gap:5px;border:1px solid var(--rule)"><div style="font-size:12px;font-weight:700;color:var(--ink-3)">${d} · 周${dn(Y,M,d)}</div>${pills}</div>`);
+  }
+  const stats={pending:0,done:0,cancelled:0};(S.schedules||[]).forEach(sc=>{if(sc.date.startsWith(`${Y}-${p2(M)}`))stats[sc.status]=(stats[sc.status]||0)+1;});
+  return`<div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:14px">
+    <button class="btn sm" data-action="cprev">◀</button><span style="font-size:17px;font-weight:700">${Y}年${M}月 排课日历</span><button class="btn sm" data-action="cnext">▶</button></div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <select class="fi" data-action="filter-teacher" style="width:auto;min-width:130px;margin:0">${tOpts}</select>
+    <select class="fi" data-action="filter-student" style="width:auto;min-width:130px;margin:0">${sOpts}</select>
+    <span class="badge badge-ok">待上课 ${stats.pending||0}</span><span class="badge badge-low">已完成 ${stats.done||0}</span><span class="badge badge-done">已取消 ${stats.cancelled||0}</span>
+    <button class="btn" data-action="add-schedule" style="margin-left:auto">+ 新增排课</button></div>
+  <div style="display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+    ${["日","一","二","三","四","五","六"].map(x=>`<div style="background:var(--sheet-2);color:var(--ink-2);font-size:12px;font-weight:700;text-align:center;padding:8px">周${x}</div>`).join("")}${cells.join("")}</div>
+  <div style="font-size:12px;color:var(--ink-3);margin-top:10px">点击日历里的课程可编辑；标记完成后才会进入现有考勤与课时统计</div>`;
+}
+function rStuCards(){
+  const cards=S.students.map(s=>{
+    const b=tb(s.id);const l=tl(s.id);const r=b-l;
+    const pct=b>0?Math.min(l/b*100,100):0;
+    const low=lowBalanceStudents().find(x=>x.s.id===s.id);
+    const warn=low?`<div class="stu-note" style="background:${low.level==="danger"?"var(--zhu-2)":"var(--amber-2)"};color:${low.level==="danger"?"var(--zhu)":"var(--amber)"}">${low.level==="danger"?"余额不足，建议提醒充值":"课时即将用完，请关注"}（剩 ${r} 课时）</div>`:"";
+    return`<div class="stu-card">
+      <div class="stu-name">${s.name}</div><div class="stu-course">${courseNames(s)}</div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <div class="stu-stats"><span>已上 <strong>${l}</strong>/${b}课时</span><span>剩余 <strong style="color:${r<=3?"var(--zhu)":"var(--qing)"}">${r}</strong>课时</span></div>
+      <div class="stu-stats"><span>累计缴费 ${fmt(tp(s.id))}</span><span>确认收入 ${fmt(uf(s.id))}</span></div>
+      ${s.note?`<div class="stu-note">${s.note}</div>`:""}${warn}
+      <div class="stu-actions">
+        <button class="btn sm" data-action="recharge" data-sid="${s.id}">提醒充值</button>
+        <button class="btn sm ghost" data-action="share-student" data-sid="${s.id}">分享页</button>
+        <button class="btn sm ghost" data-action="editstu" data-sid="${s.id}">编辑</button>
+        <button class="btn sm danger" data-action="delstu" data-sid="${s.id}">删除</button>
+      </div></div>`;}).join("");
+  return`<div class="section-head"><div class="section-title">学员列表（${S.students.length}）</div><button class="btn" data-action="addstu">+ 添加学员</button></div><div class="card-grid">${cards}</div>`;
+}
+function rTeachers(){
+  const cards=(S.teachers||[]).map(t=>{const count=(S.schedules||[]).filter(sc=>sc.teacherId===t.id).length;return`<div class="stu-card">
+    <div style="display:flex;align-items:center;gap:10px"><span style="width:14px;height:14px;border-radius:50%;background:${t.color};box-shadow:0 0 0 3px var(--sheet-2)"></span><div class="stu-name">${esc(t.name)}</div></div>
+    ${t.note?`<div class="stu-course">${esc(t.note)}</div>`:""}
+    <div class="stu-stats"><span>已排课 ${count} 节</span></div>
+    <div class="stu-actions"><button class="btn sm ghost" data-action="edit-teacher" data-tid="${t.id}">编辑</button><button class="btn sm danger" data-action="del-teacher" data-tid="${t.id}">删除</button></div></div>`;}).join("");
+  return`<div class="section-head"><div class="section-title">老师管理</div><button class="btn" data-action="add-teacher">+ 添加老师</button></div>${cards?`<div class="card-grid">${cards}</div>`:`<div class="empty-state">暂无老师，先添加老师后再排课</div>`}`;
+}
+function rPay(){
+  const M=sm();
+  const rows=[...S.payments].sort((a,b)=>b.date.localeCompare(a.date)).map(p=>{const st=M[p.studentId];return`<tr><td>${p.date}</td><td><strong>${st?st.name:"已删除"}</strong></td><td>${st?courseNames(st):"-"}</td>
+    <td style="color:var(--qing);font-weight:600">${fmt(p.amount)}</td><td>${p.hours}课时</td>
+    <td style="color:var(--ink-3);font-size:12px">${p.note||"-"}</td><td><button class="btn sm danger" data-action="delpay" data-pid="${p.id}">删除</button></td></tr>`;}).join("");
+  return`<div class="section-head"><div class="section-title">缴费记录</div><button class="btn" data-action="addpay">+ 添加缴费</button></div>
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr>${["日期","学员","课程","金额","课时","备注","操作"].map(h=>`<th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--rule);color:var(--ink-2);font-weight:600;font-size:12px">${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>
+  <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:14px;padding:12px 0;border-top:1px solid var(--sheet-2);font-size:13px;color:var(--ink-2)">2025年到账: <strong>${fmt(yp(2025))}</strong><span>2026年到账: <strong>${fmt(yp(2026))}</strong></span><span>总到账: <strong>${fmt(S.payments.reduce((a,p)=>a+p.amount,0))}</strong></span></div>`;
+}
+function rCou(){
+  const cards=S.courses.map(c=>`<div class="stu-card"><div class="stu-name">${c.name}</div>
+    <div style="font-size:24px;font-weight:700;color:var(--qing);margin:6px 0">${fmt(c.price)}<span style="font-size:13px;color:var(--ink-3)">/课时</span></div>
+    <div style="font-size:12px;color:var(--ink-3);margin-bottom:10px">每节课 = ${c.unitsPerSession||1} 课时</div>
+    <div class="stu-actions"><button class="btn sm ghost" data-action="editprice" data-cid="${c.id}" data-price="${c.price}">改价</button><button class="btn sm ghost" data-action="editunits" data-cid="${c.id}" data-units="${c.unitsPerSession||1}">改课时</button><button class="btn sm danger" data-action="delcou" data-cid="${c.id}">删除</button></div></div>`).join("");
+  return`<div class="section-head"><div class="section-title">课程设置</div><button class="btn" data-action="addcou">+ 添加课程</button></div><div class="card-grid">${cards}</div><div style="font-size:12px;color:var(--ink-3);margin-top:12px">改价只影响之后新打卡的课时；已统计的确认收入按打卡当时的单价锁定</div>`;
+}
+const TABS=["总览","排课日历","考勤打卡","学员管理","老师管理","缴费记录","课程设置"];
+function rHours(){
+  const contents=[rOverview,rSchedule,rAtt,rStuCards,rTeachers,rPay,rCou];
+  const tabs=TABS.map((t,i)=>`<button class="subtab${UI.tab===i?" on":""}" data-action="tab" data-idx="${i}">${t}</button>`).join("");
+  return`<div class="subtabs">${tabs}</div><div>${contents[UI.tab]()}</div>`;
+}
+
+/* ============ 视图：工作台首页（今日要处理） ============ */
+function rHome(){
+  const t=todayStr();
+  const over=S.todos.filter(x=>!x.done&&x.due<t);
+  const todayTodos=S.todos.filter(x=>!x.done&&x.due===t);
+  const todaySched=(S.schedules||[]).filter(sc=>sc.date===t&&sc.status!=="cancelled").sort((a,b)=>a.time.localeCompare(b.time));
+  const low=lowBalanceStudents();
+  const active=S.students.filter(s=>tb(s.id)-tl(s.id)>0).length;
+  const m=t.slice(0,7);
+  const mInc=S.payments.filter(p=>p.date.startsWith(m)).reduce((a,p)=>a+p.amount,0)+S.otherIncomes.filter(p=>p.date.startsWith(m)).reduce((a,p)=>a+p.amount,0);
+  const mExp=S.expenses.filter(p=>p.date.startsWith(m)).reduce((a,p)=>a+p.amount,0);
+  const todoActive=S.todos.filter(x=>!x.done).length;
+  const leadActive=S.leads.filter(l=>l.stage!=="成交"&&l.stage!=="流失").length;
+  const stats=[{l:"活跃学员",v:active,vc:"var(--qing)"},{l:"本月收入",v:fmtH(mInc),vc:"var(--qing)"},{l:"本月净收入",v:fmtH(mInc-mExp),vc:"var(--amber)"},{l:"待办事项",v:todoActive,vc:"var(--qing)"},{l:"活跃线索",v:leadActive,vc:"var(--zhu)"}];
+  let todayHtml="";
+  if(!over.length&&!todayTodos.length&&!todaySched.length&&!low.length){
+    todayHtml=`<div class="empty-state">今天没有要处理的事，安排得不错</div>`;
+  } else {
+    over.forEach(x=>todayHtml+=`<div class="mini"><div class="ic" style="background:var(--zhu-2);color:var(--zhu)">!</div><div class="mc"><div class="mt">${esc(x.title)}</div><div class="ms">逾期待办，截止 ${x.due}</div></div><button class="chip red" data-action="todo-done" data-id="${x.id}">完成</button></div>`);
+    todayTodos.forEach(x=>todayHtml+=`<div class="mini"><div class="ic" style="background:var(--qing-2);color:var(--qing-3)"></div><div class="mc"><div class="mt">${esc(x.title)}</div><div class="ms">今日待办 ${x.priority}级</div></div><button class="chip blue" data-action="todo-done" data-id="${x.id}">完成</button></div>`);
+    todaySched.forEach(sc=>{const st=sm()[sc.studentId],te=tm()[sc.teacherId],c=cm()[sc.courseId];todayHtml+=`<div class="mini"><div class="ic" style="background:var(--qing-2);color:var(--qing)">课</div><div class="mc"><div class="mt">${sc.time} ${esc(st?st.name:"")} ${esc(c?c.name:"")}</div><div class="ms">${esc(te?te.name:"")} ${statusLabel(sc.status)}</div></div><button class="chip blue" data-action="edit-schedule" data-sid="${sc.id}">详情</button></div>`;});
+    low.forEach(x=>{const lvl=x.level==="danger"?"red":"amber";const bg=x.level==="danger"?"var(--zhu-2)":"var(--amber-2)";const fg=x.level==="danger"?"var(--zhu)":"var(--amber)";todayHtml+=`<div class="mini"><div class="ic" style="background:${bg};color:${fg}">余</div><div class="mc"><div class="mt">${esc(x.s.name)} 课时将尽</div><div class="ms">剩余 ${x.remaining} 课时${x.level==="danger"?" 需充值":""}</div></div><button class="chip ${lvl}" data-action="recharge" data-sid="${x.s.id}">提醒</button></div>`;});
+  }
+  const handleCount=over.length+todayTodos.length+todaySched.length+low.length;
+  return`<div class="kpi-row">${stats.map(k=>`<div class="kpi-card"><div class="kpi-label">${k.l}</div><div class="kpi-value" style="color:${k.vc}">${k.v}</div></div>`).join("")}</div>
+  <div class="today-card"><div class="today-head">今日要处理 <span class="chip red" style="margin-left:6px">${handleCount} 项</span></div>${todayHtml}</div>
+  <div class="section-head"><div class="section-title">余额预警（阈值 ${S.settings.lowBalanceThreshold} 课时）</div><button class="btn sm ghost" data-action="nav" data-view="settings">调整阈值</button></div>
+  ${low.length?`<div class="card-grid">${low.map(x=>`<div class="stu-card"><div class="stu-name">${esc(x.s.name)}</div><div class="stu-course">${courseNames(x.s)}</div><div style="margin:6px 0"><span class="badge ${x.level==="danger"?"badge-danger":"badge-low"}">剩余 ${x.remaining} 课时</span></div><div class="stu-actions"><button class="btn sm" data-action="recharge" data-sid="${x.s.id}">生成续费提醒</button><button class="btn sm ghost" data-action="editstu" data-sid="${x.s.id}">详情</button></div></div>`).join("")}</div>`:`<div class="empty-state">所有学员课时充足</div>`}`;
+}
+
+/* ============ 视图：学员管理 ============ */
+function rStudents(){
+  const low=lowBalanceStudents();
+  const warnBanner=low.length?`<div class="tip-bar red">有 ${low.filter(x=>x.level==="danger").length} 名学员余额不足、${low.length} 名即将用完，请尽快提醒充值。</div>`:`<div class="tip-bar green">全部学员课时充足</div>`;
+  return warnBanner+rStuCards();
+}
+
+/* ============ 视图：日历排课 ============ */
+function rCalendar(){return rSchedule();}
+
+/* ============ 视图：今日待办 ============ */
+function rTodo(){
+  const t=todayStr();
+  const list=S.todos.slice().sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;if(a.due!==b.due)return a.due<b.due?-1:1;return 0;});
+  const filtered=UI.todoFilter==="all"?list:UI.todoFilter==="done"?list.filter(x=>x.done):list.filter(x=>!x.done);
+  const filterBtns=[["active","进行中"],["done","已完成"],["all","全部"]].map(([k,n])=>`<button class="btn sm ${UI.todoFilter===k?"":"ghost"}" data-action="todo-filter" data-f="${k}">${n}</button>`).join("");
+  const items=filtered.map(x=>{
+    const overdue=!x.done&&x.due<t;
+    return`<div class="todo-item">
+      <div class="todo-check ${x.done?"on":""}" data-action="todo-done" data-id="${x.id}" style="cursor:pointer">${x.done?"":""}</div>
+      <div class="todo-main"><div class="todo-title ${x.done?"done":""}">${esc(x.title)}</div>
+        <div class="todo-meta"><span class="prio prio-${x.priority}">${x.priority}</span>
+        <span class="tag ${overdue?"overdue":""}">${overdue?"逾期 "+x.due:x.due}</span>
+        ${x.note?`<span class="tag">${esc(x.note)}</span>`:""}</div></div>
+      <button class="btn sm ghost" data-action="edit-todo" data-id="${x.id}">编辑</button>
+      <button class="btn sm danger" data-action="del-todo" data-id="${x.id}">×</button></div>`;}).join("");
+  return`<div class="section-head"><div class="section-title">今日待办清单（${S.todos.filter(x=>!x.done).length} 项未完成）</div><button class="btn" data-action="add-todo">+ 新建待办</button></div>
+  <div style="display:flex;gap:6px;margin-bottom:12px">${filterBtns}</div>
+  ${filtered.length?items:`<div class="empty-state">暂无待办</div>`}`;
+}
+
+/* ============ 视图：收支管理 ============ */
+function svgMonthlyFinance(){
+  const months=[];const now=new Date();
+  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({m:d.getMonth()+1,key:`${d.getFullYear()}-${p2(d.getMonth()+1)}`});}
+  const data=months.map(mo=>{
+    const inc=S.payments.filter(p=>p.date.startsWith(mo.key)).reduce((a,p)=>a+p.amount,0)+S.otherIncomes.filter(p=>p.date.startsWith(mo.key)).reduce((a,p)=>a+p.amount,0);
+    const exp=S.expenses.filter(p=>p.date.startsWith(mo.key)).reduce((a,p)=>a+p.amount,0);
+    return{label:mo.m+"月",inc,exp};
+  });
+  const mx=Math.max(1,...data.map(d=>Math.max(d.inc,d.exp)));
+  const W=580,H=210,pl=42,pr=10,pt=10,pb=26;const cw=W-pl-pr,ch=H-pt-pb;const n=data.length;const groupW=cw/n;const bw=Math.min(13,groupW/3);
+  if(!data.some(d=>d.inc||d.exp))return'<div class="empty-state">近 6 个月还没有收支记录</div>';
+  let grid="",bars="",labels="";
+  for(let g=0;g<=4;g++){const y=pt+ch-g/4*ch;const val=Math.round(mx*g/4);grid+=`<line x1="${pl}" y1="${y}" x2="${W-pr}" y2="${y}" class="c-grid"/><text x="${pl-6}" y="${y+4}" class="c-axis" text-anchor="end">${val>=1000?(val/1000)+"k":val}</text>`;}
+  data.forEach((d,i)=>{const gx=pl+groupW*i+groupW/2;const ih=d.inc/mx*ch,eh=d.exp/mx*ch;const x1=gx-bw-2,x2=gx+2;
+    bars+=`<rect x="${x1}" y="${pt+ch-ih}" width="${bw}" height="${ih}" rx="1" fill="var(--qing)"/>`;
+    bars+=`<rect x="${x2}" y="${pt+ch-eh}" width="${bw}" height="${eh}" rx="1" fill="var(--zhu)"/>`;
+    labels+=`<text x="${gx}" y="${H-9}" class="c-lab" text-anchor="middle">${d.label}</text>`;});
+  grid+=`<line x1="${pl}" y1="${pt+ch}" x2="${W-pr}" y2="${pt+ch}" class="c-base"/>`;
+  return`<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">${grid}${bars}${labels}</svg><div style="display:flex;gap:18px;justify-content:center;margin-top:4px;font-size:12px;color:var(--ink-2)"><span><span class="legend-dot" style="background:var(--qing)"></span>收入</span><span><span class="legend-dot" style="background:var(--zhu);margin-left:12px"></span>支出</span></div>`;
+}
+function svgPieExpense(){
+  const cat={};S.expenses.forEach(e=>cat[e.category]=(cat[e.category]||0)+e.amount);
+  const entries=Object.entries(cat).filter(([k,v])=>v>0);const total=entries.reduce((a,[,v])=>a+v,0);
+  if(total===0)return'<div class="empty-state">暂无支出记录</div>';
+  const colors=["#1E5A6B","#A66A12","#C2412C","#5B7A5E","#7A6A8C","#8B909A","#B08968"];
+  const cx=90,cy=90,r=62,sw=20,C=2*Math.PI*r;let off=0,segs="";
+  entries.forEach(([k,v],i)=>{const len=v/total*C;const vis=entries.length>1?Math.max(0,len-2.5):len;segs+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors[i%colors.length]}" stroke-width="${sw}" stroke-dasharray="${vis.toFixed(2)} ${(C-vis).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;off+=len;});
+  const legend=entries.map(([k,v],i)=>`<div class="legend-row"><span class="legend-dot" style="background:${colors[i%colors.length]}"></span><span style="flex:1">${esc(k)}</span><span class="num" style="color:var(--ink)">${fmt(v)}</span><span style="color:var(--ink-3);width:40px;text-align:right" class="num">${Math.round(v/total*100)}%</span></div>`).join("");
+  return`<div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap"><svg class="chart" width="180" height="180" viewBox="0 0 180 180">${segs}<text x="90" y="85" text-anchor="middle" class="c-axis">支出合计</text><text x="90" y="104" text-anchor="middle" style="font-size:15px;font-weight:600;fill:var(--ink)">${fmt(total)}</text></svg><div style="min-width:220px">${legend}</div></div>`;
+}
+function rFinance(){
+  const t=todayStr().slice(0,7);
+  const lessonInc=S.payments.reduce((a,p)=>a+p.amount,0);
+  const otherInc=S.otherIncomes.reduce((a,p)=>a+p.amount,0);
+  const totalInc=lessonInc+otherInc;
+  const totalExp=S.expenses.reduce((a,p)=>a+p.amount,0);
+  const mInc=S.payments.filter(p=>p.date.startsWith(t)).reduce((a,p)=>a+p.amount,0)+S.otherIncomes.filter(p=>p.date.startsWith(t)).reduce((a,p)=>a+p.amount,0);
+  const mExp=S.expenses.filter(p=>p.date.startsWith(t)).reduce((a,p)=>a+p.amount,0);
+  const sums=[{l:"本月收入",v:fmtH(mInc),c:"var(--qing)"},{l:"本月支出",v:fmtH(mExp),c:"var(--zhu)"},{l:"本月净收入",v:fmtH(mInc-mExp),c:"var(--amber)"},{l:"累计收入",v:fmtH(totalInc),c:"var(--qing)"},{l:"累计支出",v:fmtH(totalExp),c:"var(--qing)"}];
+  const expRows=[...S.expenses].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<div class="rec-row"><div><div style="font-weight:600">${e.category}</div><div style="font-size:12px;color:var(--ink-3)">${e.date}${e.note?" · "+esc(e.note):""}</div></div><div class="amt red">-${fmt(e.amount)}</div><button class="btn sm danger" data-action="del-expense" data-id="${e.id}">×</button></div>`).join("");
+  const incRows=[...S.otherIncomes].sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`<div class="rec-row"><div><div style="font-weight:600">${e.source}</div><div style="font-size:12px;color:var(--ink-3)">${e.date}${e.note?" · "+esc(e.note):""}</div></div><div class="amt green">+${fmt(e.amount)}</div><button class="btn sm danger" data-action="del-income" data-id="${e.id}">×</button></div>`).join("");
+  return`<div class="sum-grid">${sums.map(k=>`<div class="sum-card"><div class="sum-label">${k.l}</div><div class="sum-val" style="color:${k.c}">${k.v}</div></div>`).join("")}</div>
+  <div class="section"><div class="section-title">近 6 个月收支对比</div>${svgMonthlyFinance()}</div>
+  <div class="two-col">
+    <div class="section"><div class="section-head"><div class="section-title">支出分类占比</div></div>${svgPieExpense()}<button class="btn sm" data-action="add-expense" style="margin-top:12px">+ 记一笔支出</button></div>
+    <div class="section"><div class="section-title">课时收入（来自缴费）</div><div style="font-size:13px;color:var(--ink-2);margin-bottom:8px">共 ${fmt(lessonInc)}，详见「课时统计」缴费记录</div><div class="section-title" style="font-size:13px;margin-top:6px">其他收入</div>${incRows||'<div class="empty-state">暂无其他收入</div>'}<button class="btn sm" data-action="add-income" style="margin-top:10px">+ 记一笔其他收入</button></div>
+  </div>
+  <div class="section"><div class="section-head"><div class="section-title">支出明细</div><button class="btn sm" data-action="add-expense">+ 支出</button></div>${expRows||'<div class="empty-state">暂无支出记录</div>'}</div>`;
+}
+
+/* ============ 视图：招生面板 ============ */
+function rRecruit(){
+  const t=todayStr().slice(0,7);
+  const total=S.leads.length;
+  const monthNew=S.leads.filter(l=>l.createdAt.startsWith(t)).length;
+  const won=S.leads.filter(l=>l.stage==="成交");
+  const wonAmt=won.reduce((a,l)=>a+l.intent,0);
+  const convRate=total?Math.round(won.length/total*100):0;
+  const gong=S.leads.filter(l=>l.domain==="公域").length;
+  const si=S.leads.filter(l=>l.domain==="私域").length;
+  const stats=[{l:"总线索",v:total,vc:"var(--qing)"},{l:"本月新增",v:monthNew,vc:"var(--qing)"},{l:"成交率",v:convRate+"%",vc:"var(--qing)"},{l:"成交金额",v:fmtH(wonAmt),vc:"var(--amber)"},{l:"公域/私域",v:gong+"/"+si,vc:"var(--zhu)"}];
+  const filtered=S.leads.filter(l=>UI.recruitDomain==="all"||l.domain===UI.recruitDomain);
+  const cols=STAGES.map(stage=>{
+    const items=filtered.filter(l=>l.stage===stage);
+    return`<div class="kcol"><div class="kcol-head"><span>${stage}</span><span class="kcol-count">${items.length}</span></div>
+      ${items.map(l=>{const idx=STAGES.indexOf(l.stage);        return`<div class="lead-card">
+        <div class="lead-name">${esc(l.name)} <span class="domain-badge domain-${l.domain}">${l.domain}</span>${l.studentId?`<span class="domain-badge" style="background:var(--qing-2);color:var(--qing)">已建学员</span>`:""}</div>
+        <div class="lead-line">${l.source} · ${l.phone}</div>
+        <div class="lead-line">意向 ${fmt(l.intent)}</div>
+        ${l.referrer?`<div class="lead-line" style="color:var(--qing)">推荐人：${esc(l.referrer)}</div>`:""}
+        ${l.note?`<div class="lead-line" style="color:var(--ink-3)">${esc(l.note)}</div>`:""}
+        <div class="lead-actions">
+          ${idx>0?`<button data-action="move-lead" data-id="${l.id}" data-dir="-1">←</button>`:""}
+          ${idx<STAGES.length-1?`<button data-action="move-lead" data-id="${l.id}" data-dir="1">→</button>`:""}
+          ${l.stage!=="成交"&&l.stage!=="流失"?`<button data-action="lead-trial" data-id="${l.id}" title="建学员并排试听课">试听排课</button><button data-action="lead-convert" data-id="${l.id}" title="建学员并开成交单">成交建单</button>`:""}
+          <button data-action="edit-lead" data-id="${l.id}">编辑</button>
+          <button data-action="del-lead" data-id="${l.id}">删</button>
+        </div></div>`;}).join("")}</div>`;}).join("");
+  const src={};S.leads.forEach(l=>{src[l.source]=(src[l.source]||{total:0,won:0});src[l.source].total++;if(l.stage==="成交")src[l.source].won++;});
+  const srcMax=Math.max(1,...Object.values(src).map(x=>x.total));
+  const srcList=Object.entries(src).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>`<div class="src-item"><span style="width:74px;flex-shrink:0">${k}</span><div class="src-bar"><div class="src-fill" style="width:${v.total/srcMax*100}%"></div></div><span style="width:78px;text-align:right;color:var(--ink-2)">${v.total}条 · 成${v.won}</span></div>`).join("");
+  const domainBtns=[["all","全部"],["公域","公域"],["私域","私域"]].map(([k,n])=>`<button class="btn sm ${UI.recruitDomain===k?"":"ghost"}" data-action="recruit-domain" data-d="${k}">${n}</button>`).join("");
+  const ref=referralStats();
+  const referralHtml=ref.length?`<div class="card-grid">${ref.map(x=>`<div class="stu-card"><div class="stu-name">${esc(x.referrer)}</div><div class="stu-course">转介绍 ${x.total} 条 · 成交 ${x.won} 单</div><div class="stu-stats"><span>应发奖励</span><strong style="color:var(--qing)">${x.owed} ${S.settings.referralRewardType}</strong></div><div class="stu-actions"><button class="btn sm ${x.rewarded?"ghost":"green"}" data-action="toggle-referral" data-ref="${esc(x.referrer)}">${x.rewarded?"已发放":"标记发放"}</button></div></div>`).join("")}</div>`:`<div class="empty-state">暂无「转介绍」来源线索。在「设置」配置奖励规则，线索来源选「转介绍」并填推荐人后自动统计。</div>`;
+  return`<div class="kpi-row">${stats.map(k=>`<div class="kpi-card"><div class="kpi-label">${k.l}</div><div class="kpi-value" style="color:${k.vc}">${k.v}</div></div>`).join("")}</div>
+  <div class="section-head"><div class="section-title">招生漏斗看板</div><div style="display:flex;gap:8px;flex-wrap:wrap"><div style="display:flex;gap:6px">${domainBtns}</div><button class="btn" data-action="add-lead">+ 新增线索</button></div></div>
+  <div class="kanban">${cols}</div>
+  <div class="section" style="margin-top:16px"><div class="section-title">线索来源追踪</div><div class="src-list">${srcList||'<div class="empty-state">暂无线索</div>'}</div></div>
+  <div class="section" style="margin-top:16px"><div class="section-title">转介绍与裂变激励</div>
+    <div style="font-size:12.5px;color:var(--ink-2);margin-bottom:10px">奖励规则：每成功转化 1 位「转介绍」来源学员，奖励推荐人 <strong>${S.settings.referralRewardValue} ${S.settings.referralRewardType}</strong>。可在「设置」修改；发放后点「标记发放」避免重复。</div>
+    ${referralHtml}
+  </div>`;
+}
+
+/* ============ 视图：设置 ============ */
+function rSettings(){
+  const st=S.settings;
+  return`${APP?'<div class="tip-bar green">数据存在本机 SQLite 数据库，自动写入。想搬到另一台电脑：「数据库」→ 导出 JSON，在新电脑上导入。</div>':'<div class="tip-bar">数据保存在本浏览器。建议点右上角「数据」绑定本地文件（电脑 Chrome/Edge）或定期导出备份。切换设备时导入 JSON 即可迁移。</div>'}
+  <div class="section"><div class="section-title">个性化设置</div>
+    <label class="flabel">老师称呼（用于续费提醒话术）</label><input class="fi" data-action="set-teachername" value="${esc(st.teacherName)}" placeholder="如：王老师">
+    <div class="two-col">
+      <div><label class="flabel">课时余额预警阈值（剩余 ≤ 该值时提示充值）</label><input class="fi" type="number" min="0" data-action="set-threshold" value="${st.lowBalanceThreshold}"></div>
+      <div><label class="flabel">提前提醒课节数（剩余 ≤ 阈值+该值时黄色预警）</label><input class="fi" type="number" min="0" data-action="set-ahead" value="${st.remindAheadClasses}"></div>
+    </div>
+    <div style="font-size:12px;color:var(--ink-3)">例：阈值 4、提前 2 → 剩余 ≤6 黄色「即将用完」，剩余 ≤4 红色「建议充值」。</div>
+  </div>
+  <div class="section"><div class="section-title">外观</div>
+    <div class="theme-grid">${[["ledger","点名册","纸本 · 楷体 · 朱印","#F8F6F1","#1E5A6B","#C2412C"],["slate","夜读","深色 · 金印","#151920","#E8A33D","#E6E9EF"],["clean","明亮","白底 · 墨绿 · 圆润","#FFFFFF","#2D6A4F","#D9534F"]].map(([id,n,d,p,c1,c2])=>`<div class="theme-opt ${(st.theme||"ledger")===id?"on":""}" data-action="set-theme" data-theme="${id}" role="button" tabindex="0"><div class="sw" style="background:${p}"><i style="background:${c1}"></i><i style="background:${c2}"></i><i style="background:${c1};opacity:.35"></i></div><b>${n}</b><span>${d}</span></div>`).join("")}</div>
+    <label class="check-item" style="display:inline-flex"><input type="checkbox" data-action="set-density"${st.density==="compact"?" checked":""}><span>紧凑密度（学员多时一屏看更多）</span></label>
+  </div>
+  <div class="section"><div class="section-title">数据与备份</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" data-action="open-datafile">${APP?"数据库与备份":"数据文件与备份"}</button>
+      <button class="btn ghost" data-action="export-data">导出完整数据(JSON)</button>
+      <button class="btn ghost" data-action="import-data">导入数据</button>
+      <button class="btn ghost" data-action="export-csv-hours">导出课时CSV</button>
+      <button class="btn ghost" data-action="export-finance-csv">导出收支CSV</button>
+      <button class="btn ghost" data-action="export-lead-csv">导出线索CSV</button>
+    </div>
+    <hr class="divider">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn warn" data-action="reseed">恢复示例数据</button>
+      <button class="btn danger" data-action="clear-all">清空全部数据</button>
+    </div>
+    <input id="data-import-input" type="file" accept="application/json,.json" style="display:none">
+  </div>
+  <div class="section"><div class="section-title">转介绍奖励设置</div>
+    <div class="two-col">
+      <div><label class="flabel">奖励形式</label><select class="fi" data-action="set-referral-type"><option value="课时"${S.settings.referralRewardType==="课时"?" selected":""}>课时</option><option value="金额"${S.settings.referralRewardType==="金额"?" selected":""}>金额</option></select></div>
+      <div><label class="flabel">每成功转化 1 位「转介绍」学员奖励</label><input class="fi" type="number" min="0" data-action="set-referral-value" value="${S.settings.referralRewardValue}"></div>
+    </div>
+    <div style="font-size:12px;color:var(--ink-3)">线索来源选「转介绍」并填写推荐人后，在「招生面板」自动统计应发奖励。</div>
+  </div>
+  <div class="section"><div class="section-title">关于</div>
+    <div style="font-size:13px;color:var(--ink-2);line-height:1.7">独立老师工作台 v2 · 纯本地单文件应用，无服务器、无外部依赖。<br>包含：课时统计（复用 v8）、学员管理、日历排课、今日待办、收支管理、招生面板、余额预警、家长分享页、试听/成交 SOP、报表中心、转介绍激励、资料库。</div>
+  </div>`;
+}
+
+/* ============ v2：家长只读分享页 ============ */
+function shareStudentData(sid){
+  const st=sm()[sid];if(!st)return null;
+  const b=tb(sid),l=tl(sid),r=b-l;
+  const up=(S.schedules||[]).filter(sc=>sc.studentId===sid&&sc.date>=todayStr()&&sc.status!=="cancelled").sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
+  const pays=S.payments.filter(p=>p.studentId===sid).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  return{st,b,l,r,up,pays,teacherName:S.settings.teacherName};
+}
+function rShareBody(sid){
+  const d=shareStudentData(sid);if(!d)return'<div class="empty-state">未找到该学员</div>';
+  const C=cm(),T=tm();
+  const upHtml=d.up.length?d.up.map(sc=>{const c=C[sc.courseId],te=T[sc.teacherId];return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border:1px solid var(--rule);border-radius:9px;margin-bottom:6px;font-size:14px"><span>${sc.date} ${sc.time}</span><span style="color:var(--ink-2)">${esc(te?te.name:"")} · ${esc(c?c.name:"")}</span><span class="badge ${sc.status==="done"?"badge-done":sc.status==="cancelled"?"badge-low":"badge-ok"}">${statusLabel(sc.status)}</span></div>`;}).join(""):'<div class="empty-state">近期暂无排课</div>';
+  const payHtml=d.pays.length?d.pays.map(p=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--sheet-2)"><span>${p.date}</span><span style="color:var(--qing);font-weight:600">+${fmt(p.amount)} · ${p.hours}课时</span></div>`).join(""):'<div class="empty-state">暂无缴费</div>';
+  return`<div style="max-width:560px;margin:0 auto;background:var(--sheet);border-radius:16px;padding:24px;box-shadow:0 8px 30px #00000014">
+    <div style="text-align:center;margin-bottom:16px"><div style="font-size:20px;font-weight:800">${esc(d.st.name)} 的学习档案</div><div style="font-size:12px;color:var(--ink-3);margin-top:4px">由 ${esc(d.teacherName)} 分享 · 更新于 ${todayStr()}</div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+      <div style="background:var(--qing-2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:12px;color:var(--ink-2)">总课时</div><div style="font-size:20px;font-weight:800;color:var(--qing)">${d.b}</div></div>
+      <div style="background:var(--qing-2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:12px;color:var(--ink-2)">已上</div><div style="font-size:20px;font-weight:800;color:var(--qing)">${d.l}</div></div>
+      <div style="background:${d.r<=3?"var(--zhu-2)":"var(--amber-2)"};border-radius:10px;padding:12px;text-align:center"><div style="font-size:12px;color:var(--ink-2)">剩余</div><div style="font-size:20px;font-weight:800;color:${d.r<=3?"var(--zhu)":"var(--amber)"}">${d.r}</div></div>
+    </div>
+    ${d.st.note?`<div style="background:var(--amber-2);color:var(--amber);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:14px">老师备注：${esc(d.st.note)}</div>`:""}
+    <div style="font-weight:700;margin:14px 0 8px;font-size:15px">近期排课</div>${upHtml}
+    <div style="font-weight:700;margin:18px 0 8px;font-size:15px">缴费记录（最近）</div>${payHtml}
+    <div style="margin-top:18px;font-size:11px;color:var(--ink-3);text-align:center">本页面为只读分享，仅供家长了解学习进度</div>
+  </div>`;
+}
+function buildShareHTML(sid){
+  const d=shareStudentData(sid);if(!d)return"";
+  const body=rShareBody(sid);
+  return`<!DOCTYPE html><html lang="zh-CN" data-theme="${(S.settings.theme==="slate"||S.settings.theme==="clean")?S.settings.theme:"ledger"}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(d.st.name)} 学习档案</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&display=swap"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/style.css">
+  <style>${document.querySelector("style").textContent}</style><style>body{padding:16px}body::before{display:none}</style></head>
+  <body>${body}</body></html>`;
+}
+
+/* ============ v2：报表中心 ============ */
+function periodRange(kind){
+  const t=todayStr();
+  if(kind==="week")return[addDays(t,-6),t];
+  if(kind==="month")return[t.slice(0,7)+"-01",t];
+  return[addDays(t,-29),t];
+}
+function genBizReport(kind){
+  const[a,b]=periodRange(kind);
+  const incL=S.payments.filter(p=>p.date>=a&&p.date<=b).reduce((s,p)=>s+p.amount,0);
+  const incO=S.otherIncomes.filter(p=>p.date>=a&&p.date<=b).reduce((s,p)=>s+p.amount,0);
+  const exp=S.expenses.filter(p=>p.date>=a&&p.date<=b).reduce((s,p)=>s+p.amount,0);
+  const lessons=S.students.reduce((s,st)=>s+allAttendanceRecords(st.id).filter(r=>r.date>=a&&r.date<=b).reduce((x,r)=>x+recordUnits(r),0),0);
+  const newLeads=S.leads.filter(l=>l.createdAt>=a&&l.createdAt<=b).length;
+  const won=S.leads.filter(l=>l.stage==="成交"&&l.lastFollow>=a&&l.lastFollow<=b).length;
+  const totLeads=S.leads.length;
+  const conv=totLeads?Math.round(S.leads.filter(l=>l.stage==="成交").length/totLeads*100):0;
+  const low=lowBalanceStudents().filter(x=>x.level==="danger").length;
+  const title=kind==="week"?"本周运营周报":kind==="month"?"本月运营月报":"近30天运营报告";
+  return`【${S.settings.teacherName} ${title}】(${a} ~ ${b})
+· 课时收入：${fmt(incL)}
+· 其他收入：${fmt(incO)}
+· 总支出：${fmt(exp)}
+· 净收入：${fmt(incL+incO-exp)}
+· 课时消耗：${lessons} 课时
+· 新增线索：${newLeads} 条
+· 成交：${won} 单（整体成交率 ${conv}%）
+· 余额不足待提醒：${low} 名学员
+—— 数据来自独立老师工作台`;
+}
+function genStudentReport(sid,kind){
+  const d=shareStudentData(sid);if(!d)return"";
+  const[a,b]=periodRange(kind);
+  const att=allAttendanceRecords(sid).filter(r=>r.date>=a&&r.date<=b);
+  const units=att.reduce((x,r)=>x+recordUnits(r),0);
+  const first=att.length?att[0].date:"无";
+  const last=att.length?att[att.length-1].date:"无";
+  const C=cm(),T=tm();
+  const up=d.up.map(sc=>`${sc.date} ${sc.time} ${esc((T[sc.teacherId]||{}).name||"")} ${esc((C[sc.courseId]||{}).name||"")}`).join("；")||"暂无";
+  return`【${esc(d.st.name)} 学习进度报告】(${a} ~ ${b})
+· 课程：${courseNames(d.st)}
+· 累计购买 ${d.b} 课时，已上 ${d.l} 课时，剩余 ${d.r} 课时
+· 本周期上课 ${units} 课时（${first} 至 ${last}）
+· 近期排课：${up}
+· 老师备注：${d.st.note||"无"}
+—— ${esc(d.teacherName)}`;
+}
+function rReport(){
+  const low=lowBalanceStudents().filter(x=>x.level==="danger").length;
+  const won=S.leads.filter(l=>l.stage==="成交").length;
+  const conv=S.leads.length?Math.round(won/S.leads.length*100):0;
+  const m=todayStr().slice(0,7);
+  const mInc=S.payments.filter(p=>p.date.startsWith(m)).reduce((a,p)=>a+p.amount,0)+S.otherIncomes.filter(p=>p.date.startsWith(m)).reduce((a,p)=>a+p.amount,0);
+  return`<div class="kpi-row">
+    ${[{l:"本月收入",v:fmtH(mInc),vc:"var(--qing)"},{l:"成交学员",v:won,vc:"var(--amber)"},{l:"整体成交率",v:conv+"%",vc:"var(--qing)"},{l:"余额不足",v:low,vc:"var(--zhu)"}].map(k=>`<div class="kpi-card"><div class="kpi-label">${k.l}</div><div class="kpi-value" style="color:${k.vc}">${k.v}</div></div>`).join("")}
+  </div>
+  <div class="section"><div class="section-title">运营报表（经营复盘）</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn" data-action="gen-report" data-kind="week">生成本周周报</button>
+      <button class="btn" data-action="gen-report" data-kind="month">生成本月月报</button>
+      <button class="btn ghost" data-action="gen-report" data-kind="30">近30天</button>
+    </div>
+    <div id="report-out" style="background:var(--sheet-2);border:1px solid var(--rule);border-radius:10px;padding:14px;font-size:13.5px;white-space:pre-wrap;line-height:1.7;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn sm" data-action="copy-report">复制报告</button>
+      <button class="btn sm ghost" data-action="download-report">下载txt</button>
+    </div>
+  </div>
+  <div class="section"><div class="section-title">学员进度报告（可发给家长）</div>
+    <p style="font-size:12.5px;color:var(--ink-2);margin-bottom:10px">选择学员与周期，一键生成学习进度小结，复制或下载后发给家长，是续费与转介绍的好钩子。</p>
+    <button class="btn" data-action="open-report-student">选择学员生成报告</button>
+  </div>`;
+}
+
+/* ============ v2：转介绍裂变激励 ============ */
+function referralStats(){
+  const map={};
+  S.leads.filter(l=>l.source==="转介绍").forEach(l=>{const key=l.referrer||"(未填推荐人)";if(!map[key])map[key]={referrer:key,total:0,won:0};map[key].total++;if(l.stage==="成交")map[key].won++;});
+  const rewarded=new Set(S.referralRewarded||[]);
+  const val=Number(S.settings.referralRewardValue)||0;
+  return Object.values(map).map(x=>({...x,owed:x.won*val,rewarded:rewarded.has(x.referrer)})).sort((a,b)=>b.won-a.won);
+}
+
+/* ============ v2：试听/成交 SOP 自动化 ============ */
+function ensureLeadStudent(lid){
+  const l=S.leads.find(x=>x.id===lid);if(!l)return null;
+  if(l.studentId&&sm()[l.studentId])return sm()[l.studentId];
+  const st={id:uid(),name:l.name,note:"线索来源："+l.source+(l.referrer?"（推荐人："+l.referrer+"）":""),courseIds:[]};
+  ss({...S,students:[...S.students,st],leads:S.leads.map(x=>x.id===lid?{...x,studentId:st.id}:x)});
+  return sm()[st.id];
+}
+
+/* ============ v2：教学资料 / 课件库 ============ */
+const MAT_TYPES=["教案","课件","试卷","笔记","链接","其他"];
+function addMaterial(d){ss({...S,materials:[...S.materials,{id:uid(),createdAt:todayStr(),...d}]});}
+function updMaterial(id,d){ss({...S,materials:S.materials.map(m=>m.id===id?{...m,...d}:m)});}
+function delMaterial(id){if(confirm("确定删除该资料？"))ss({...S,materials:S.materials.filter(m=>m.id!==id)});}
+function rLibrary(){
+  const mats=S.materials;
+  const cOpts=`<option value="all">全部分类</option>`+MAT_TYPES.map(c=>`<option value="${c}"${UI.libType===c?" selected":""}>${c}</option>`).join("");
+  const stuOpts=`<option value="all">全部归属</option><option value="public">公共资料</option>`+S.students.map(s=>`<option value="${s.id}"${UI.libStu===s.id?" selected":""}>${esc(s.name)}</option>`).join("");
+  const filtered=mats.filter(m=>(UI.libType==="all"||m.type===UI.libType)&&(UI.libStu==="all"||(UI.libStu==="public"?!m.studentId:m.studentId===UI.libStu)));
+  const cards=filtered.slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(m=>{const c=cm()[m.courseId];const st=sm()[m.studentId];return`<div class="stu-card">
+    <div style="display:flex;justify-content:space-between;align-items:start"><div class="stu-name">${esc(m.title)}</div><span class="badge badge-ok">${m.type}</span></div>
+    <div class="stu-course">${c?esc(c.name):"通用"}${st?" · "+esc(st.name):" · 公共"}</div>
+    ${m.content?`<div style="font-size:12.5px;color:var(--ink-2);white-space:pre-wrap;max-height:90px;overflow:auto;background:var(--sheet-2);padding:8px;border-radius:8px;margin:6px 0">${esc(m.content)}</div>`:""}
+    ${m.url?`<div style="font-size:12px;margin:4px 0"><a href="${esc(m.url)}" target="_blank" style="color:var(--qing)">打开链接</a></div>`:""}
+    ${m.attachment?`<div style="font-size:12px;margin:4px 0"><a href="${esc(m.attachment)}" target="_blank" download="${esc(m.fileName||"附件")}" style="color:var(--qing)">下载附件：${esc(m.fileName||"文件")}</a></div>`:""}
+    ${m.tags?`<div style="font-size:11px;color:var(--ink-3);margin:4px 0">#${esc(m.tags)}</div>`:""}
+    <div class="stu-stats"><span>添加于 ${m.createdAt}</span></div>
+    <div class="stu-actions"><button class="btn sm ghost" data-action="edit-material" data-id="${m.id}">编辑</button><button class="btn sm danger" data-action="del-material" data-id="${m.id}">删除</button></div>
+  </div>`;}).join("");
+  return`<div class="section-head"><div class="section-title">教学资料 / 课件库（${mats.length}）</div><button class="btn" data-action="add-material">+ 添加资料</button></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <select class="fi" data-action="lib-type" style="width:auto;min-width:130px;margin:0">${cOpts}</select>
+    <select class="fi" data-action="lib-stu" style="width:auto;min-width:130px;margin:0">${stuOpts}</select>
+  </div>
+  ${filtered.length?`<div class="card-grid">${cards}</div>`:`<div class="empty-state">暂无资料，点右上角添加。可归档教案、课件、试卷、笔记，或上传附件。</div>`}`;
+}
+
+/* ============ 弹窗 ============ */
+function rModal(){
+  const m=UI.modal;if(!m)return"";
+  const C=cm(),M=sm();
+  if(m.type==="time-pick"){
+    const st=M[m.sid];return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box" style="max-width:320px;text-align:center">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">选择上课时间</div><div style="font-size:12px;color:var(--ink-2);margin-bottom:14px">${m.date} · ${esc(st?st.name:"")}</div>
+      <input id="time-input" class="fi" type="time" value="${p2(new Date().getHours())+":"+p2(new Date().getMinutes())}">
+      <select id="time-course" class="fi">${courseOptions(studentCourseIds(st)[0]||primaryCourseId(m.sid))}</select>
+      <label class="flabel" style="text-align:left">本次消耗课时</label><input id="time-units" class="fi" type="number" min="0.5" step="0.5" value="${courseUnits(studentCourseIds(st)[0]||primaryCourseId(m.sid))}">
+      <div style="display:flex;gap:8px"><button class="btn ghost" data-action="modal-close" style="flex:1">取消</button><button class="btn" data-action="time-confirm" data-sid="${m.sid}" data-date="${m.date}" style="flex:1">确认</button></div></div></div>`;
+  }
+  if(m.type==="att-review"){
+    const st=M[m.sid];const recs=attendanceRecords(m.sid,m.date);
+    if(!recs.length)return"";
+    const wd=dn(...m.date.split("-").map(Number));
+    const desc=r=>{const cN=(C[recordCourseId(m.sid,r)]||{}).name||"未知课程";return{cN,u:recordUnits(r),fee:recordFee(m.sid,r),t:(r.time&&r.time!==1)?r.time:""};};
+    /* 第二步：真正的二次确认 */
+    if(m.confirmIdx!=null&&recs[m.confirmIdx]){
+      const r=recs[m.confirmIdx],d=desc(r);
+      return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box" style="max-width:400px">
+        <div class="modal-title" style="color:var(--zhu)">再确认一次：取消这条打卡</div>
+        <div class="tip-bar red" style="margin-bottom:14px">取消后会立刻发生这些变化，且<b>无法撤销</b>：<br>· ${esc(st?st.name:"")} 的已上课时 <b>−${d.u}</b> 节<br>· 确认收入 <b>−${fmt(d.fee)}</b><br>· 剩余课时 <b>+${d.u}</b> 节${r.scheduleId?"<br>· 对应的那节排课会退回「待上课」":""}</div>
+        <div style="background:var(--sheet-2);border-radius:9px;padding:11px 13px;font-size:13px;line-height:1.9;margin-bottom:14px">
+          <div>学　员：<b>${esc(st?st.name:"")}</b></div>
+          <div>日　期：<b>${m.date}（周${wd}）</b>${d.t?" · "+esc(d.t):""}</div>
+          <div>课　程：<b>${esc(d.cN)}</b></div>
+          <div>课时／金额：<b>${d.u} 节 · ${fmt(d.fee)}</b></div>
+        </div>
+        <div style="display:flex;gap:8px"><button class="btn" data-action="att-back" style="flex:1.4">← 算了，保留这条</button><button class="btn danger" data-action="att-do-cancel" data-sid="${m.sid}" data-date="${m.date}" data-idx="${m.confirmIdx}" style="flex:1">确认取消</button></div>
+      </div></div>`;
+    }
+    /* 第一步：展示当天所有打卡明细 */
+    const rows=recs.map((r,i)=>{const d=desc(r);return`<div class="att-rec">
+      <div class="cell on" style="flex-shrink:0"></div>
+      <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">${esc(d.cN)}${d.t?`<span style="font-weight:400;color:var(--ink-2)"> · ${esc(d.t)}</span>`:""}</div>
+      <div style="font-size:12px;color:var(--ink-2);margin-top:2px">${d.u} 课时 · ${fmt(d.fee)}${r.scheduleId?" · 来自排课":""}${r.markedAt?" · 打卡于 "+esc(r.markedAt.slice(0,10)):""}</div></div>
+      <button class="btn sm danger" data-action="att-ask-cancel" data-idx="${i}" style="flex-shrink:0">取消打卡</button></div>`;}).join("");
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">已确认的打卡</div>
+      <div style="font-size:12.5px;color:var(--ink-2);margin:-8px 0 12px">${esc(st?st.name:"")} · ${m.date}（周${wd}）</div>
+      ${rows}
+      <div class="tip-bar" style="margin:12px 0 0">打卡一旦确认就计入课时和收入，不能直接改。确实打错了，点「取消打卡」再确认一次才会撤销。</div>
+      <div class="modal-actions"><button class="btn" data-action="modal-close" style="width:100%">知道了</button></div></div></div>`;
+  }
+  if(m.type==="add-student"){
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">添加学员</div>
+      <label class="flabel">姓名</label><input id="ns-name" class="fi" placeholder="学员姓名">
+      <label class="flabel">课程 / 班级（可多选）</label>${courseCheckList("ns-courses",[])}
+      <label class="flabel">备注</label><input id="ns-note" class="fi" placeholder="备注（可选）">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-add-student">保存</button></div></div></div>`;
+  }
+  if(m.type==="edit-student"){
+    const s=M[m.sid];if(!s)return"";const pays=S.payments.filter(p=>p.studentId===m.sid).sort((a,b)=>b.date.localeCompare(a.date));
+    const bl=tb(m.sid),ll=tl(m.sid),rl=bl-ll;
+    const prows=pays.map(p=>`<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:6px;align-items:center;padding:8px 10px;background:var(--sheet-2);border-radius:8px;margin-bottom:4px"><span style="font-size:11px;color:var(--ink-3)">${p.date}</span><input id="ep-amt-${p.id}" value="${p.amount}" type="number" min="0" style="padding:6px 8px;border-radius:6px;border:1px solid var(--rule);font-size:12px"><input id="ep-hrs-${p.id}" value="${p.hours}" type="number" min="0" style="padding:6px 8px;border-radius:6px;border:1px solid var(--rule);font-size:12px"><button class="btn sm danger" data-action="del-pay-inline" data-pid="${p.id}" data-sid="${m.sid}">×</button></div>${p.note?`<div style="font-size:11px;color:var(--ink-3);padding:0 10px;margin-bottom:6px">备注：${esc(p.note)}</div>`:""}`).join("");
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box wide"><div class="modal-title">编辑学员</div>
+      <label class="flabel">姓名</label><input id="es-name" class="fi" value="${esc(s.name)}">
+      <label class="flabel">课程 / 班级（可多选）</label>${courseCheckList("es-courses",studentCourseIds(s))}
+      <label class="flabel">备注</label><input id="es-note" class="fi" value="${esc(s.note)}">
+      <hr class="divider"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;font-weight:700">缴费记录</span><span style="font-size:12px;color:var(--ink-2)">${rl}节剩余 · 确认收入 ${fmt(uf(m.sid))}</span></div>
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:6px;padding:0 0 4px;font-size:11px;color:var(--ink-3);font-weight:600"><span>日期</span><span>金额(¥)</span><span>课时(节)</span><span></span></div>
+      ${prows||'<div style="font-size:12px;color:var(--ink-3);text-align:center;padding:8px">暂无缴费记录</div>'}
+      <div style="margin-top:6px"><button class="btn sm" style="width:100%;padding:8px" data-action="open-add-pay-for" data-sid="${m.sid}">+ 新增缴费记录</button></div>
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn sm ghost" data-action="share-student" data-sid="${m.sid}">生成分享页</button><button class="btn" data-action="confirm-edit-student" data-sid="${m.sid}">保存</button></div></div></div>`;
+  }
+  if(m.type==="add-pay"){
+    const stuOpts=S.students.map(s=>`<option value="${s.id}"${m.preStudentId===s.id?" selected":""}>${s.name}</option>`).join("");
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">添加缴费记录</div>
+      <label class="flabel">学员</label><select id="np-stu" class="fi">${stuOpts}</select>
+      <label class="flabel">日期</label><input id="np-date" class="fi" type="date" value="${todayStr()}">
+      <label class="flabel">金额 (¥)</label><input id="np-amt" class="fi" type="number" min="0" placeholder="0">
+      <label class="flabel">课时 (节)</label><input id="np-hrs" class="fi" type="number" min="0" placeholder="0">
+      <label class="flabel">备注</label><input id="np-note" class="fi" placeholder="备注（可选）">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-add-pay" data-return-sid="${m.returnSid||""}">保存</button></div></div></div>`;
+  }
+  if(m.type==="add-course"){
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">添加课程</div>
+      <label class="flabel">课程名称</label><input id="nc-name" class="fi" placeholder="如：英语口语1对1辅导">
+      <label class="flabel">单价 (¥/课时)</label><input id="nc-price" class="fi" type="number" min="0" placeholder="0">
+      <label class="flabel">每节课算几个课时</label><input id="nc-units" class="fi" type="number" min="0.5" step="0.5" value="1">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-add-course">保存</button></div></div></div>`;
+  }
+  if(m.type==="add-teacher"||m.type==="edit-teacher"){
+    const t=m.tid?tm()[m.tid]:null;const color=t?t.color:TEACHER_COLORS[(S.teachers||[]).length%TEACHER_COLORS.length];
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">${t?"编辑老师":"添加老师"}</div>
+      <label class="flabel">姓名</label><input id="nt-name" class="fi" value="${esc(t?t.name:"")}" placeholder="老师姓名">
+      <label class="flabel">颜色</label><input id="nt-color" class="fi color-input" type="color" value="${color}">
+      <label class="flabel">备注</label><input id="nt-note" class="fi" value="${esc(t?t.note:"")}" placeholder="备注（可选）">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-teacher" data-tid="${m.tid||""}">保存</button></div></div></div>`;
+  }
+  if(m.type==="add-schedule"||m.type==="edit-schedule"){
+    const T=tm(),sc=m.sid?(S.schedules||[]).find(x=>x.id===m.sid):null;
+    const teacherOpts=(S.teachers||[]).map(t=>`<option value="${t.id}"${sc&&sc.teacherId===t.id?" selected":""}>${esc(t.name)}</option>`).join("");
+    const preSid=m.preStudentId||(sc?sc.studentId:"");
+    const studentOpts=S.students.map(s=>`<option value="${s.id}"${s.id===preSid?" selected":""}>${esc(s.name)}</option>`).join("");
+    const selectedStudent=preSid?sm()[preSid]:(sc?M[sc.studentId]:S.students[0]);const courseOpts=courseOptions(sc?sc.courseId:studentCourseIds(selectedStudent)[0]);
+    const statusOpts=Object.keys(STATUS_TEXT).map(k=>`<option value="${k}"${(sc?sc.status:"pending")===k?" selected":""}>${STATUS_TEXT[k]}</option>`).join("");
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box wide"><div class="modal-title">${sc?"编辑排课":"新增排课"}</div>
+      ${(S.teachers||[]).length?"":'<div class="empty-state" style="margin-bottom:10px">请先在老师管理中添加老师</div>'}
+      <div class="two-col"><div><label class="flabel">老师</label><select id="sc-teacher" class="fi">${teacherOpts}</select></div><div><label class="flabel">学员</label><select id="sc-student" class="fi">${studentOpts}</select></div></div>
+      <div class="two-col"><div><label class="flabel">日期</label><input id="sc-date" class="fi" type="date" value="${sc?sc.date:todayStr()}"></div><div><label class="flabel">开始时间</label><input id="sc-time" class="fi" type="time" value="${sc?sc.time:"18:00"}"></div></div>
+      <label class="flabel">本次课程 / 班级</label><select id="sc-course" class="fi">${courseOpts}</select>
+      ${sc?`<label class="flabel">状态</label><select id="sc-status" class="fi">${statusOpts}</select>`:`<div class="two-col"><div><label class="flabel">排课方式</label><select id="sc-repeat" class="fi"><option value="once">单次</option><option value="weekly">每周重复</option></select></div><div><label class="flabel">生成周数</label><input id="sc-weeks" class="fi" type="number" min="1" max="52" value="4"></div></div>`}
+      <label class="flabel">备注</label><input id="sc-note" class="fi" value="${esc(sc?sc.note:"")}" placeholder="备注（可选）">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button>
+        ${sc&&sc.status!=="done"?`<button class="btn sm" data-action="complete-schedule" data-sid="${sc.id}">标记完成</button>`:""}
+        ${sc?`<button class="btn sm danger" data-action="cancel-schedule" data-sid="${sc.id}">取消课程</button><button class="btn sm danger" data-action="del-schedule" data-sid="${sc.id}">删除</button>`:""}
+        <button class="btn" data-action="confirm-schedule" data-sid="${m.sid||""}">保存</button></div></div></div>`;
+  }
+  if(m.type==="data-file"&&APP){
+    const i=m.info||{},snaps=m.snaps||[],rows=m.logRows||[];
+    const kb=n=>n>=1048576?(n/1048576).toFixed(1)+" MB":Math.max(1,Math.round(n/1024))+" KB";
+    const logHtml=rows.length?rows.slice(0,12).map(r=>`<div style="display:flex;gap:8px;align-items:center;font-size:12px;padding:5px 0;border-bottom:1px solid var(--sheet-2)">
+        <span class="badge ${r.action==="cancel"?"badge-danger":"badge-ok"}" style="flex-shrink:0">${r.action==="cancel"?"取消":"打卡"}</span>
+        <span style="flex:1;min-width:0;color:var(--ink-2)">${esc(r.studentName||"?")} · ${esc(r.date)} · ${esc(r.courseName||"")} · ${r.units}课时</span>
+        <span style="color:var(--ink-3);flex-shrink:0">${esc(String(r.at).slice(0,16).replace("T"," "))}</span></div>`).join("")
+      :'<div style="font-size:12px;color:var(--ink-3);padding:8px 0">还没有打卡记录</div>';
+    const snapHtml=snaps.length?snaps.slice(0,8).map(x=>`<div style="display:flex;gap:8px;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid var(--sheet-2)">
+        <span style="flex:1;color:var(--ink-2)">${esc(String(x.at).slice(0,16).replace("T"," "))} · ${esc(x.reason)} · ${kb(x.size)}</span>
+        <button class="btn sm ghost" data-action="db-restore" data-id="${x.id}">回滚到这里</button></div>`).join("")
+      :'<div style="font-size:12px;color:var(--ink-3);padding:8px 0">暂无快照</div>';
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box wide"><div class="modal-title">数据库</div>
+      <div class="tip-bar green" style="margin-bottom:12px">数据存在本机 SQLite 数据库里，每次改动自动写入。删浏览器、换浏览器、清缓存都不影响。</div>
+      <div style="background:var(--sheet-2);border-radius:9px;padding:11px 13px;font-size:12.5px;line-height:1.9;margin-bottom:12px;word-break:break-all">
+        <div>位置：<code style="font-size:11.5px">${esc(i.path||"读取中…")}</code></div>
+        <div>大小：<b>${i.sizeBytes?kb(i.sizeBytes):"-"}</b> · 学员 <b>${i.students||0}</b> · 打卡 <b>${i.attendance||0}</b> 条 · 缴费 <b>${i.payments||0}</b> 条</div>
+        <div>审计流水 <b>${i.logEntries||0}</b> 条 · 自动快照 <b>${i.snapshots||0}</b> 份</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn sm" data-action="db-backup">备份数据库…</button>
+        <button class="btn sm ghost" data-action="db-export">导出 JSON…</button>
+        <button class="btn sm ghost" data-action="db-import">从 JSON 导入…</button>
+        <button class="btn sm ghost" data-action="db-snapshot">立即存快照</button>
+        <button class="btn sm ghost" data-action="db-reveal">打开文件夹</button>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">考勤审计流水（打卡 / 取消都留痕）</div>
+      <div style="max-height:170px;overflow-y:auto;margin-bottom:14px">${logHtml}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">自动快照（每小时一份 + 每次启动，保留最近 30 份）</div>
+      <div style="max-height:150px;overflow-y:auto">${snapHtml}</div>
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close" style="width:100%">关闭</button></div></div></div>`;
+  }
+  if(m.type==="data-file"){
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">数据文件与备份</div>
+      ${_fileHandle?`<div style="background:var(--qing-2);color:var(--qing);padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px">已绑定本地数据文件，修改会实时写入，清缓存不会丢。</div>`:`<div style="background:var(--amber-2);color:var(--amber);padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px">当前数据只存在浏览器里，清缓存会丢。建议绑定一个本地数据文件。</div>`}
+      ${FSA_OK?`<button class="btn" style="width:100%;margin-bottom:8px" data-action="file-new">新建数据文件并绑定</button><button class="btn ghost" style="width:100%;padding:9px;margin-bottom:8px" data-action="file-open">打开已有数据文件并绑定</button>`:`<div style="font-size:12px;color:var(--ink-2);margin-bottom:8px">此浏览器不支持绑定本地文件（仅电脑版 Chrome / Edge 支持）。请用下面的手动备份，或换电脑浏览器。</div>`}
+      <hr class="divider"><button class="btn ghost" style="width:100%;padding:9px" data-action="manual-backup">立即导出一份备份</button>
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">关闭</button></div></div></div>`;
+  }
+  /* 新增：待办 / 收支 / 招生 弹窗 */
+  if(m.type==="add-todo"||m.type==="edit-todo"){
+    const x=m.tid?S.todos.find(t=>t.id===m.tid):null;
+    const due=x?x.due:todayStr();const prio=x?x.priority:"P1";
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">${x?"编辑待办":"新建待办"}</div>
+      <label class="flabel">事项</label><input id="td-title" class="fi" value="${esc(x?x.title:"")}" placeholder="如：给小明家长发续费提醒">
+      <div class="two-col"><div><label class="flabel">截止日期</label><input id="td-due" class="fi" type="date" value="${due}"></div><div><label class="flabel">优先级</label><select id="td-prio" class="fi">${["P0","P1","P2"].map(p=>`<option value="${p}"${p===prio?" selected":""}>${p}</option>`).join("")}</select></div></div>
+      <label class="flabel">备注</label><input id="td-note" class="fi" value="${esc(x?x.note:"")}" placeholder="备注（可选）">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-todo" data-tid="${m.tid||""}">保存</button></div></div></div>`;
+  }
+  if(m.type==="add-expense"){
+    const catOpts=EXPENSE_CATS.map(c=>`<option value="${c}">${c}</option>`).join("");
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">记一笔支出</div>
+      <label class="flabel">日期</label><input id="ex-date" class="fi" type="date" value="${todayStr()}">
+      <label class="flabel">分类</label><select id="ex-cat" class="fi">${catOpts}</select>
+      <label class="flabel">金额 (¥)</label><input id="ex-amt" class="fi" type="number" min="0" placeholder="0">
+      <label class="flabel">备注</label><input id="ex-note" class="fi" placeholder="备注（可选）">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-expense">保存</button></div></div></div>`;
+  }
+  if(m.type==="add-income"){
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">记一笔其他收入</div>
+      <label class="flabel">日期</label><input id="in-date" class="fi" type="date" value="${todayStr()}">
+      <label class="flabel">来源</label><input id="in-src" class="fi" placeholder="如：资料售卖 / 平台奖励">
+      <label class="flabel">金额 (¥)</label><input id="in-amt" class="fi" type="number" min="0" placeholder="0">
+      <label class="flabel">备注</label><input id="in-note" class="fi" placeholder="备注（可选）">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-income">保存</button></div></div></div>`;
+  }
+  if(m.type==="add-lead"||m.type==="edit-lead"){
+    const l=m.lid?S.leads.find(x=>x.id===m.lid):null;
+    const srcOpts=LEAD_SOURCES.map(s=>`<option value="${s}"${l&&l.source===s?" selected":""}>${s}</option>`).join("");
+    const stageOpts=STAGES.map(s=>`<option value="${s}"${l&&l.stage===s?" selected":""}>${s}</option>`).join("");
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">${l?"编辑线索":"新增线索"}</div>
+      <label class="flabel">家长/学员姓名</label><input id="ld-name" class="fi" value="${esc(l?l.name:"")}" placeholder="姓名">
+      <label class="flabel">联系电话</label><input id="ld-phone" class="fi" placeholder="手机号">
+      <div class="two-col"><div><label class="flabel">来源渠道</label><select id="ld-src" class="fi">${srcOpts}</select></div><div><label class="flabel">公域/私域</label><select id="ld-dom" class="fi">${["公域","私域"].map(d=>`<option value="${d}"${l&&l.domain===d?" selected":""}>${d}</option>`).join("")}</select></div></div>
+      <label class="flabel">推荐人（来源选「转介绍」时填写，用于裂变激励统计）</label><input id="ld-ref" class="fi" value="${esc(l?l.referrer:"")}" placeholder="如：老学员张明家长">
+      <div class="two-col"><div><label class="flabel">阶段</label><select id="ld-stage" class="fi">${stageOpts}</select></div><div><label class="flabel">意向金额(¥)</label><input id="ld-intent" class="fi" type="number" min="0" value="${l?l.intent:0}"></div></div>
+      <label class="flabel">备注</label><input id="ld-note" class="fi" value="${esc(l?l.note:"")}" placeholder="备注（可选）">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-lead" data-lid="${m.lid||""}">保存</button></div></div></div>`;
+  }
+  if(m.type==="recharge-msg"){
+    const st=sm()[m.sid];const txt=rechargeText(m.sid);
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">续费提醒话术</div>
+      <div style="background:var(--sheet-2);border-radius:10px;padding:14px;font-size:14px;line-height:1.7;color:var(--ink)">${esc(txt)}</div>
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">关闭</button><button class="btn" data-action="copy-text" data-text="${esc(txt)}">复制话术</button></div></div></div>`;
+  }
+  if(m.type==="share-student"){
+    const sid=m.sid;const body=rShareBody(sid);
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box wide"><div class="modal-title">学习档案分享页</div>
+      ${body}
+      <div style="font-size:12px;color:var(--ink-2);margin:12px 0 4px;line-height:1.6">这是一个<strong>只读</strong>页面，家长可查看孩子课时、排课与缴费摘要。下载后通过微信发给家长即可，对方用手机浏览器打开。</div>
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">关闭</button><button class="btn" data-action="download-share" data-sid="${sid}">下载分享页（发给家长）</button></div></div></div>`;
+  }
+  if(m.type==="add-material"||m.type==="edit-material"){
+    const x=m.id?S.materials.find(k=>k.id===m.id):null;
+    const typeOpts=MAT_TYPES.map(t=>`<option value="${t}"${x&&x.type===t?" selected":""}>${t}</option>`).join("");
+    const courseOpts=`<option value="">通用</option>`+S.courses.map(c=>`<option value="${c.id}"${x&&x.courseId===c.id?" selected":""}>${esc(c.name)}</option>`).join("");
+    const stuOpts=`<option value="">公共资料</option>`+S.students.map(s=>`<option value="${s.id}"${x&&x.studentId===s.id?" selected":""}>${esc(s.name)}</option>`).join("");
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box"><div class="modal-title">${x?"编辑资料":"添加教学资料"}</div>
+      <label class="flabel">标题</label><input id="mt-title" class="fi" value="${esc(x?x.title:"")}" placeholder="如：初三物理力学讲义">
+      <div class="two-col"><div><label class="flabel">类型</label><select id="mt-type" class="fi">${typeOpts}</select></div><div><label class="flabel">关联课程</label><select id="mt-course" class="fi">${courseOpts}</select></div></div>
+      <label class="flabel">归属学员（选公共则为通用资料）</label><select id="mt-stu" class="fi">${stuOpts}</select>
+      <label class="flabel">内容 / 笔记（文本）</label><textarea id="mt-content" class="fi" rows="4" placeholder="可粘贴讲义、错题、要点">${esc(x?x.content:"")}</textarea>
+      <label class="flabel">链接（如网盘 / 文档 URL，可选）</label><input id="mt-url" class="fi" value="${esc(x?x.url:"")}" placeholder="https://...">
+      <label class="flabel">附件（可选，图片/文件会存入本机，建议 &lt; 2MB）</label><input id="mt-file" type="file" class="fi">
+      <label class="flabel">标签（逗号分隔）</label><input id="mt-tags" class="fi" value="${esc(x?x.tags:"")}" placeholder="如：期中,复习">
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn" data-action="confirm-material" data-id="${m.id||""}">保存</button></div></div></div>`;
+  }
+  if(m.type==="report-student"){
+    const sOpts=S.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+    return`<div class="modal-overlay" data-action="modal-close"><div class="modal-box wide"><div class="modal-title">学员进度报告</div>
+      <div class="two-col"><div><label class="flabel">选择学员</label><select id="rs-stu" class="fi">${sOpts}</select></div><div><label class="flabel">统计周期</label><select id="rs-kind" class="fi"><option value="week">本周</option><option value="month">本月</option><option value="30">近30天</option></select></div></div>
+      <textarea id="rs-out" readonly class="fi" rows="9" style="margin-top:10px;background:var(--sheet-2);white-space:pre-wrap;font-size:13px;line-height:1.7"></textarea>
+      <div class="modal-actions"><button class="btn ghost" data-action="modal-close">关闭</button><button class="btn" data-action="gen-student-report">生成</button><button class="btn sm ghost" data-action="copy-student-report">复制</button><button class="btn sm ghost" data-action="download-student-report">下载</button></div></div></div>`;
+  }
+  return"";
+}
+
+/* ============ 导航 / 顶栏 ============ */
+const ICON={home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="3.5" height="8" rx="1"/><rect x="10" y="6" width="3.5" height="14" rx="1"/><rect x="16" y="9" width="3.5" height="11" rx="1"/></svg>',
+users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15 15c3 0 6 2 6 5"/></svg>',
+cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>',
+check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12l3 3 5-6"/></svg>',
+wallet:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="13" r="1.5" fill="currentColor"/></svg>',
+funnel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg>',
+gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>',
+report:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+library:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6v14H4zM10 5h6v14h-6zM16 7l3 1-2 12-3-1z"/></svg>'};
+const SHORT={home:"首页",hours:"课时",students:"学员",calendar:"排课",todo:"待办",finance:"收支",recruit:"招生",report:"报表",library:"资料",settings:"设置"};
+const VIEWS=[{id:"home",name:"工作台",icon:"home"},{id:"hours",name:"课时统计",icon:"chart"},{id:"students",name:"学员管理",icon:"users"},{id:"calendar",name:"日历排课",icon:"cal"},{id:"todo",name:"今日待办",icon:"check"},{id:"finance",name:"收支管理",icon:"wallet"},{id:"recruit",name:"招生面板",icon:"funnel"},{id:"report",name:"报表中心",icon:"report",bottom:false},{id:"library",name:"资料库",icon:"library",bottom:false},{id:"settings",name:"设置",icon:"gear"}];
+function badgeFor(v){if(v==="todo"){const n=S.todos.filter(x=>!x.done).length;return n?n:"";}if(v==="students"){const n=lowBalanceStudents().filter(x=>x.level==="danger").length;return n?n:"";}return"";}
+const MORE=["recruit","report","library"];
+function rSidebar(){
+  const tab=v=>`<button class="nav-item ${UI.view===v.id?"active":""}" data-action="nav" data-view="${v.id}" title="${v.name}"><span class="nav-label">${[...(SHORT[v.id]||v.name)].map(ch=>`<i>${ch}</i>`).join("")}</span>${badgeFor(v.id)?`<span class="nav-badge">${badgeFor(v.id)}</span>`:""}</button>`;
+  const main=VIEWS.filter(v=>!MORE.includes(v.id)&&v.id!=="settings").map(tab).join("");
+  const moreViews=VIEWS.filter(v=>MORE.includes(v.id));
+  const fly=UI.moreOpen?`<div class="nav-flyout">${moreViews.map(v=>`<button class="${UI.view===v.id?"on":""}" data-action="nav" data-view="${v.id}">${ICON[v.icon]}<span>${v.name}</span>${badgeFor(v.id)?`<span class="nav-badge static">${badgeFor(v.id)}</span>`:""}</button>`).join("")}</div>`:"";
+  const more=`<div class="nav-more-wrap"><button class="nav-item ${(MORE.includes(UI.view)||UI.moreOpen)?"active":""}" data-action="nav-more" title="招生 · 报表 · 资料" aria-expanded="${!!UI.moreOpen}"><span class="nav-label"><i>更</i><i>多</i></span></button>${fly}</div>`;
+  const settings=tab(VIEWS.find(v=>v.id==="settings"));
+  return`<aside class="sidebar"><div class="brand"><div class="brand-logo" title="独立老师工作台">师</div></div><nav class="nav">${main}${more}${settings}</nav><div class="side-foot">${[...(APP?"本机数据库":"存于浏览器")].map(ch=>`<i>${ch}</i>`).join("")}</div></aside>`;
+}
+function rBottomNav(){
+  const items=VIEWS.map(v=>`<button class="bn-item ${UI.view===v.id?"active":""}" data-action="nav" data-view="${v.id}"><span class="bn-wrap">${ICON[v.icon]}${badgeFor(v.id)?`<span class="bn-badge">${badgeFor(v.id)}</span>`:""}</span><span>${v.name}</span></button>`).join("");
+  return`<nav class="bottom-nav">${items}</nav>`;
+}
+function rTopbar(){
+  const v=VIEWS.find(x=>x.id===UI.view);const title=v?v.name:"";
+  let extra="";
+  if(UI.view==="finance")extra=`<button class="btn sm ghost" data-action="export-finance-csv">导出收支 CSV</button>`;
+  if(UI.view==="recruit")extra=`<button class="btn sm ghost" data-action="export-lead-csv">导出线索 CSV</button>`;
+  if(UI.view==="hours")extra=`<button class="btn sm ghost" data-action="export-csv-hours">导出课时 CSV</button>`;
+  const dbIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg>';
+  return`<header class="topbar"><h1>${title}</h1><span class="sub">${esc(S.settings.teacherName)}</span>
+    <div class="topbar-actions">${extra}<button class="btn sm ghost" data-action="open-datafile">${dbIcon}${APP?"数据库":"数据"}</button></div></header>`;
+}
+function rView(){
+  switch(UI.view){
+    case "home":return rHome();
+    case "hours":return rHours();
+    case "students":return rStudents();
+    case "calendar":return rCalendar();
+    case "todo":return rTodo();
+    case "finance":return rFinance();
+    case "recruit":return rRecruit();
+    case "report":return rReport();
+    case "library":return rLibrary();
+    case "settings":return rSettings();
+    default:return rHome();
+  }
+}
+function re(){
+  applyAppearance();
+  const sh=location.hash.match(/^#share=(.+)$/);
+  if(sh){const sid=decodeURIComponent(sh[1]);const d=shareStudentData(sid);const body=d?rShareBody(sid):'<div class="empty-state">未找到该学员</div>';document.getElementById("app").innerHTML=`<div style="min-height:100vh;background:var(--sheet-2);padding:16px"><div style="max-width:620px;margin:0 auto">${body}<div style="text-align:center;margin-top:18px"><button class="btn ghost" data-action="exit-share">返回工作台</button></div></div></div>`;return;}
+  const tip=APP
+    ?(_saveErr?`<div class="tip-bar red">保存到数据库失败：${esc(_saveErr)}。请点右上角「数据库」查看，或先导出一份 JSON 保底</div>`:"")
+    :(_pendingHandle?'<div class="tip-bar" style="cursor:pointer" data-action="reconnect-file">检测到已绑定的数据文件，点这里重新连接以继续自动保存</div>'
+    :(_fileHandle?'':'<div class="tip-bar">数据存在浏览器本地，清缓存会丢。建议点右上角「数据」绑定本地文件或定期导出备份</div>'));
+  document.getElementById("app").innerHTML=`
+    <div class="layout">
+      ${rSidebar()}
+      <main class="main">${rTopbar()}<div class="content">${tip}${rView()}</div></main>
+    </div>
+    ${rBottomNav()}
+    ${rModal()}`;
+}
+
+/* ============ 事件处理 ============ */
+document.addEventListener("click",e=>{
+  if(UI.moreOpen&&!e.target.closest(".nav-more-wrap")&&!e.target.closest(".modal-box")){UI.moreOpen=false;re();}
+  const el=e.target.closest("[data-action]");if(!el)return;
+  const a=el.dataset.action;
+  if(a==="set-theme"){S.settings.theme=el.dataset.theme;saveS();re();return;}
+  if(a==="nav-more"){su({moreOpen:!UI.moreOpen});return;}
+  if(a==="nav"){su({view:el.dataset.view,moreOpen:false});return;}
+  if(a==="modal-close"){if(e.target===el)su({modal:null});return;}
+  if(a==="open-datafile"){
+    su({modal:{type:"data-file"}});
+    if(APP)refreshDbPanel();
+    return;
+  }
+  if(a==="db-backup"){window.TWDB.backup().then(refreshDbPanel);return;}
+  if(a==="db-export"){flushSave().then(()=>window.TWDB.exportJSON(JSON.parse(JSON.stringify(S))));return;}
+  if(a==="db-import"){window.TWDB.importJSON();return;}
+  if(a==="db-reveal"){window.TWDB.revealDataFolder();return;}
+  if(a==="db-snapshot"){flushSave().then(()=>window.TWDB.snapshotNow(JSON.parse(JSON.stringify(S)))).then(refreshDbPanel);return;}
+  if(a==="db-restore"){const id=+el.dataset.id;window.TWDB.restoreSnapshot(id).then(r=>{
+    if(r&&r.ok&&r.state){S=normalizeS(r.state);re();su({modal:null});alert("已回滚到该快照");}
+    else if(r&&r.error)alert("回滚失败："+r.error);
+  });return;}
+  if(a==="file-new"){bindNewFile();return;}
+  if(a==="file-open"){bindOpenFile();return;}
+  if(a==="manual-backup"){exportData();return;}
+  if(a==="reconnect-file"){reconnectHandle();return;}
+  if(a==="export"){exportCSV();return;}
+  if(a==="export-csv-hours"){exportCSV();return;}
+  if(a==="export-finance-csv"){exportFinanceCSV();return;}
+  if(a==="export-lead-csv"){exportLeadCSV();return;}
+  if(a==="export-data"){exportData();return;}
+  if(a==="import-data"){document.getElementById("data-import-input").click();return;}
+  if(a==="copy-text"){const t=el.dataset.text;if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert("已复制到剪贴板"));else alert(t);return;}
+  if(a==="reseed"){if(confirm("将用示例数据覆盖当前全部数据，确定？")){_fileHandle=null;ss(seedState());alert("已恢复示例数据");}return;}
+  if(a==="clear-all"){if(confirm("将清空全部数据（保留设置），确定？")){const set=S.settings;S=normalizeS({settings:set});saveS();re();alert("已清空全部数据");}return;}
+  /* v8 课时 tab */
+  if(a==="tab"){su({tab:+el.dataset.idx});return;}
+  if(a==="cprev"){const m=UI.calM-1;if(m<1)su({calY:UI.calY-1,calM:12});else su({calM:m});return;}
+  if(a==="cnext"){const m=UI.calM+1;if(m>12)su({calY:UI.calY+1,calM:1});else su({calM:m});return;}
+  if(a==="add-teacher"){su({modal:{type:"add-teacher"}});return;}
+  if(a==="edit-teacher"){su({modal:{type:"edit-teacher",tid:el.dataset.tid}});return;}
+  if(a==="del-teacher"){delTeacher(el.dataset.tid);return;}
+  if(a==="confirm-teacher"){const name=document.getElementById("nt-name").value.trim();const color=document.getElementById("nt-color").value;const note=document.getElementById("nt-note").value.trim();if(!name){alert("请输入老师姓名");return;}if(el.dataset.tid)updTeacher(el.dataset.tid,{name,color,note});else addTeacher({name,color,note});su({modal:null});return;}
+  if(a==="add-schedule"){if(!(S.teachers||[]).length){alert("请先添加老师");return;}su({modal:{type:"add-schedule"}});return;}
+  if(a==="edit-schedule"){su({modal:{type:"edit-schedule",sid:el.dataset.sid}});return;}
+  if(a==="confirm-schedule"){const teacherId=document.getElementById("sc-teacher").value,studentId=document.getElementById("sc-student").value,courseId=document.getElementById("sc-course").value,date=document.getElementById("sc-date").value,time=document.getElementById("sc-time").value,note=document.getElementById("sc-note").value.trim();if(!teacherId||!studentId||!courseId||!date||!time){alert("请完整填写老师、学员、课程、日期和时间");return;}const sid=el.dataset.sid;if(sid){const status=document.getElementById("sc-status").value;const data={teacherId,studentId,courseId,date,time,note,status};const c=conflict(data,sid);if(c){alert(conflictMsg(c,data));return;}updSchedule(sid,data);su({modal:null});return;}const repeat=document.getElementById("sc-repeat").value,weeks=Math.max(1,parseInt(document.getElementById("sc-weeks").value)||1);const list=Array.from({length:repeat==="weekly"?weeks:1},(_,i)=>({teacherId,studentId,courseId,date:addDays(date,i*7),time,note,status:"pending"}));const bad=list.map(x=>conflict(x)).find(Boolean);if(bad){alert(conflictMsg(bad,list.find(x=>x.date===bad.date&&x.time===bad.time)));return;}addScheduleList(list);su({modal:null});return;}
+  if(a==="complete-schedule"){completeSchedule(el.dataset.sid);su({modal:null});return;}
+  if(a==="cancel-schedule"){updSchedule(el.dataset.sid,{status:"cancelled"});su({modal:null});return;}
+  if(a==="del-schedule"){delSchedule(el.dataset.sid);su({modal:null});return;}
+  if(a==="att"){const sid=el.dataset.sid,dt=el.dataset.date;if(ah(sid,dt)){su({modal:{type:"att-review",sid,date:dt,confirmIdx:null}});}else{su({modal:{type:"time-pick",sid,date:dt}});}return;}
+  if(a==="att-ask-cancel"){su({modal:{...UI.modal,confirmIdx:+el.dataset.idx}});return;}
+  if(a==="att-back"){su({modal:{...UI.modal,confirmIdx:null}});return;}
+  if(a==="att-do-cancel"){const sid=el.dataset.sid,dt=el.dataset.date,i=+el.dataset.idx;removeAttendanceRecord(sid,dt,i);su({modal:null});return;}
+  if(a==="time-confirm"){const t=document.getElementById("time-input");const val=t?t.value:"";const cid=document.getElementById("time-course").value;const uEl=document.getElementById("time-units");const u=uEl?parseFloat(uEl.value):NaN;setAttendance(el.dataset.sid,el.dataset.date,val||1,cid,(!isNaN(u)&&u>0)?u:undefined);su({modal:null});return;}
+  if(a==="addstu"){su({modal:{type:"add-student"}});return;}
+  if(a==="confirm-add-student"){const n=document.getElementById("ns-name").value.trim();const courseIds=checkedValues("ns-courses");const note=document.getElementById("ns-note").value.trim();if(!n){alert("请输入学员姓名");return;}if(!courseIds.length){alert("请至少选择一个课程/班级");return;}addStu({name:n,courseIds,note});su({modal:null});return;}
+  if(a==="editstu"){su({modal:{type:"edit-student",sid:el.dataset.sid}});return;}
+  if(a==="delstu"){delStu(el.dataset.sid);return;}
+  if(a==="confirm-edit-student"){const sid=el.dataset.sid;const n=document.getElementById("es-name").value.trim();const courseIds=checkedValues("es-courses");const note=document.getElementById("es-note").value.trim();if(!n){alert("请输入学员姓名");return;}if(!courseIds.length){alert("请至少选择一个课程/班级");return;}let newPays=S.payments.map(p=>{if(p.studentId!==sid)return p;const ai=document.getElementById("ep-amt-"+p.id);const hi=document.getElementById("ep-hrs-"+p.id);if(!ai||!hi)return p;const av2=parseFloat(ai.value),hv=parseInt(hi.value);return{...p,amount:isNaN(av2)?p.amount:av2,hours:isNaN(hv)?p.hours:hv};});ss({...S,students:S.students.map(s=>s.id===sid?{...s,name:n,courseIds,courseId:courseIds[0],note}:s),payments:newPays});su({modal:null});return;}
+  if(a==="del-pay-inline"){if(!confirm("确定删除该缴费记录？"))return;const pid=el.dataset.pid,sid=el.dataset.sid;ss({...S,payments:S.payments.filter(p=>p.id!==pid)});su({modal:{type:"edit-student",sid}});return;}
+  if(a==="open-add-pay-for"){su({modal:{type:"add-pay",preStudentId:el.dataset.sid,returnSid:el.dataset.sid}});return;}
+  if(a==="addpay"){su({modal:{type:"add-pay"}});return;}
+  if(a==="confirm-add-pay"){const sid2=document.getElementById("np-stu").value;const date=document.getElementById("np-date").value;const amt=parseFloat(document.getElementById("np-amt").value)||0;const hrs=parseInt(document.getElementById("np-hrs").value)||0;const note=document.getElementById("np-note").value.trim();if(!date){alert("请选择日期");return;}addPay({studentId:sid2,date,amount:amt,hours:hrs,note});const ret=el.dataset.returnSid;const rv=UI.modal&&UI.modal.returnView;if(ret)su({modal:{type:"edit-student",sid:ret}});else if(rv)su({view:rv,modal:null});else su({modal:null});return;}
+  if(a==="delpay"){delPay(el.dataset.pid);return;}
+  if(a==="addcou"){su({modal:{type:"add-course"}});return;}
+  if(a==="confirm-add-course"){const n=document.getElementById("nc-name").value.trim();const pr=parseFloat(document.getElementById("nc-price").value)||0;if(!n){alert("请输入课程名称");return;}const uEl=document.getElementById("nc-units");const u=uEl?parseFloat(uEl.value):1;addCou({name:n,price:pr,unitsPerSession:(!isNaN(u)&&u>0)?u:1});su({modal:null});return;}
+  if(a==="editprice"){const v=prompt("修改单价（¥/课时）：",el.dataset.price);if(v===null)return;const n=parseFloat(v);if(isNaN(n)||n<0){alert("请输入有效金额");return;}updCou(el.dataset.cid,{price:n});return;}
+  if(a==="editunits"){const v=prompt("每节课算几个课时？",el.dataset.units);if(v===null)return;const n=parseFloat(v);if(isNaN(n)||n<=0){alert("请输入大于 0 的数字");return;}updCou(el.dataset.cid,{unitsPerSession:n});return;}
+  if(a==="delcou"){delCou(el.dataset.cid);return;}
+  /* 新模块：待办 */
+  if(a==="add-todo"){su({modal:{type:"add-todo"}});return;}
+  if(a==="edit-todo"){su({modal:{type:"edit-todo",tid:el.dataset.id}});return;}
+  if(a==="confirm-todo"){const title=document.getElementById("td-title").value.trim();const due=document.getElementById("td-due").value;const prio=document.getElementById("td-prio").value;const note=document.getElementById("td-note").value.trim();if(!title){alert("请输入待办事项");return;}const tid=el.dataset.tid;if(tid){ss({...S,todos:S.todos.map(t=>t.id===tid?{...t,title,due,priority:prio,note}:t)});}else{ss({...S,todos:[...S.todos,{id:uid(),title,due,priority:prio,note,done:false}]});}su({modal:null});return;}
+  if(a==="todo-done"){const id=el.dataset.id;ss({...S,todos:S.todos.map(t=>t.id===id?{...t,done:!t.done}:t)});return;}
+  if(a==="del-todo"){if(!confirm("确定删除该待办？"))return;ss({...S,todos:S.todos.filter(t=>t.id!==el.dataset.id)});return;}
+  if(a==="todo-filter"){su({todoFilter:el.dataset.f});return;}
+  /* 新模块：收支 */
+  if(a==="add-expense"){su({modal:{type:"add-expense"}});return;}
+  if(a==="confirm-expense"){const date=document.getElementById("ex-date").value;const cat=document.getElementById("ex-cat").value;const amt=parseFloat(document.getElementById("ex-amt").value)||0;const note=document.getElementById("ex-note").value.trim();if(!date){alert("请选择日期");return;}ss({...S,expenses:[...S.expenses,{id:uid(),date,cat:undefined,category:cat,amount:amt,note}]});su({modal:null});return;}
+  if(a==="del-expense"){if(confirm("确定删除？"))ss({...S,expenses:S.expenses.filter(x=>x.id!==el.dataset.id)});return;}
+  if(a==="add-income"){su({modal:{type:"add-income"}});return;}
+  if(a==="confirm-income"){const date=document.getElementById("in-date").value;const src=document.getElementById("in-src").value.trim();const amt=parseFloat(document.getElementById("in-amt").value)||0;const note=document.getElementById("in-note").value.trim();if(!date){alert("请选择日期");return;}if(!src){alert("请填写来源");return;}ss({...S,otherIncomes:[...S.otherIncomes,{id:uid(),date,source:src,amount:amt,note}]});su({modal:null});return;}
+  if(a==="del-income"){if(confirm("确定删除？"))ss({...S,otherIncomes:S.otherIncomes.filter(x=>x.id!==el.dataset.id)});return;}
+  /* 新模块：招生 */
+  if(a==="add-lead"){su({modal:{type:"add-lead"}});return;}
+  if(a==="edit-lead"){su({modal:{type:"edit-lead",lid:el.dataset.id}});return;}
+  if(a==="confirm-lead"){const name=document.getElementById("ld-name").value.trim();const phone=document.getElementById("ld-phone").value.trim();const source=document.getElementById("ld-src").value;const domain=document.getElementById("ld-dom").value;const stage=document.getElementById("ld-stage").value;const intent=parseFloat(document.getElementById("ld-intent").value)||0;const note=document.getElementById("ld-note").value.trim();if(!name){alert("请输入姓名");return;}const lid=el.dataset.lid;if(lid){ss({...S,leads:S.leads.map(l=>l.id===lid?{...l,name,phone,source,domain,stage,intent,note}:l)});}else{ss({...S,leads:[...S.leads,{id:uid(),name,phone,source,domain,stage,intent,note,createdAt:todayStr(),lastFollow:todayStr()}]});}su({modal:null});return;}
+  if(a==="move-lead"){const id=el.dataset.id;const dir=parseInt(el.dataset.dir);ss({...S,leads:S.leads.map(l=>{if(l.id!==id)return l;const idx=STAGES.indexOf(l.stage);const ni=Math.max(0,Math.min(STAGES.length-1,idx+dir));return{...l,stage:STAGES[ni],lastFollow:todayStr()};})});return;}
+  if(a==="del-lead"){if(confirm("确定删除该线索？"))ss({...S,leads:S.leads.filter(l=>l.id!==el.dataset.id)});return;}
+  if(a==="recruit-domain"){su({recruitDomain:el.dataset.d});return;}
+  /* v2 新模块：分享 / 报表 / 资料 / SOP / 转介绍 */
+  if(a==="share-student"){su({modal:{type:"share-student",sid:el.dataset.sid}});return;}
+  if(a==="download-share"){const sid=el.dataset.sid;const html=buildShareHTML(sid);if(!html){alert("未找到该学员");return;}const blob=new Blob([html],{type:"text/html;charset=utf-8;"});const aEl=document.createElement("a");aEl.href=URL.createObjectURL(blob);aEl.download=`${sm()[sid].name}学习档案_${todayStr()}.html`;aEl.click();return;}
+  if(a==="exit-share"){location.hash="";re();return;}
+  if(a==="gen-report"){const kind=el.dataset.kind;const txt=genBizReport(kind);const out=document.getElementById("report-out");if(out){out.textContent=txt;out.style.display="block";}return;}
+  if(a==="copy-report"){const out=document.getElementById("report-out");const t=out?out.textContent:"";if(!t){alert("请先生成报告");return;}if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert("已复制"));else alert(t);return;}
+  if(a==="download-report"){const out=document.getElementById("report-out");const t=out?out.textContent:"";if(!t){alert("请先生成报告");return;}const blob=new Blob([t],{type:"text/plain;charset=utf-8;"});const aEl=document.createElement("a");aEl.href=URL.createObjectURL(blob);aEl.download=`运营报告_${todayStr()}.txt`;aEl.click();return;}
+  if(a==="open-report-student"){su({modal:{type:"report-student"}});return;}
+  if(a==="gen-student-report"){const sid=document.getElementById("rs-stu").value;const kind=document.getElementById("rs-kind").value;const out=document.getElementById("rs-out");if(out)out.value=genStudentReport(sid,kind);return;}
+  if(a==="copy-student-report"){const out=document.getElementById("rs-out");const t=out?out.value:"";if(!t){alert("请先生成报告");return;}if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert("已复制"));else alert(t);return;}
+  if(a==="download-student-report"){const out=document.getElementById("rs-out");const t=out?out.value:"";if(!t){alert("请先生成报告");return;}const blob=new Blob([t],{type:"text/plain;charset=utf-8;"});const aEl=document.createElement("a");aEl.href=URL.createObjectURL(blob);aEl.download=`学员进度报告_${todayStr()}.txt`;aEl.click();return;}
+  if(a==="add-material"){su({modal:{type:"add-material"}});return;}
+  if(a==="edit-material"){su({modal:{type:"edit-material",id:el.dataset.id}});return;}
+  if(a==="confirm-material"){const id=el.dataset.id;const title=document.getElementById("mt-title").value.trim();const type=document.getElementById("mt-type").value;const courseId=document.getElementById("mt-course").value;const studentId=document.getElementById("mt-stu").value;const content=document.getElementById("mt-content").value;const url=document.getElementById("mt-url").value.trim();const tags=document.getElementById("mt-tags").value.trim();const fileEl=document.getElementById("mt-file");if(!title){alert("请输入标题");return;}const doSave=(attachment,fileName)=>{const data={title,type,courseId,studentId,content,url,tags,attachment,fileName};if(id)updMaterial(id,data);else addMaterial(data);su({modal:null});};if(fileEl&&fileEl.files&&fileEl.files[0]){const f=fileEl.files[0];if(f.size>2*1024*1024){alert("附件超过 2MB，建议上传到网盘后用链接分享");return;}const rd=new FileReader();rd.onload=()=>doSave(rd.result,f.name);rd.readAsDataURL(f);}else{const ex=id?S.materials.find(k=>k.id===id):null;doSave(ex?ex.attachment:"",ex?ex.fileName:"");}return;}
+  if(a==="del-material"){delMaterial(el.dataset.id);return;}
+  if(a==="lead-trial"){const st=ensureLeadStudent(el.dataset.id);if(!st)return;su({modal:{type:"add-schedule",preStudentId:st.id}});return;}
+  if(a==="lead-convert"){const st=ensureLeadStudent(el.dataset.id);if(!st)return;ss({...S,leads:S.leads.map(l=>l.id===el.dataset.id?{...l,stage:"成交",lastFollow:todayStr()}:l)});su({modal:{type:"add-pay",preStudentId:st.id,returnView:"recruit"}});return;}
+  if(a==="toggle-referral"){const ref=el.dataset.ref;const set=new Set(S.referralRewarded||[]);if(set.has(ref))set.delete(ref);else set.add(ref);ss({...S,referralRewarded:[...set]});return;}
+  /* 余额提醒 */
+  if(a==="recharge"){su({modal:{type:"recharge-msg",sid:el.dataset.sid}});return;}
+});
+document.addEventListener("change",e=>{
+  const el=e.target.closest("[data-action]");if(el){const a=el.dataset.action;
+    if(a==="filter-teacher"){su({schTeacher:el.value});return;}
+    if(a==="filter-student"){su({schStudent:el.value});return;}
+    if(a==="set-density"){S.settings.density=el.checked?"compact":"cozy";saveS();re();return;}
+    if(a==="set-threshold"){S.settings.lowBalanceThreshold=Math.max(0,parseInt(el.value)||0);saveS();return;}
+    if(a==="set-ahead"){S.settings.remindAheadClasses=Math.max(0,parseInt(el.value)||0);saveS();return;}
+    if(a==="set-teachername"){S.settings.teacherName=el.value.trim()||"老师";saveS();return;}
+    if(a==="lib-type"){su({libType:el.value});return;}
+    if(a==="lib-stu"){su({libStu:el.value});return;}
+    if(a==="set-referral-type"){S.settings.referralRewardType=el.value;saveS();return;}
+    if(a==="set-referral-value"){S.settings.referralRewardValue=Math.max(0,parseFloat(el.value)||0);saveS();return;}
+  }
+  if(e.target&&e.target.id==="data-import-input"){importData(e.target.files[0]);e.target.value="";}
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&UI.moreOpen&&!UI.modal){su({moreOpen:false});return;}
+  if(!UI.modal)return;
+  if(e.key==="Escape"){su({modal:null});return;}
+  if(e.key==="Enter"&&UI.modal.type==="time-pick"){const t=document.getElementById("time-input");const val=t?t.value:"";const cid=document.getElementById("time-course").value;const uEl=document.getElementById("time-units");const u=uEl?parseFloat(uEl.value):NaN;setAttendance(UI.modal.sid,UI.modal.date,val||1,cid,(!isNaN(u)&&u>0)?u:undefined);su({modal:null});}
+});
+/* 拉一次数据库信息填进「数据」弹窗 */
+function refreshDbPanel(){
+  if(!APP)return Promise.resolve();
+  return Promise.all([window.TWDB.info(),window.TWDB.snapshots(),window.TWDB.log(30)]).then(([info,snaps,log])=>{
+    if(UI.modal&&UI.modal.type==="data-file")
+      su({modal:{...UI.modal,info:info&&info.ok?info:{},snaps:(snaps&&snaps.rows)||[],logRows:(log&&log.rows)||[]}});
+  }).catch(e=>console.error(e));
+}
+if(APP){
+  /* 主进程导入 / 回滚之后，把新数据推回页面 */
+  window.TWDB.onReload(state=>{if(state){S=normalizeS(state);re();}});
+  /* 关窗前把还没落盘的改动刷掉（debounce 窗口里最多 120ms） */
+  window.addEventListener("beforeunload",()=>{if(_savePending)flushSave();});
+  document.title="独立老师工作台";
+}
+re();
+if(!APP)tryRestoreHandle();
+</script>
+</body>
+</html>

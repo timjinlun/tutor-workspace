@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>独立老师工作台 · UI 方向对比</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --wall:#17181C; --wall2:#1E2025; --wallline:#2C2F36;
+  --wtext:#E8EAED; --wdim:#9AA0AA; --wfaint:#6B717C;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--wall); color:var(--wtext);
+  font-family:Inter,-apple-system,"PingFang SC","Noto Sans SC",sans-serif;
+  line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:56px 28px 100px}
+
+/* ---------- 画廊说明层 ---------- */
+.kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--wfaint);font-weight:600;margin-bottom:14px}
+h1{font-size:38px;line-height:1.2;font-weight:700;letter-spacing:-.02em;margin-bottom:14px}
+.lede{font-size:15.5px;color:var(--wdim);max-width:62ch}
+.diag{margin:36px 0 0;border:1px solid var(--wallline);border-radius:10px;background:var(--wall2);padding:22px 24px}
+.diag h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--wfaint);margin-bottom:14px;font-weight:600}
+.diag ul{list-style:none;display:grid;gap:9px}
+.diag li{font-size:14px;color:var(--wdim);padding-left:22px;position:relative}
+.diag li::before{content:"×";position:absolute;left:4px;color:#E06055;font-weight:700}
+.diag b{color:var(--wtext);font-weight:600}
+
+hr.rule{border:none;border-top:1px solid var(--wallline);margin:56px 0 0}
+
+/* ---------- 每个方向 ---------- */
+.dir{margin-top:56px}
+.dir-head{display:flex;align-items:flex-start;gap:18px;margin-bottom:8px}
+.dir-num{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;color:var(--wfaint);
+  border:1px solid var(--wallline);border-radius:5px;padding:4px 8px;flex-shrink:0;margin-top:5px}
+.dir-title{font-size:25px;font-weight:700;letter-spacing:-.01em}
+.dir-title span{font-weight:400;color:var(--wfaint);font-size:16px;margin-left:10px}
+.dir-sub{font-size:14.5px;color:var(--wdim);margin-top:3px;max-width:70ch}
+.swatches{display:flex;gap:6px;margin:16px 0 18px;flex-wrap:wrap}
+.sw{width:52px;height:34px;border-radius:5px;border:1px solid rgba(255,255,255,.09);position:relative}
+.sw i{position:absolute;top:38px;left:0;font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--wfaint);font-style:normal}
+.swatches{margin-bottom:34px}
+
+.frame{border-radius:12px;overflow:hidden;border:1px solid var(--wallline);box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.meta div{border:1px solid var(--wallline);border-radius:9px;padding:13px 15px;background:var(--wall2)}
+.meta strong{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--wfaint);margin-bottom:5px;font-weight:600}
+.meta p{font-size:13.5px;color:var(--wdim)}
+.meta .good strong{color:#6FCF97}
+.meta .cost strong{color:#E0A355}
+
+/* ==================== 预览通用骨架 ==================== */
+.ui{display:flex;min-height:430px;font-size:13px}
+.ui-side{width:178px;flex-shrink:0;display:flex;flex-direction:column}
+.ui-brand{display:flex;align-items:center;gap:9px;padding:16px 16px 14px}
+.ui-logo{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.ui-bname{font-size:13px;font-weight:700;line-height:1.25}
+.ui-bsub{font-size:10.5px;opacity:.6}
+.ui-nav{padding:4px 10px;display:grid;gap:2px}
+.ui-nav a{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:12.5px;text-decoration:none;font-weight:500}
+.ui-ic{width:15px;height:15px;flex-shrink:0;opacity:.85}
+.ui-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.ui-top{display:flex;align-items:center;gap:10px;padding:13px 18px}
+.ui-h1{font-size:16px;font-weight:700}
+.ui-h1 em{font-style:normal;font-weight:400;font-size:12px;opacity:.55;margin-left:8px}
+.ui-btns{margin-left:auto;display:flex;gap:7px}
+.ui-btn{padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid transparent;cursor:default}
+.ui-body{padding:14px 18px 20px;flex:1;display:flex;flex-direction:column;gap:14px}
+.ui-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.ui-kpi{padding:12px 14px;border-radius:9px}
+.ui-klabel{font-size:11px;opacity:.62;margin-bottom:3px}
+.ui-kval{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.ui-kval u{text-decoration:none;font-size:11.5px;font-weight:500;opacity:.6;margin-left:3px}
+.ui-tblwrap{border-radius:9px;overflow:hidden;flex:1}
+table.ui-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.ui-tbl th{font-weight:600;font-size:10.5px;padding:7px 6px;text-align:center;opacity:.6}
+.ui-tbl th.nm{text-align:left;padding-left:14px;width:78px}
+.ui-tbl th.cs{text-align:left;width:62px}
+.ui-tbl td{padding:0;text-align:center;height:31px}
+.ui-tbl td.nm{text-align:left;padding-left:14px;font-weight:600}
+.ui-tbl td.cs{text-align:left;font-size:11px;opacity:.62}
+.ui-tbl td.sum{font-variant-numeric:tabular-nums;font-weight:700;font-size:12px}
+.cell{width:19px;height:19px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.ui-alert{padding:9px 13px;border-radius:8px;font-size:12px;display:flex;align-items:center;gap:8px}
+.ui-alert b{font-weight:700}
+
+/* ==================== A · 教务纸本 ==================== */
+.dirA .ui{background:#FAF7F0;color:#22303F;
+  font-family:Inter,-apple-system,"PingFang SC",sans-serif}
+.dirA .ui-side{background:#F2EDE1;border-right:1px solid #DFD6C4}
+.dirA .ui-logo{background:#1F4E5F;color:#F7F3E8;border-radius:4px;font-family:"Noto Serif SC",serif}
+.dirA .ui-bname{color:#1B2A3A;font-family:"Noto Serif SC",serif}
+.dirA .ui-bsub{color:#8A8070}
+.dirA .ui-nav a{color:#5D6B75;border-radius:4px}
+.dirA .ui-nav a.on{background:#1F4E5F;color:#F7F3E8;font-weight:600}
+.dirA .ui-top{background:#FAF7F0;border-bottom:1px solid #DFD6C4}
+.dirA .ui-h1{font-family:"Noto Serif SC",serif;color:#1B2A3A;letter-spacing:.01em}
+.dirA .ui-btn{background:#FAF7F0;border-color:#C9BFA9;color:#5D6B75;border-radius:3px}
+.dirA .ui-btn.pri{background:#1F4E5F;border-color:#1F4E5F;color:#F7F3E8}
+.dirA .ui-kpi{background:#fff;border:1px solid #E3DACA;border-radius:3px}
+.dirA .ui-klabel{color:#8A8070}
+.dirA .ui-kval{font-family:"Noto Serif SC",serif;color:#1F4E5F}
+.dirA .ui-kval.red{color:#B23A2F}
+.dirA .ui-tblwrap{background:#fff;border:1px solid #E3DACA;border-radius:3px}
+.dirA .ui-tbl th{color:#8A8070;border-bottom:1.5px solid #C9BFA9;background:#F7F3E8;
+  border-right:1px solid #EDE5D6}
+.dirA .ui-tbl td{border-bottom:1px solid #EFE8DA;border-right:1px solid #F2EDE1}
+.dirA .ui-tbl td.nm{color:#1B2A3A}
+.dirA .ui-tbl tr:nth-child(even) td{background:#FDFBF6}
+.dirA .cell{border:1.5px solid #D5CAB4;border-radius:2px}
+.dirA .cell.on{background:#1F4E5F;border-color:#1F4E5F;color:#F7F3E8}
+.dirA .ui-tbl td.sum{color:#1F4E5F;font-family:"Noto Serif SC",serif}
+.dirA .ui-alert{background:#FBF0E4;border:1px solid #E5C9A3;color:#8A5A20}
+
+/* ==================== B · 冷静工具 ==================== */
+.dirB .ui{background:#0E1116;color:#E6E9EF}
+.dirB .ui-side{background:#0A0D11;border-right:1px solid #1D232C}
+.dirB .ui-logo{background:linear-gradient(160deg,#E8A33D,#C97F22);color:#14181E;border-radius:7px}
+.dirB .ui-bname{color:#F2F4F8}
+.dirB .ui-bsub{color:#6A7383}
+.dirB .ui-nav a{color:#8B95A5}
+.dirB .ui-nav a.on{background:#1A2029;color:#F2F4F8;box-shadow:inset 2px 0 0 #E8A33D}
+.dirB .ui-top{border-bottom:1px solid #1D232C}
+.dirB .ui-h1{color:#F2F4F8;letter-spacing:-.01em}
+.dirB .ui-btn{background:#161B22;border-color:#262D38;color:#A7B0BE}
+.dirB .ui-btn.pri{background:#E8A33D;border-color:#E8A33D;color:#14181E}
+.dirB .ui-kpi{background:#12161C;border:1px solid #1D232C}
+.dirB .ui-klabel{color:#727C8C}
+.dirB .ui-kval{color:#F2F4F8;font-family:"JetBrains Mono",monospace;font-size:19px}
+.dirB .ui-kval.amber{color:#E8A33D}
+.dirB .ui-tblwrap{background:#12161C;border:1px solid #1D232C}
+.dirB .ui-tbl th{color:#6A7383;border-bottom:1px solid #1D232C;font-family:"JetBrains Mono",monospace}
+.dirB .ui-tbl td{border-bottom:1px solid #171C23}
+.dirB .ui-tbl td.nm{color:#E6E9EF}
+.dirB .cell{border-radius:4px;background:#1A2029}
+.dirB .cell.on{background:#E8A33D;color:#14181E;box-shadow:0 0 10px rgba(232,163,61,.28)}
+.dirB .cell.half{background:rgba(232,163,61,.42);color:#14181E}
+.dirB .ui-tbl td.sum{color:#E8A33D;font-family:"JetBrains Mono",monospace}
+.dirB .ui-alert{background:rgba(232,163,61,.09);border:1px solid rgba(232,163,61,.28);color:#E3B26C}
+
+/* ==================== C · 明亮教务 ==================== */
+.dirC .ui{background:#F6F8F7;color:#1A2B23}
+.dirC .ui-side{background:#fff;border-right:1px solid #E6EBE8}
+.dirC .ui-logo{background:#2D6A4F;color:#fff;border-radius:9px}
+.dirC .ui-bname{color:#16281F}
+.dirC .ui-bsub{color:#8FA098}
+.dirC .ui-nav a{color:#5E7269;border-radius:9px}
+.dirC .ui-nav a.on{background:#E8F1EC;color:#2D6A4F;font-weight:600}
+.dirC .ui-top{background:#fff;border-bottom:1px solid #E6EBE8}
+.dirC .ui-h1{color:#16281F}
+.dirC .ui-btn{background:#fff;border-color:#DCE4E0;color:#5E7269;border-radius:8px}
+.dirC .ui-btn.pri{background:#2D6A4F;border-color:#2D6A4F;color:#fff}
+.dirC .ui-kpi{background:#fff;border-radius:11px;box-shadow:0 1px 2px rgba(22,40,31,.06)}
+.dirC .ui-klabel{color:#8FA098}
+.dirC .ui-kval{color:#16281F}
+.dirC .ui-kval.green{color:#2D6A4F}
+.dirC .ui-tblwrap{background:#fff;border-radius:11px;box-shadow:0 1px 2px rgba(22,40,31,.06)}
+.dirC .ui-tbl th{color:#8FA098}
+.dirC .ui-tbl td{border-top:1px solid #F0F4F2}
+.dirC .ui-tbl td.nm{color:#16281F}
+.dirC .cell{border-radius:50%;background:#EDF1EF}
+.dirC .cell.on{background:#2D6A4F;color:#fff}
+.dirC .ui-tbl td.sum{color:#2D6A4F}
+.dirC .ui-alert{background:#FEF4E8;color:#9A5A14;border:1px solid #F7DFC0;border-radius:9px}
+
+/* ==================== D · 密度优先 ==================== */
+.dirD .ui{background:#fff;color:#111418;font-size:12px}
+.dirD .ui-side{width:158px;background:#FAFBFC;border-right:1px solid #D8DDE3}
+.dirD .ui-logo{background:#0B5FFF;color:#fff;border-radius:2px;width:26px;height:26px;font-size:12px}
+.dirD .ui-bname{color:#111418;font-size:12.5px}
+.dirD .ui-bsub{color:#7A828C;font-size:10px}
+.dirD .ui-nav a{color:#4A525C;border-radius:2px;padding:6px 9px;font-size:12px}
+.dirD .ui-nav a.on{background:#E8F0FF;color:#0B4ACC;font-weight:600;box-shadow:inset 2px 0 0 #0B5FFF}
+.dirD .ui-top{border-bottom:1px solid #D8DDE3;padding:9px 14px}
+.dirD .ui-h1{font-size:14px;color:#111418}
+.dirD .ui-btn{background:#fff;border-color:#C8D0D9;color:#39414B;border-radius:2px;padding:5px 10px;font-size:11.5px}
+.dirD .ui-btn.pri{background:#0B5FFF;border-color:#0B5FFF;color:#fff}
+.dirD .ui-body{padding:10px 14px 14px;gap:10px}
+.dirD .ui-kpis{grid-template-columns:repeat(3,max-content);gap:0;border:1px solid #D8DDE3}
+.dirD .ui-kpi{border-radius:0;padding:8px 20px;border-right:1px solid #E4E8ED}
+.dirD .ui-kpi:last-child{border-right:none}
+.dirD .ui-klabel{color:#7A828C;font-size:10.5px}
+.dirD .ui-kval{font-size:17px;font-family:"JetBrains Mono",monospace;color:#111418}
+.dirD .ui-tblwrap{border:1px solid #D8DDE3;border-radius:0}
+.dirD .ui-tbl{font-size:11.5px}
+.dirD .ui-tbl th{background:#F2F5F8;border-bottom:1px solid #D8DDE3;border-right:1px solid #E4E8ED;
+  color:#5A626C;padding:5px 4px;font-family:"JetBrains Mono",monospace;font-size:10px}
+.dirD .ui-tbl td{height:26px;border-bottom:1px solid #EDF0F3;border-right:1px solid #F2F5F8}
+.dirD .ui-tbl tr:nth-child(even) td{background:#FAFBFC}
+.dirD .ui-tbl td.nm{color:#111418;font-weight:600}
+.dirD .cell{width:16px;height:16px;border:1px solid #C8D0D9;border-radius:1px}
+.dirD .cell.on{background:#0B5FFF;border-color:#0B5FFF;color:#fff}
+.dirD .ui-tbl td.sum{font-family:"JetBrains Mono",monospace;color:#0B4ACC}
+.dirD .ui-alert{border-radius:0;border:1px solid #FFD9A0;background:#FFF8EC;color:#8A5A10;font-size:11.5px}
+
+/* ---------- 底部 ---------- */
+.verdict{margin-top:64px;border:1px solid var(--wallline);border-radius:12px;background:var(--wall2);padding:26px 28px}
+.verdict h2{font-size:19px;font-weight:700;margin-bottom:6px}
+.verdict .conf{font-family:"JetBrains Mono",monospace;font-size:11px;color:#E0A355;margin-bottom:16px}
+.verdict p{font-size:14.5px;color:var(--wdim);margin-bottom:12px;max-width:72ch}
+.verdict p b{color:var(--wtext);font-weight:600}
+.pickrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px;margin-top:20px}
+.pick{border:1px solid var(--wallline);border-radius:9px;padding:13px 15px;background:var(--wall)}
+.pick b{display:block;font-size:13.5px;margin-bottom:4px}
+.pick span{font-size:12.5px;color:var(--wfaint)}
+@media(max-width:820px){
+  .wrap{padding:34px 16px 70px} h1{font-size:28px}
+  .meta{grid-template-columns:1fr}
+  .frame{overflow-x:auto} .ui{min-width:760px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">独立老师工作台 · 视觉重构提案</div>
+  <h1>四个方向，同一块界面</h1>
+  <p class="lede">每个方向渲染的都是同一屏内容：侧边栏、本月三个数、九月考勤表、余额预警。内容完全一样，只有视觉语言不同，所以差异是可比的。挑一个，我就按它重构整个 App。</p>
+
+  <div class="diag">
+    <h2>现在这版丑在哪</h2>
+    <ul>
+      <li><b>蓝紫渐变</b>（#3b82f6 → #8b5cf6）是 2022 年模板生成后台的标志配色，一眼认得出来</li>
+      <li><b>emoji 当图标</b>（🔗 🗄 ➕ ✏️）—— 廉价感最主要的来源，且在 Windows 上渲染成另一套字形</li>
+      <li><b>全屏圆角卡片加阴影</b>，每块权重一样，看不出哪个重要，是一锅「卡片汤」</li>
+      <li><b>字体是系统默认栈</b>，数字没做等宽对齐，整列数字看着是歪的</li>
+      <li>最要命的：<b>考勤表是这个产品的核心，却长得像 Excel 截图</b>，从没被当成主角设计过</li>
+    </ul>
+  </div>
+
+  <hr class="rule"/>
+
+  <!-- ============ A ============ -->
+  <section class="dir dirA">
+    <div class="dir-head">
+      <div class="dir-num">A</div>
+      <div>
+        <div class="dir-title">教务纸本 <span>Ledger</span></div>
+        <div class="dir-sub">灵感来自老师真实在用的纸质点名册和教材印刷：暖纸底、贯通的账本格线、墨青色印章式打卡格。数字和标题用宋体，正文用无衬线。</div>
+      </div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#FAF7F0"><i>纸白</i></div>
+      <div class="sw" style="background:#1F4E5F"><i>墨青</i></div>
+      <div class="sw" style="background:#1B2A3A"><i>墨黑</i></div>
+      <div class="sw" style="background:#B23A2F"><i>批改红</i></div>
+      <div class="sw" style="background:#C9BFA9"><i>格线</i></div>
+    </div>
+    <div class="frame">
+      <div class="ui">
+        <aside class="ui-side">
+          <div class="ui-brand"><div class="ui-logo">师</div><div><div class="ui-bname">独立老师工作台</div><div class="ui-bsub">王老师</div></div></div>
+          <nav class="ui-nav">
+            <a href="#a">今日</a><a href="#a" class="on">课时统计</a><a href="#a">学员</a><a href="#a">收支</a><a href="#a">招生</a>
+          </nav>
+        </aside>
+        <div class="ui-main">
+          <div class="ui-top"><div class="ui-h1">2026年9月 考勤表<em>共 6 名学员</em></div>
+            <div class="ui-btns"><span class="ui-btn">导出</span><span class="ui-btn pri">记一节课</span></div></div>
+          <div class="ui-body">
+            <div class="ui-kpis">
+              <div class="ui-kpi"><div class="ui-klabel">本月课时</div><div class="ui-kval">86<u>节</u></div></div>
+              <div class="ui-kpi"><div class="ui-klabel">确认收入</div><div class="ui-kval">24,080<u>元</u></div></div>
+              <div class="ui-kpi"><div class="ui-klabel">待续费</div><div class="ui-kval red">3<u>人</u></div></div>
+            </div>
+            <div class="ui-tblwrap">
+              <table class="ui-tbl">
+                <tr><th class="nm">学员</th><th class="cs">课程</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>合计</th></tr>
+                <tr><td class="nm">张明</td><td class="cs">数学</td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td class="sum">12</td></tr>
+                <tr><td class="nm">李华</td><td class="cs">英语</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td class="sum">16</td></tr>
+                <tr><td class="nm">王芳</td><td class="cs">语文</td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td class="sum">9</td></tr>
+                <tr><td class="nm">刘洋</td><td class="cs">物理</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td class="sum">11</td></tr>
+              </table>
+            </div>
+            <div class="ui-alert">王芳 只剩 <b>2 节课</b>，上次续费是 7 月 12 日</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="good"><strong>适合</strong><p>你想让产品看起来「专业、可信、像正经教务工具」。老师群体对纸本点名册有肌肉记忆，上手成本最低。也最不像 AI 生成的。</p></div>
+      <div class="cost"><strong>代价</strong><p>宋体渲染在 Windows 上不如 Mac，要额外配字体栈。暖色调长时间看比冷色调累一点。</p></div>
+    </div>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section class="dir dirB">
+    <div class="dir-head">
+      <div class="dir-num">B</div>
+      <div>
+        <div class="dir-title">冷静工具 <span>Slate</span></div>
+        <div class="dir-sub">Linear 那一派：深色优先、极度克制、全局只有一个强调色。这里用琥珀金而不是常见的蓝或荧光绿，打卡格点亮像盖了个金印。考勤表做成密度热力图，一眼看出这个月谁上得密。</div>
+      </div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#0E1116"><i>底</i></div>
+      <div class="sw" style="background:#12161C"><i>面板</i></div>
+      <div class="sw" style="background:#1D232C"><i>描边</i></div>
+      <div class="sw" style="background:#E8A33D"><i>琥珀金</i></div>
+      <div class="sw" style="background:#E6E9EF"><i>文字</i></div>
+    </div>
+    <div class="frame">
+      <div class="ui">
+        <aside class="ui-side">
+          <div class="ui-brand"><div class="ui-logo">师</div><div><div class="ui-bname">独立老师工作台</div><div class="ui-bsub">王老师</div></div></div>
+          <nav class="ui-nav">
+            <a href="#b">今日</a><a href="#b" class="on">课时统计</a><a href="#b">学员</a><a href="#b">收支</a><a href="#b">招生</a>
+          </nav>
+        </aside>
+        <div class="ui-main">
+          <div class="ui-top"><div class="ui-h1">2026年9月 考勤表<em>共 6 名学员</em></div>
+            <div class="ui-btns"><span class="ui-btn">导出</span><span class="ui-btn pri">记一节课</span></div></div>
+          <div class="ui-body">
+            <div class="ui-kpis">
+              <div class="ui-kpi"><div class="ui-klabel">本月课时</div><div class="ui-kval">86<u>节</u></div></div>
+              <div class="ui-kpi"><div class="ui-klabel">确认收入</div><div class="ui-kval">24,080<u>元</u></div></div>
+              <div class="ui-kpi"><div class="ui-klabel">待续费</div><div class="ui-kval amber">3<u>人</u></div></div>
+            </div>
+            <div class="ui-tblwrap">
+              <table class="ui-tbl">
+                <tr><th class="nm">学员</th><th class="cs">课程</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>合计</th></tr>
+                <tr><td class="nm">张明</td><td class="cs">数学</td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell half">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td class="sum">12</td></tr>
+                <tr><td class="nm">李华</td><td class="cs">英语</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td class="sum">16</td></tr>
+                <tr><td class="nm">王芳</td><td class="cs">语文</td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell"></div></td><td><div class="cell half">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td class="sum">9</td></tr>
+                <tr><td class="nm">刘洋</td><td class="cs">物理</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td class="sum">11</td></tr>
+              </table>
+            </div>
+            <div class="ui-alert">王芳 只剩 <b>2 节课</b>，上次续费是 7 月 12 日</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="good"><strong>适合</strong><p>你自己天天开着它。深色晚上不刺眼，密度高，看起来最「贵」最像专业软件，能撑起更高的定价。</p></div>
+      <div class="cost"><strong>代价</strong><p>目标客群是辅导老师，不是程序员。深色界面对不熟悉软件的人有距离感，截图发小红书的传播力也弱于亮色。</p></div>
+    </div>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section class="dir dirC">
+    <div class="dir-head">
+      <div class="dir-num">C</div>
+      <div>
+        <div class="dir-title">明亮教务 <span>Clean</span></div>
+        <div class="dir-sub">飞书、Notion 那一派：亮、白、圆润，用留白和灰阶分区而不是靠边框。主色换成墨绿，避开满大街的蓝紫，同时保留教育行业的稳重感。打卡格是实心圆点。</div>
+      </div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#F6F8F7"><i>底</i></div>
+      <div class="sw" style="background:#FFFFFF"><i>卡片</i></div>
+      <div class="sw" style="background:#2D6A4F"><i>墨绿</i></div>
+      <div class="sw" style="background:#F4A259"><i>暖橙</i></div>
+      <div class="sw" style="background:#8FA098"><i>次级</i></div>
+    </div>
+    <div class="frame">
+      <div class="ui">
+        <aside class="ui-side">
+          <div class="ui-brand"><div class="ui-logo">师</div><div><div class="ui-bname">独立老师工作台</div><div class="ui-bsub">王老师</div></div></div>
+          <nav class="ui-nav">
+            <a href="#c">今日</a><a href="#c" class="on">课时统计</a><a href="#c">学员</a><a href="#c">收支</a><a href="#c">招生</a>
+          </nav>
+        </aside>
+        <div class="ui-main">
+          <div class="ui-top"><div class="ui-h1">2026年9月 考勤表<em>共 6 名学员</em></div>
+            <div class="ui-btns"><span class="ui-btn">导出</span><span class="ui-btn pri">记一节课</span></div></div>
+          <div class="ui-body">
+            <div class="ui-kpis">
+              <div class="ui-kpi"><div class="ui-klabel">本月课时</div><div class="ui-kval">86<u>节</u></div></div>
+              <div class="ui-kpi"><div class="ui-klabel">确认收入</div><div class="ui-kval green">24,080<u>元</u></div></div>
+              <div class="ui-kpi"><div class="ui-klabel">待续费</div><div class="ui-kval">3<u>人</u></div></div>
+            </div>
+            <div class="ui-tblwrap">
+              <table class="ui-tbl">
+                <tr><th class="nm">学员</th><th class="cs">课程</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>合计</th></tr>
+                <tr><td class="nm">张明</td><td class="cs">数学</td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td class="sum">12</td></tr>
+                <tr><td class="nm">李华</td><td class="cs">英语</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td class="sum">16</td></tr>
+                <tr><td class="nm">王芳</td><td class="cs">语文</td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td class="sum">9</td></tr>
+                <tr><td class="nm">刘洋</td><td class="cs">物理</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td class="sum">11</td></tr>
+              </table>
+            </div>
+            <div class="ui-alert">王芳 只剩 <b>2 节课</b>，上次续费是 7 月 12 日</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="good"><strong>适合</strong><p>卖给最广的老师群体。亮色、圆润、低门槛，截图发小红书好看，客服成本最低。风险最小的一条路。</p></div>
+      <div class="cost"><strong>代价</strong><p>也是最容易撞脸的一条。做不好就退回「又一个飞书皮肤」，靠的是执行精度：留白、灰阶层次、字重，一处松就垮。</p></div>
+    </div>
+  </section>
+
+  <!-- ============ D ============ -->
+  <section class="dir dirD">
+    <div class="dir-head">
+      <div class="dir-num">D</div>
+      <div>
+        <div class="dir-title">密度优先 <span>Dense</span></div>
+        <div class="dir-sub">把表格本身当成界面主角。零圆角零阴影，边框定义一切，行高压到 26px，数字全部等宽右对齐，学员列冻结。屏幕上能塞下的信息量是其他方向的两倍。</div>
+      </div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#FFFFFF"><i>底</i></div>
+      <div class="sw" style="background:#F2F5F8"><i>表头</i></div>
+      <div class="sw" style="background:#D8DDE3"><i>边框</i></div>
+      <div class="sw" style="background:#0B5FFF"><i>功能蓝</i></div>
+      <div class="sw" style="background:#111418"><i>文字</i></div>
+    </div>
+    <div class="frame">
+      <div class="ui">
+        <aside class="ui-side">
+          <div class="ui-brand"><div class="ui-logo">师</div><div><div class="ui-bname">独立老师工作台</div><div class="ui-bsub">王老师</div></div></div>
+          <nav class="ui-nav">
+            <a href="#d">今日</a><a href="#d" class="on">课时统计</a><a href="#d">学员</a><a href="#d">收支</a><a href="#d">招生</a>
+          </nav>
+        </aside>
+        <div class="ui-main">
+          <div class="ui-top"><div class="ui-h1">2026年9月 考勤表<em>共 6 名学员</em></div>
+            <div class="ui-btns"><span class="ui-btn">导出</span><span class="ui-btn pri">记一节课</span></div></div>
+          <div class="ui-body">
+            <div class="ui-kpis">
+              <div class="ui-kpi"><div class="ui-klabel">本月课时</div><div class="ui-kval">86</div></div>
+              <div class="ui-kpi"><div class="ui-klabel">确认收入</div><div class="ui-kval">24,080</div></div>
+              <div class="ui-kpi"><div class="ui-klabel">待续费</div><div class="ui-kval">3</div></div>
+            </div>
+            <div class="ui-tblwrap">
+              <table class="ui-tbl">
+                <tr><th class="nm">学员</th><th class="cs">课程</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>合计</th></tr>
+                <tr><td class="nm">张明</td><td class="cs">数学</td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td class="sum">12</td></tr>
+                <tr><td class="nm">李华</td><td class="cs">英语</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td class="sum">16</td></tr>
+                <tr><td class="nm">王芳</td><td class="cs">语文</td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td class="sum">9</td></tr>
+                <tr><td class="nm">刘洋</td><td class="cs">物理</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td class="sum">11</td></tr>
+                <tr><td class="nm">陈晨</td><td class="cs">数学</td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td class="sum">14</td></tr>
+                <tr><td class="nm">赵雷</td><td class="cs">英语</td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td><div class="cell"></div></td><td><div class="cell on">✓</div></td><td class="sum">13</td></tr>
+              </table>
+            </div>
+            <div class="ui-alert">王芳 只剩 <b>2 节课</b>，上次续费是 7 月 12 日</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="good"><strong>适合</strong><p>学员多的老师（15 人以上）。一屏能看完整月，不用翻页不用横向滚。功能性最强，做起来也最快。</p></div>
+      <div class="cost"><strong>代价</strong><p>最没「设计感」，卖相最弱。老师看到第一眼会觉得「这不就是 Excel 吗」，很难支撑溢价。</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 结论 ============ -->
+  <div class="verdict">
+    <h2>我的判断：A（教务纸本）</h2>
+    <div class="conf">置信度 中高</div>
+    <p>你这个产品是<b>卖给辅导老师的商品</b>，不是自用工具。那视觉的第一任务就是「让老师一眼觉得这东西专业、值这个钱」，而不是「让我自己看着爽」。</p>
+    <p>B 最好看，但深色对非技术用户有距离感，而且截图发小红书的传播力明显弱。D 最实用但卖相撑不起价。C 最安全，问题是<b>它安全到没有记忆点</b>，做出来很可能被评价成「又一个飞书皮肤」。</p>
+    <p>A 的优势是它有一个别人没有的落点：<b>老师对纸质点名册有肌肉记忆</b>。暖纸底加账本格线，打开就知道这是干嘛的，上手成本最低，同时因为没人这么做后台，反而最不像模板生成的。这也是唯一一个视觉语言能直接反哺你商品详情页的方向。</p>
+    <div class="pickrow">
+      <div class="pick"><b>选 A</b><span>专业可信，最有辨识度，适合当商品卖</span></div>
+      <div class="pick"><b>选 B</b><span>最好看最像专业软件，但客群可能不买账</span></div>
+      <div class="pick"><b>选 C</b><span>最安全最好懂，代价是没记忆点</span></div>
+      <div class="pick"><b>选 D</b><span>信息密度最高，卖相最弱</span></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

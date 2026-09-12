@@ -120,6 +120,7 @@ export function readV2State(db: DatabaseSync): StateLike | null {
       remindAhead: n(set.remindAheadClasses) || 2,
       accent: "coral",
       appearance: "system",
+      background: "aurora",
       onboarded: true,
     },
   };

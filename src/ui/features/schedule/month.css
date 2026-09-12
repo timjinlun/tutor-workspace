@@ -9,7 +9,7 @@
 .month-legend i.canc { background: var(--fill-2); }
 .month-wrap { padding: 8px 10px; overflow-x: auto; }
 table.month { border-collapse: separate; border-spacing: 0; font-size: 12px; min-width: 100%; }
-.month th { font-weight: 500; color: var(--label-2); padding: 6px 2px 8px; text-align: center; min-width: 30px; }
+.month th { font-weight: 500; color: var(--label-2); padding: 6px 1px 8px; text-align: center; min-width: 27px; }
 .month th .num { display: block; font-size: 12.5px; color: var(--label); }
 .month th small { font-size: 10px; color: var(--label-3); }
 .month th.wk .num, .month th.wk small { color: var(--label-3); }
@@ -19,7 +19,9 @@ table.month { border-collapse: separate; border-spacing: 0; font-size: 12px; min
 .month td { text-align: center; height: 40px; border-top: 1px solid var(--line); }
 .month td.wk, .month th.wk { background: var(--surface-2); }
 .month td.today { background: var(--accent-soft); }
-.month th.sum, .month td.sum { min-width: 52px; font-weight: 600; }
+.month th.sum, .month td.sum { min-width: 52px; font-weight: 600; position: sticky; right: 0; background: var(--surface); z-index: 2; }
+.month th.sum:nth-last-child(2), .month td.sum:nth-last-child(2) { right: 84px; }
+.month td.sum.fee { min-width: 84px; padding-right: 8px; }
 .month td.fee { color: var(--label-2); font-weight: 500; }
 .cell { width: 22px; height: 22px; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; position: relative; color: transparent; transition: transform .1s, background .1s; }
 .cell:hover { transform: scale(1.15); background: var(--fill); }

@@ -1,8 +1,4 @@
-.month-nav { display: flex; align-items: center; gap: 4px; padding-bottom: 5px; }
-.month-nav span { font-size: 14px; font-weight: 600; color: var(--label-2); min-width: 100px; text-align: center; }
-.month-nav button { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--label-2); }
-.month-nav button:hover { background: color-mix(in srgb, var(--label) 8%, transparent); color: var(--label); }
-.month-nav button:disabled { opacity: .3; }
+.page-head .month-nav { padding-bottom: 5px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .fin-cards { margin-bottom: 16px; }
 .fin-card { padding: 14px 16px; }

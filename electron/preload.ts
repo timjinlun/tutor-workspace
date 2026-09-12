@@ -19,6 +19,11 @@ const bridge = {
       return () => ipcRenderer.removeListener("data:imported", h);
     },
   },
+  wallpaper: {
+    get: () => ipcRenderer.invoke("wallpaper:get"),
+    set: (dataUrl: string) => ipcRenderer.invoke("wallpaper:set", dataUrl),
+    clear: () => ipcRenderer.invoke("wallpaper:clear"),
+  },
   system: {
     accentColor: () => ipcRenderer.invoke("system:accentColor"),
     onAccentChange: (fn: (hex: string) => void) => {

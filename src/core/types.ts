@@ -138,11 +138,14 @@ export interface Material {
 
 export type Accent = "coral" | "indigo" | "system";
 export type Appearance = "system" | "light" | "dark";
+/** 主界面背景：无 / 极光 / 网格 / 自定义图片 */
+export type Background = "none" | "aurora" | "mesh" | "custom";
 
 export interface Settings {
   teacherName: string;
   accent: Accent;
   appearance: Appearance;
+  background: Background;
   /** 剩余课时 ≤ 该值：红色提醒 */
   lowBalanceThreshold: number;
   /** 剩余课时 ≤ 阈值 + 该值：黄色提醒 */
@@ -170,6 +173,7 @@ export const DEFAULT_SETTINGS: Settings = {
   teacherName: "老师",
   accent: "coral",
   appearance: "system",
+  background: "aurora",
   lowBalanceThreshold: 4,
   remindAhead: 2,
   onboarded: false,

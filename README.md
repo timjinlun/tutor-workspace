@@ -33,11 +33,11 @@ A local-first macOS app for independent tutors. React + TypeScript + Electron, S
 
 ## 外观
 
-跟随系统深浅色；强调色三选一：珊瑚、靛蓝、跟随 macOS 系统强调色。侧栏是原生毛玻璃。
+跟随系统深浅色；强调色三选一：珊瑚、靛蓝、跟随 macOS 系统强调色。背景四选一：纯色、极光（缓慢漂移的光斑）、网格、**自己的图片**。有背景时卡片变成半透明毛玻璃。
 
 <p align="center">
+<img src="docs/screenshots/wallpaper.png" width="430" alt="自定义壁纸">
 <img src="docs/screenshots/today-dark.png" width="430" alt="深色">
-<img src="docs/screenshots/today-indigo.png" width="430" alt="靛蓝">
 </p>
 
 ## 开发
@@ -80,7 +80,8 @@ electron/          主进程、preload、SQLite
 - [x] 成绩卡（1080×1350 分享图）
 - [x] 潜在学员、资料、转介绍
 - [x] v2 数据库自动升级
-- [ ] App 图标
+- [x] 背景与自定义壁纸、毛玻璃
+- [x] App 图标
 - [ ] iOS / iPad（Tauri 2，同一套 React 代码）
 
 ## License

@@ -13,6 +13,7 @@ let store: SqliteStore | null = null;
 
 const dataDir = () => path.join(app.getPath("userData"), "data");
 const dbFile = () => path.join(dataDir(), "工作台.db");
+const wallpaperFile = () => path.join(app.getPath("userData"), "wallpaper.txt");
 
 /* ============================== 窗口 ============================== */
 
@@ -194,6 +195,27 @@ function wireIpc() {
       return { ok: true, path: filePath };
     } catch (e) {
       return { ok: false, error: String(e instanceof Error ? e.message : e) };
+    }
+  });
+
+  /* 壁纸：一个 data URL 存成文件，不塞进数据库，避免每次保存都拖着几 MB */
+  ipcMain.handle("wallpaper:get", () => {
+    try {
+      return fs.readFileSync(wallpaperFile(), "utf8");
+    } catch {
+      return null;
+    }
+  });
+  ipcMain.handle("wallpaper:set", (_e, dataUrl: string) => {
+    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/") || dataUrl.length > 12 * 1024 * 1024) return { ok: false };
+    fs.writeFileSync(wallpaperFile(), dataUrl, "utf8");
+    return { ok: true };
+  });
+  ipcMain.handle("wallpaper:clear", () => {
+    try {
+      fs.unlinkSync(wallpaperFile());
+    } catch {
+      /* ignore */
     }
   });
 

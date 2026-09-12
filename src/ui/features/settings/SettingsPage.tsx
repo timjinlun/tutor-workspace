@@ -1,9 +1,9 @@
 /** 设置：称呼、外观、课程与单价、老师、你的数据。这里不出现「数据库」三个字。 */
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Plus, FolderOpen, Download, Upload, Save } from "lucide-react";
+import { Plus, FolderOpen, Download, Upload, Save, ImagePlus, X } from "lucide-react";
 import { useStore } from "@/store";
-import type { Accent, Appearance } from "@/core/types";
+import type { Accent, Appearance, Background } from "@/core/types";
 import { Button, Chip, Field, Input, Segmented } from "@/ui/primitives";
 import { ConfirmSheet } from "@/ui/widgets/ConfirmSheet";
 import { platform, isApp } from "@/platform";
@@ -13,6 +13,21 @@ export function SettingsPage() {
   const ent = useStore((x) => x.ent);
   const { updateSettings, addCourse, updateCourse, addTeacher, replaceState, loadDemo, clearAll } = useStore(useShallow((x) => ({ updateSettings: x.updateSettings, addCourse: x.addCourse, updateCourse: x.updateCourse, addTeacher: x.addTeacher, replaceState: x.replaceState, loadDemo: x.loadDemo, clearAll: x.clearAll })));
   const [info, setInfo] = useState<{ path: string; sizeBytes: number; snapshots: number } | null>(null);
+  const wallpaper = useStore((x) => x.wallpaper);
+  const setWallpaper = useStore((x) => x.setWallpaper);
+  const pickWallpaper = async () => {
+    const url = await platform.wallpaper.pick();
+    if (!url) return;
+    if (await platform.wallpaper.set(url)) {
+      setWallpaper(url);
+      updateSettings({ background: "custom" });
+    }
+  };
+  const clearWallpaper = async () => {
+    await platform.wallpaper.clear();
+    setWallpaper(null);
+    updateSettings({ background: "aurora" });
+  };
   const [newCourse, setNewCourse] = useState({ name: "", price: "" });
   const [newTeacher, setNewTeacher] = useState("");
   const [teacherMsg, setTeacherMsg] = useState("");
@@ -48,6 +63,15 @@ export function SettingsPage() {
             <Segmented<Appearance> value={s.settings.appearance} options={[{ value: "system", label: "跟随系统" }, { value: "light", label: "浅色" }, { value: "dark", label: "深色" }]} onChange={(appearance) => updateSettings({ appearance })} />
           </Field>
         </div>
+        <Field label="背景">
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <Segmented<Background> value={s.settings.background} options={[{ value: "none", label: "纯色" }, { value: "aurora", label: "极光" }, { value: "mesh", label: "网格" }, ...(wallpaper ? [{ value: "custom" as Background, label: "我的图片" }] : [])]} onChange={(background) => updateSettings({ background })} />
+            <Button icon={<ImagePlus />} onClick={pickWallpaper}>{wallpaper ? "换一张图片…" : "用自己的图片…"}</Button>
+            {wallpaper && <Button variant="ghost" size="sm" icon={<X />} onClick={clearWallpaper}>移除图片</Button>}
+          </div>
+        </Field>
+        {wallpaper && <div className="wallpaper-preview" style={{ backgroundImage: `url(${wallpaper})` }} />}
+        <div className="muted" style={{ fontSize: 12.5 }}>有背景时卡片会变成半透明的毛玻璃。图片只存在这台电脑上，不进数据备份。</div>
       </div>
 
       <div className="card">

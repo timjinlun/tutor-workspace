@@ -15,6 +15,11 @@ export interface TutorBridge {
     onImported(fn: (state: State) => void): () => void;
     savePng(dataUrl: string, filename: string): Promise<{ ok: true; path: string } | { ok: false; cancelled?: boolean; error?: string }>;
   };
+  wallpaper: {
+    get(): Promise<string | null>;
+    set(dataUrl: string): Promise<{ ok: boolean }>;
+    clear(): Promise<void>;
+  };
   system: {
     accentColor(): Promise<string | null>;
     onAccentChange(fn: (hex: string) => void): () => void;

@@ -1,20 +1,14 @@
 /** 收支：本月四个数、近 6 个月对比、支出分类、明细录入、月度经营报告。 */
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { ChevronLeft, ChevronRight, Plus, Trash2, FileText } from "lucide-react";
+import { Plus, Trash2, FileText } from "lucide-react";
 import { useStore } from "@/store";
 import { cashInMonth, expenseByCategory, expenseInMonth, EXPENSE_CATEGORIES, fmtMoney, incomeInMonth, INCOME_SOURCES, monthlySeries, doneUnitsInMonth } from "@/core/finance";
 import { monthKey, todayISO } from "@/core/date";
-import { Button, Chip, Field, Input, Select, Sheet } from "@/ui/primitives";
+import { Button, Chip, Field, Input, MonthPicker, Select, Sheet } from "@/ui/primitives";
 import { MonthlyReportSheet } from "@/ui/widgets/ReportSheets";
 import "./finance.css";
 
-const shiftMonth = (ym: string, d: number) => {
-  const [y, m] = ym.split("-").map(Number);
-  const dt = new Date(y ?? 2026, (m ?? 1) - 1 + d, 1);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-};
-const ymCN = (ym: string) => `${ym.slice(0, 4)} 年 ${Number(ym.slice(5))} 月`;
 
 export function FinancePage() {
   const s = useStore((x) => x.s);
@@ -42,11 +36,7 @@ export function FinancePage() {
     <div className="page">
       <div className="page-head">
         <h1>收支</h1>
-        <div className="month-nav">
-          <button onClick={() => setYm(shiftMonth(ym, -1))} aria-label="上个月"><ChevronLeft size={16} /></button>
-          <span className="num">{ymCN(ym)}</span>
-          <button onClick={() => setYm(shiftMonth(ym, 1))} aria-label="下个月" disabled={ym >= monthKey(today)}><ChevronRight size={16} /></button>
-        </div>
+        <MonthPicker value={ym} onChange={setYm} max={monthKey(today)} />
         <div className="actions">
           <Button icon={<FileText />} onClick={() => setReportOpen(true)}>经营月报</Button>
           <Button variant="primary" icon={<Plus />} onClick={() => setExpOpen(true)}>记支出</Button>

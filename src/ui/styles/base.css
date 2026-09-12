@@ -1,7 +1,8 @@
 @import "./tokens.css";
+@import "./background.css";
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { height: 100%; }
+html, body, #root { height: 100%; min-height: 100vh; }
 html { background: transparent; }
 body {
   font-family: var(--font-ui);
@@ -30,7 +31,7 @@ button { cursor: default; background: none; border: none; }
 .select-text { user-select: text; }
 
 /* ---------- 布局 ---------- */
-.layout { display: flex; height: 100%; }
+.layout { display: flex; height: 100%; min-height: 100vh; }
 .sidebar {
   width: 224px; flex-shrink: 0; display: flex; flex-direction: column;
   background: var(--sidebar); padding: 52px 12px 14px; -webkit-app-region: drag;
@@ -53,7 +54,7 @@ body:not(.app) .sidebar { background: var(--sidebar-solid); padding-top: 20px; }
 .sidebar-foot .name { font-weight: 600; font-size: 13.5px; }
 .sidebar-foot .sub { font-size: 11.5px; color: var(--label-2); }
 .main { flex: 1; min-width: 0; background: var(--bg); overflow-y: auto; }
-.page { max-width: 1040px; margin: 0 auto; padding: 44px 40px 80px; }
+.page { max-width: 1480px; margin: 0 auto; padding: 44px clamp(28px, 4vw, 64px) 80px; }
 .page-head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
 .page-head h1 { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 .page-head .sub { font-size: 14px; color: var(--label-2); padding-bottom: 4px; }
@@ -75,8 +76,13 @@ body:not(.app) .sidebar { background: var(--sidebar-solid); padding-top: 20px; }
 .row.clickable { cursor: default; margin: 0 -10px; padding-left: 10px; padding-right: 10px; border-radius: var(--radius-sm); }
 .row.clickable:hover { background: color-mix(in srgb, var(--label) 4%, transparent); }
 .row.clickable.on { background: var(--accent-soft); }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.month-nav { display: flex; align-items: center; gap: 4px; }
+.month-nav span { font-size: 14px; font-weight: 600; color: var(--label-2); min-width: 100px; text-align: center; }
+.month-nav button { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--label-2); }
+.month-nav button:hover { background: color-mix(in srgb, var(--label) 8%, transparent); color: var(--label); }
+.month-nav button:disabled { opacity: .3; }
 @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
 
 /* ---------- 统计胶囊 ---------- */

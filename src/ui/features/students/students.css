@@ -1,4 +1,4 @@
-.students-body { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+.students-body { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .students-list { padding: 12px 14px; position: sticky; top: 0; max-height: calc(100vh - 120px); overflow-y: auto; }
 .search { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 9px; padding: 0 10px; height: 32px; margin-bottom: 8px; color: var(--label-3); }
 .search input { flex: 1; background: none; border: none; outline: none; font-size: 13px; color: var(--label); }

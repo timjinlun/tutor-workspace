@@ -4,7 +4,7 @@ import { Copy, Lock } from "lucide-react";
 import { useStore } from "@/store";
 import { monthlyReport, parentReport } from "@/core/report";
 import { monthKey, todayISO } from "@/core/date";
-import { Button, Chip, Field, Input, Sheet } from "@/ui/primitives";
+import { Button, Chip, Field, Input, MonthPicker, Sheet } from "@/ui/primitives";
 import { platform } from "@/platform";
 
 function useCopy() {
@@ -30,7 +30,7 @@ export function ParentReportSheet({ open, onClose, studentId }: { open: boolean;
   return (
     <Sheet open={open} onClose={onClose} title="家长报告" sub="生成一段可以直接发给家长的文字。" wide>
       <div className="grid-2">
-        <Field label="月份"><Input type="month" value={ym} onChange={(e) => setYm(e.target.value)} /></Field>
+        <Field label="月份"><MonthPicker value={ym} onChange={setYm} max={monthKey(todayISO())} /></Field>
         <Field label="老师的话（可选）"><Input value={note} placeholder="这个月进步很大…" onChange={(e) => setNote(e.target.value)} /></Field>
       </div>
       <pre className="report-pre select-text">{text}</pre>

@@ -1,0 +1,57 @@
+/* =====================================================================
+   背景层与毛玻璃。
+   html[data-bg=none]   纯色，卡片不透明（原样）
+   html[data-bg=aurora] 三个强调色系的光斑缓慢漂移
+   html[data-bg=mesh]   静态网格渐变
+   html[data-bg=custom] 老师自己的图片
+   有背景时，卡片和侧栏变成半透明 + backdrop blur。
+   ===================================================================== */
+.bg-layer { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background-size: cover; background-position: center; }
+html[data-bg="none"] .bg-layer { display: none; }
+.layout { position: relative; z-index: 1; isolation: isolate; }
+
+/* ---------- 极光 ---------- */
+html[data-bg="aurora"] .bg-layer { background: var(--bg); }
+.blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; will-change: transform; }
+.blob.b1 { width: 55vw; height: 55vw; left: -12vw; top: -18vw; background: color-mix(in srgb, var(--accent) 70%, #ffd166); animation: drift1 38s ease-in-out infinite alternate; }
+.blob.b2 { width: 48vw; height: 48vw; right: -14vw; top: 8vh; background: color-mix(in srgb, var(--accent) 35%, #7c83ff); animation: drift2 46s ease-in-out infinite alternate; }
+.blob.b3 { width: 46vw; height: 46vw; left: 22vw; bottom: -24vw; background: color-mix(in srgb, var(--accent) 25%, #5ee6c8); animation: drift3 52s ease-in-out infinite alternate; }
+html[data-appearance="dark"] .blob { opacity: .34; }
+@keyframes drift1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(10vw, 8vh) scale(1.12); } }
+@keyframes drift2 { from { transform: translate(0, 0) scale(1); } to { transform: translate(-9vw, 10vh) scale(0.92); } }
+@keyframes drift3 { from { transform: translate(0, 0) scale(1); } to { transform: translate(8vw, -8vh) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .blob { animation: none !important; } }
+
+/* ---------- 网格 ---------- */
+html[data-bg="mesh"] .bg-layer {
+  background:
+    radial-gradient(at 12% 8%, color-mix(in srgb, var(--accent) 34%, transparent) 0, transparent 52%),
+    radial-gradient(at 88% 12%, color-mix(in srgb, #7c83ff 28%, transparent) 0, transparent 50%),
+    radial-gradient(at 70% 90%, color-mix(in srgb, #5ee6c8 26%, transparent) 0, transparent 52%),
+    radial-gradient(at 15% 85%, color-mix(in srgb, #ffd166 24%, transparent) 0, transparent 50%),
+    var(--bg);
+}
+html[data-bg="mesh"] .bg-layer::after {
+  content: ""; position: absolute; inset: 0;
+  background-image: linear-gradient(color-mix(in srgb, var(--label) 7%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--label) 7%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px; mask-image: radial-gradient(at 50% 40%, #000 20%, transparent 80%);
+}
+
+/* ---------- 自定义图片 ---------- */
+html[data-bg="custom"] .bg-layer::after { content: ""; position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 42%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
+
+/* ---------- 有背景时的毛玻璃 ---------- */
+html:not([data-bg="none"]) .main { background: transparent; }
+html:not([data-bg="none"]) .card,
+html:not([data-bg="none"]) .stat,
+html:not([data-bg="none"]) .month-wrap {
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 0 0 1px color-mix(in srgb, var(--surface) 60%, transparent) inset, 0 8px 30px rgba(0,0,0,.05);
+}
+html:not([data-bg="none"]) body:not(.app) .sidebar { background: color-mix(in srgb, var(--sidebar-solid) 70%, transparent); backdrop-filter: blur(28px); }
+html:not([data-bg="none"]) .month th.nm, html:not([data-bg="none"]) .month td.nm { background: color-mix(in srgb, var(--surface) 92%, transparent); }
+html:not([data-bg="none"]) .month td.wk, html:not([data-bg="none"]) .month th.wk { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+html:not([data-bg="none"]) .students-list { background: color-mix(in srgb, var(--surface) 78%, transparent); }
+.wallpaper-preview { height: 90px; border-radius: var(--radius-sm); background-size: cover; background-position: center; margin-bottom: 10px; box-shadow: var(--shadow-card); }

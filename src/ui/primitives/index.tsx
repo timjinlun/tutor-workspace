@@ -1,6 +1,6 @@
 /** 设计系统组件。无业务、不 import store。 */
 import { AnimatePresence, motion } from "motion/react";
-import { Check } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes } from "react";
 
 /* ---------- Button ---------- */
@@ -45,6 +45,22 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/* ---------- MonthPicker：上月 / 下月，中文显示 ---------- */
+export function MonthPicker({ value, onChange, max }: { value: string; onChange: (ym: string) => void; max?: string }) {
+  const shift = (d: number) => {
+    const [y, m] = value.split("-").map(Number);
+    const dt = new Date(y ?? 2026, (m ?? 1) - 1 + d, 1);
+    onChange(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`);
+  };
+  return (
+    <div className="month-nav">
+      <button type="button" onClick={() => shift(-1)} aria-label="上个月"><ChevronLeft size={16} /></button>
+      <span className="num">{value.slice(0, 4)} 年 {Number(value.slice(5))} 月</span>
+      <button type="button" onClick={() => shift(1)} aria-label="下个月" disabled={!!max && value >= max}><ChevronRight size={16} /></button>
     </div>
   );
 }

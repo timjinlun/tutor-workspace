@@ -41,13 +41,21 @@ export function App() {
   const ready = useStore((x) => x.ready);
   const saveError = useStore((x) => x.saveError);
   const settings = useStore((x) => x.s.settings);
+  const wallpaper = useStore((x) => x.wallpaper);
   const lowCount = useStore((x) => lowBalanceStudents(x.s).filter((l) => l.level === "danger").length);
   useAppearance(settings.appearance, settings.accent);
+  const bg = settings.background === "custom" && !wallpaper ? "aurora" : settings.background;
+  useEffect(() => {
+    document.documentElement.dataset.bg = bg;
+  }, [bg]);
 
   if (!ready) return null;
   const Page = PAGES[route.page];
   return (
     <div className="layout">
+      <div className="bg-layer" aria-hidden="true" style={bg === "custom" && wallpaper ? { backgroundImage: `url(${wallpaper})` } : undefined}>
+        {bg === "aurora" && <><i className="blob b1" /><i className="blob b2" /><i className="blob b3" /></>}
+      </div>
       <aside className="sidebar">
         <nav className="nav">
           {NAV.map((n) => (

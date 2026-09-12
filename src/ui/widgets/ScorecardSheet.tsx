@@ -7,7 +7,7 @@ import { Download, Lock } from "lucide-react";
 import { useStore } from "@/store";
 import { scorecardData, type ScorecardData } from "@/core/scorecard";
 import { monthKey, todayISO } from "@/core/date";
-import { Button, Chip, Field, Input, Sheet } from "@/ui/primitives";
+import { Button, Chip, Field, MonthPicker, Sheet } from "@/ui/primitives";
 import { platform } from "@/platform";
 
 const W = 1080, H = 1350;
@@ -39,7 +39,7 @@ export function ScorecardSheet({ open, onClose }: { open: boolean; onClose: () =
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
         <canvas ref={ref} width={W} height={H} style={{ width: 270, height: 337, borderRadius: 14, boxShadow: "var(--shadow-card)", flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <Field label="月份"><Input type="month" value={ym} onChange={(e) => setYm(e.target.value)} /></Field>
+          <Field label="月份"><MonthPicker value={ym} onChange={setYm} max={monthKey(todayISO())} /></Field>
           <div className="muted" style={{ fontSize: 13, lineHeight: 1.7 }}>
             上课 {data.lessons} 次 · {data.units} 课时<br />确认收入 ¥{data.income.toLocaleString("zh-CN")}<br />{data.students} 位学员{data.topStudent ? ` · 最勤奋：${data.topStudent.name}` : ""}
           </div>

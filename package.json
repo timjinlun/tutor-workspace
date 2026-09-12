@@ -1,7 +1,7 @@
 {
   "name": "tutor-workspace",
   "productName": "独立老师工作台",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0",
   "description": "给独立老师的本地优先桌面工作台：今天 / 学员 / 课表 / 收支。macOS 原生质感，数据存本机 SQLite。",
   "author": "Tim",
   "license": "MIT",

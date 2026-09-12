@@ -5,13 +5,14 @@
  */
 import { create } from "zustand";
 import type { AuditEntry, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
-import { emptyState } from "@/core/types";
+import { DEFAULT_SETTINGS, emptyState } from "@/core/types";
 import { uid } from "@/core/id";
 import { todayISO } from "@/core/date";
 import { demoState } from "@/core/demo";
 import { cancelLesson, completeLesson, copyFromLastWeek, logLesson, undoLesson, type DayItem, type LogLessonInput } from "@/core/lesson";
 import { createEntitlements, type Entitlements, type Tier } from "@/entitlements";
 import type { Repository } from "@/data/repository";
+import { platform } from "@/platform";
 
 export type Page = "today" | "students" | "schedule" | "finance" | "more" | "settings" | "leads" | "materials" | "referral";
 export interface Route {
@@ -25,6 +26,9 @@ export interface Store {
   saveError: string | null;
   route: Route;
   ent: Entitlements;
+  /** 自定义壁纸 data URL，存在平台层，不进 State */
+  wallpaper: string | null;
+  setWallpaper(url: string | null): void;
   /* 生命周期 */
   hydrate(repo: Repository): Promise<void>;
   /* 导航 */
@@ -109,12 +113,16 @@ export const useStore = create<Store>((set, get) => {
     saveError: null,
     route: { page: "today" },
     ent: createEntitlements("free"),
+    wallpaper: null,
+    setWallpaper: (url) => set({ wallpaper: url }),
 
     async hydrate(r) {
       repo = r;
       const loaded = await r.load();
-      set({ s: loaded ?? demoState(), ready: true });
+      const s = loaded ? { ...emptyState(), ...loaded, settings: { ...DEFAULT_SETTINGS, ...loaded.settings } } : demoState();
+      set({ s, ready: true });
       if (!loaded) persist(get, set);
+      void platform.wallpaper.get().then((w) => w && set({ wallpaper: w }));
     },
 
     go: (route) => set({ route }),

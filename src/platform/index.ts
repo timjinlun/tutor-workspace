@@ -32,6 +32,55 @@ export const platform = {
     if (isApp) void window.tw!.system.openExternal(url);
     else window.open(url, "_blank", "noopener");
   },
+  wallpaper: {
+    async get(): Promise<string | null> {
+      if (isApp) return window.tw!.wallpaper.get();
+      try {
+        return localStorage.getItem("tutor-workspace-wallpaper");
+      } catch {
+        return null;
+      }
+    },
+    async set(dataUrl: string): Promise<boolean> {
+      if (isApp) return (await window.tw!.wallpaper.set(dataUrl)).ok;
+      try {
+        localStorage.setItem("tutor-workspace-wallpaper", dataUrl);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async clear() {
+      if (isApp) await window.tw!.wallpaper.clear();
+      else localStorage.removeItem("tutor-workspace-wallpaper");
+    },
+    /** 让用户选一张图，等比缩到 2000px 以内，转成 JPEG data URL */
+    pick(): Promise<string | null> {
+      return new Promise((resolve) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = () => {
+          const f = input.files?.[0];
+          if (!f) return resolve(null);
+          const img = new Image();
+          img.onload = () => {
+            const max = 2000;
+            const k = Math.min(1, max / Math.max(img.width, img.height));
+            const c = document.createElement("canvas");
+            c.width = Math.round(img.width * k);
+            c.height = Math.round(img.height * k);
+            c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+            resolve(c.toDataURL("image/jpeg", 0.86));
+            URL.revokeObjectURL(img.src);
+          };
+          img.onerror = () => resolve(null);
+          img.src = URL.createObjectURL(f);
+        };
+        input.click();
+      });
+    },
+  },
   data: {
     async info() {
       return isApp ? window.tw!.data.info() : null;

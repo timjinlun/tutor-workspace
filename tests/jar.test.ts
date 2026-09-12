@@ -37,6 +37,11 @@ describe("储蓄罐账目", () => {
 });
 
 describe("储蓄罐物理", () => {
+  it("长圆柱最后发射的币能在剩余300ms内接近罐底", () => {
+    let w = addCoins(createWorld(300), 1, 4, () => 0.5);
+    for (let i = 0; i < 18; i++) w = stepWorld(w);
+    expect(w.coins[0]!.y).toBeGreaterThan(270);
+  });
   it("活跃粒子不超过240，超额沉积", () => {
     const w = addCoins(createWorld(), 300, 4, () => 0.5);
     expect(w.coins.length).toBe(240);

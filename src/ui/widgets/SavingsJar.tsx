@@ -1,132 +1,135 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "@/store";
+import { scheduleCoins, type CoinEmission } from "@/core/coin-queue";
 import { feedbackTiming } from "@/core/lesson-feedback";
 import { jarState } from "@/core/jar";
 import { fmtMoney } from "@/core/finance";
 import { addCoins, createWorld, stepWorld, type Coin } from "@/core/jar-physics";
+import { useLocalDay } from "./useLocalDay";
 import "./savings-jar.css";
-
-function coin(ctx: CanvasRenderingContext2D, c: Coin, color: string, opacity = 1) {
-  ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(Math.sin(c.x * 13 + c.y) * 0.35);
-  ctx.globalAlpha = opacity * 0.7; ctx.fillStyle = color;
-  ctx.beginPath(); ctx.ellipse(0, 1.6, c.r, c.r * 0.46, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.globalAlpha = opacity;
-  ctx.beginPath(); ctx.ellipse(0, 0, c.r, c.r * 0.46, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.globalAlpha = opacity * 0.25; ctx.strokeStyle = color; ctx.lineWidth = 0.65;
-  ctx.beginPath(); ctx.ellipse(0, -0.5, c.r * 0.75, c.r * 0.3, 0, Math.PI, Math.PI * 2); ctx.stroke(); ctx.restore();
-}
+import { createJarRenderer } from "./jar-webgl";
 
 export function SavingsJar() {
   const ref = useRef<HTMLCanvasElement>(null);
   const s = useStore((x) => x.s);
   const state = jarState(s);
+  const day = useLocalDay();
+  useEffect(() => useStore.getState().refreshJarSettings(), [day]);
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    let renderer: ReturnType<typeof createJarRenderer>;
+    try { renderer = createJarRenderer(canvas); } catch { canvas.dataset.renderer = "unavailable"; canvas.setAttribute("aria-label", "当前设备无法启用三维储蓄罐"); return; }
     const root = document.documentElement;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const base = document.createElement("canvas");
-    base.width = 320; base.height = 280;
-    const b = base.getContext("2d");
-    if (!b) return;
+    let sceneHeight = 300, bottom = 284;
+    let settled: Coin[] = [];
     let delayTimer: ReturnType<typeof setTimeout> | undefined;
-    let raf = 0, start = 0, last = 0, emitted = 0;
+    let raf = 0, last = 0, finishAt = 0, emitted = 0;
     let world = createWorld();
-    let groups: { count: number; radius: number }[] = [];
-    let total = 0, reverse = false;
-    let accent = "", line = "", highlight = "", shadow = "", tint = "";
+    let pending: CoinEmission[] = [];
+    let outgoing: { coin: Coin; start: number }[] = [];
+    const unsettled = new Map<string, number>();
     let current = jarState(useStore.getState().s);
-    const resize = () => { const dpr = window.devicePixelRatio || 1; canvas.width = Math.round(160 * dpr); canvas.height = Math.round(140 * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
-    const colors = () => { const css = getComputedStyle(canvas); accent = css.getPropertyValue("--jar-coin").trim(); line = css.getPropertyValue("--line-strong").trim(); highlight = css.getPropertyValue("--jar-highlight").trim(); shadow = css.getPropertyValue("--jar-shadow").trim(); tint = css.getPropertyValue("--jar-tint").trim(); };
-    const ellipse = (y: number, ry: number) => { ctx.beginPath(); ctx.ellipse(80, y, 57, ry, 0, 0, Math.PI * 2); };
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      sceneHeight = Math.max(140, Math.round(canvas.getBoundingClientRect().height)); bottom = sceneHeight - 16;
+      canvas.width = Math.round(160 * dpr); canvas.height = Math.round(sceneHeight * dpr);
+      renderer.resize(sceneHeight);
+    };
     const rebuild = () => {
       current = jarState(useStore.getState().s);
-      b.setTransform(2, 0, 0, 2, 0, 0); b.clearRect(0, 0, 160, 140);
-      // A bounded texture represents accumulated money, independently of coin denomination.
-      const height = current.fill * 82;
+      settled = [];
+      // Bounded mesh instances represent accumulated money independently of denomination.
+      const pendingAmount = [...unsettled.values()].reduce((n, amount) => n + amount, 0);
+      const height = Math.max(0, Math.min(1, (current.amount - pendingAmount) / current.capacity)) * (bottom - 42);
       for (let row = 0; row < Math.ceil(height / 3); row++) {
         for (let col = 0; col < 12; col++) {
           const x = 30 + col * 9 + (row % 2) * 3;
-          const y = 121 - row * 3 + Math.sin(col * 7 + row * 3) * 1.4;
-          if (x < 132 && y >= 123 - height) coin(b, { x, y, px: x, py: y, r: 4.7 + Math.sin(col + row) * 0.5 }, accent, 0.7 + ((row + col) % 4) * 0.1);
+          const y = bottom - 3 - row * 3 + Math.sin(col * 7 + row * 3) * 1.4;
+          if (x < 132 && y >= bottom - 1 - height) settled.push({ x, y, px: x, py: y, r: 5.8 + Math.sin(col + row) * 0.5 });
         }
       }
     };
-    const draw = (progress = 0) => {
-      ctx.clearRect(0, 0, 160, 140);
-      ctx.strokeStyle = line; ctx.lineWidth = 0.8; ellipse(124, 12); ctx.stroke();
-      ctx.save(); ctx.beginPath(); ctx.rect(23, 25, 114, 100); ctx.clip();
-      ctx.drawImage(base, 0, 0, 160, 140);
-      if (reverse) {
-        for (let i = 0; i < Math.min(total, 240); i++) {
-          const x = 30 + (i * 17 % 100), y = 122 - current.fill * 82;
-          coin(ctx, { x: x + (80 - x) * progress, y: y + (15 - y) * progress, px: 0, py: 0, r: 4.5 }, accent, 1 - progress);
-        }
-      } else for (const c of world.coins) coin(ctx, c, accent, 0.85);
-      ctx.restore();
-      ctx.fillStyle = tint; ctx.fillRect(23, 25, 114, 99);
-      for (const x of [24, 127]) { const g = ctx.createLinearGradient(x, 0, x + 9, 0); g.addColorStop(0, highlight); g.addColorStop(1, "transparent"); ctx.fillStyle = g; ctx.fillRect(x, 27, 9, 96); }
-      ctx.strokeStyle = line; ctx.beginPath(); ctx.moveTo(23, 25); ctx.lineTo(23, 124); ctx.moveTo(137, 25); ctx.lineTo(137, 124); ctx.stroke();
-      ellipse(25, 14); ctx.stroke(); ellipse(27, 14); ctx.stroke(); ellipse(124, 12); ctx.stroke(); ellipse(127, 11); ctx.stroke();
-      ctx.fillStyle = shadow; ellipse(124, 9); ctx.fill();
-      ctx.beginPath(); ctx.roundRect(57, 23, 46, 3, 1.5); ctx.stroke();
-      ctx.strokeStyle = highlight; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.ellipse(80, 25, 55, 13, 0, Math.PI * 1.12, Math.PI * 1.6); ctx.stroke();
+    const draw = (now = performance.now()) => {
+      renderer.draw([...settled, ...world.coins, ...outgoing.map(({coin: c, start}) => {
+        const progress = Math.min(1, (now - start) / 300);
+        return {...c, x: c.x + (80-c.x)*progress, y: c.y + (15-c.y)*progress, r: c.r*(1-progress)};
+      })]);
     };
-    const stop = () => { clearTimeout(delayTimer); cancelAnimationFrame(raf); raf = 0; world = createWorld(); canvas.dataset.animating = "false"; };
+    const stop = () => {
+      clearTimeout(delayTimer); delayTimer = undefined; cancelAnimationFrame(raf); raf = 0;
+      world = createWorld(); pending = []; outgoing = []; unsettled.clear(); canvas.dataset.animating = "false";
+    };
     const finish = () => { stop(); rebuild(); draw(); };
     const tick = (now: number) => {
-      const elapsed = now - start;
-      if (reverse) { draw(Math.min(1, elapsed / 300)); if (elapsed >= 300) { finish(); return; } }
-      else {
-        const wanted = Math.min(total, Math.floor(elapsed / Math.min(18, 600 / Math.max(1, total))) + 1);
-        while (emitted < wanted) {
-          let offset = emitted, radius = 4.5;
-          for (const g of groups) { if (offset < g.count) { radius = g.radius; break; } offset -= g.count; }
-          world = addCoins(world, 1, radius, Math.random); emitted++;
-          for (const c of world.deposited) coin(b, c, accent, 0.8);
-        }
-        let steps = 0;
-        while (now - last >= 1000 / 60 && steps++ < 4) { world = stepWorld(world); last += 1000 / 60; }
-        if (steps >= 4) last = now;
-        draw();
-        if (elapsed >= 900 || (emitted === total && world.sleeping)) { finish(); return; }
+      delayTimer = undefined;
+      while (pending[0] && pending[0].at <= now) {
+        const entry = pending.shift()!;
+        world = addCoins(world, 1, entry.radius, Math.random, entry.id); emitted++;
+        canvas.dataset.emitted = String(emitted);
+        settled.push(...world.deposited);
       }
+      let steps = 0;
+      while (now - last >= 1000 / 60 && steps++ < 4) { world = stepWorld(world); last += 1000 / 60; }
+      if (steps >= 4) last = now;
+      outgoing = outgoing.filter((item) => now - item.start < 300);
+      draw(now);
+      if (now >= finishAt && pending.length === 0 && outgoing.length === 0) { finish(); return; }
       raf = requestAnimationFrame(tick);
     };
-    resize(); colors(); rebuild(); draw(); canvas.dataset.animating = "false";
+    resize(); rebuild(); draw(); canvas.dataset.animating = "false";
     const unsubscribe = useStore.subscribe((next, prev) => {
       if (next.s === prev.s) return;
-      if (next.jarFeedback.seq !== prev.jarFeedback.seq && next.jarFeedback.changes.length && !reduce.matches) {
-        stop(); rebuild();
-        const changes = next.jarFeedback.changes;
-        reverse = changes.reduce((n, c) => n + c.amount, 0) < 0;
-        const value = next.s.settings.coinValue.amount;
-        groups = changes.map((c) => ({ count: Math.min(240, Math.max(1, Math.round(Math.abs(c.amount) / value))), radius: 4.5 * Math.max(0.85, Math.min(1.15, Math.abs(c.amount) / (value * 30))) }));
-        total = Math.min(1000, groups.reduce((n, g) => n + g.count, 0));
-        if (!reverse) { current = jarState(prev.s); const restore = current; /* Draw old balance until the new coins settle. */
-          const height = restore.fill * 82;
-          b.clearRect(0, 0, 160, 140);
-          for (let row = 0; row < Math.ceil(height / 3); row++) for (let col = 0; col < 12; col++) {
-            const x = 30 + col * 9 + (row % 2) * 3, y = 121 - row * 3;
-            if (x < 132) coin(b, { x, y, px: x, py: y, r: 4.7 }, accent, 0.75 + (col % 3) * 0.1);
-          }
+      if (next.jarFeedback.seq === prev.jarFeedback.seq) {
+        if (next.s.settings.jarCapacity !== prev.s.settings.jarCapacity) finish();
+        return;
+      }
+      if (!next.jarFeedback.changes.length || reduce.matches) { finish(); return; }
+      const now = performance.now();
+      const changes = next.jarFeedback.changes;
+      const value = next.s.settings.coinValue.amount;
+      const delay = feedbackTiming(next.jarFeedback.monthDelta ?? 0, !!next.jarFeedback.origin, reduce.matches).jarDelay;
+      for (const change of changes) {
+        if (change.amount > 0) unsettled.set(change.id, (unsettled.get(change.id) ?? 0) + change.amount);
+        else {
+          const activeCoins = world.coins.filter((c) => c.lessonId === change.id);
+          const wasPending = unsettled.has(change.id);
+          const count = wasPending ? activeCoins.length : Math.min(240, Math.max(1, Math.round(-change.amount / value)));
+          for (let i = 0; i < count; i++) outgoing.push({ coin: activeCoins[i] ?? { x: 30 + (i * 17 % 100), y: bottom - 2 - current.fill * (bottom - 42), px: 0, py: 0, r: 4.5 }, start: now });
+          world = { ...world, coins: world.coins.filter((c) => c.lessonId !== change.id) };
+          unsettled.delete(change.id);
         }
-        world = createWorld(Math.max(40, 124 - current.fill * 82));
-        emitted = 0; canvas.dataset.animating = "true";
-        const delay = feedbackTiming(next.jarFeedback.monthDelta ?? 0, !!next.jarFeedback.origin, reduce.matches).jarDelay;
-        draw();
-        delayTimer = setTimeout(() => { start = last = performance.now(); raf = requestAnimationFrame(tick); }, delay);
-      } else { finish(); }
+      }
+      pending = scheduleCoins(pending, changes, value, now, delay);
+      rebuild();
+      const settledFill = Math.max(0, Math.min(1, (current.amount - [...unsettled.values()].reduce((n, amount) => n + amount, 0)) / current.capacity));
+      world = { ...world, floor: Math.max(40, bottom - settledFill * (bottom - 42)) };
+      finishAt = Math.max(finishAt, now + (changes.some((c) => c.amount > 0) ? delay + 900 : 300));
+      canvas.dataset.animating = "true"; draw(now);
+      if (!raf) {
+        clearTimeout(delayTimer);
+        last = now;
+        const wait = outgoing.length ? 0 : Math.max(0, (pending[0]?.at ?? now) - now);
+        delayTimer = setTimeout(() => { delayTimer = undefined; last = performance.now(); raf = requestAnimationFrame(tick); }, wait);
+      }
     });
-    const redraw = () => { stop(); resize(); colors(); rebuild(); draw(); };
+    const redraw = () => { stop(); resize(); rebuild(); draw(); };
+    let pointerX: number | null = null, pointerY = 0;
+    const down = (event: PointerEvent) => { pointerX = event.clientX; pointerY = event.clientY; canvas.setPointerCapture(event.pointerId); };
+    const move = (event: PointerEvent) => { if (pointerX === null) return; renderer.rotate((event.clientX-pointerX)*.012,(event.clientY-pointerY)*.008); pointerX=event.clientX;pointerY=event.clientY; draw(); };
+    const up = () => { pointerX = null; };
+    canvas.addEventListener("pointerdown", down); canvas.addEventListener("pointermove", move); canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+    const lost = (event: Event) => { event.preventDefault(); stop(); canvas.dataset.renderer = "context-lost"; };
+    const restored = () => { renderer.dispose(); renderer=createJarRenderer(canvas); redraw(); };
+    canvas.addEventListener("webglcontextlost", lost); canvas.addEventListener("webglcontextrestored", restored);
     const observer = new MutationObserver(redraw);
     observer.observe(root, { attributes: true, attributeFilter: ["data-appearance", "data-accent", "style"] });
+    const sizeObserver = new ResizeObserver(redraw); sizeObserver.observe(canvas);
     reduce.addEventListener("change", redraw); window.addEventListener("resize", redraw);
     const refresh = () => useStore.getState().refreshJarSettings();
     window.addEventListener("focus", refresh); refresh();
-    return () => { stop(); unsubscribe(); observer.disconnect(); reduce.removeEventListener("change", redraw); window.removeEventListener("resize", redraw); window.removeEventListener("focus", refresh); };
+    return () => { stop(); renderer.dispose(); canvas.removeEventListener("webglcontextlost", lost); canvas.removeEventListener("webglcontextrestored", restored); canvas.removeEventListener("pointerdown", down); canvas.removeEventListener("pointermove", move); canvas.removeEventListener("pointerup", up); canvas.removeEventListener("pointercancel", up); unsubscribe(); observer.disconnect(); sizeObserver.disconnect(); reduce.removeEventListener("change", redraw); window.removeEventListener("resize", redraw); window.removeEventListener("focus", refresh); };
   }, []);
   return <div className="savings-jar" title={`已确认收入 ${fmtMoney(state.amount)}，容量 ${fmtMoney(state.capacity)}`}>
     <canvas ref={ref} aria-label={`储蓄罐，${Math.round(state.fill * 100)}% 满，${fmtMoney(state.amount)}`} role="img" />

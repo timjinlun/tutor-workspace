@@ -1,0 +1,13 @@
+{
+  "actualEmission240Over600ms": {
+    "active": 240,
+    "meanMs": 0.36449307407407394,
+    "maxMs": 0.9435000000000002
+  },
+  "extraStress240Simultaneous": {
+    "active": 240,
+    "meanMs": 0.48936349999999934,
+    "maxMs": 1.3335830000000044
+  },
+  "note": "Local Node measurement; includes no canvas drawing. Timing depends on runtime/JIT/hardware."
+}

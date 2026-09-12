@@ -3,14 +3,20 @@
   --jar-highlight: rgba(255, 255, 255, .48);
   --jar-shadow: rgba(0, 0, 0, .035);
   --jar-tint: rgba(160, 200, 220, .04);
-  width: 160px; margin: 12px auto 18px; flex-shrink: 0;
+  width: 160px; height: clamp(180px, calc(100vh - 390px), 340px);
+  margin: 16px auto auto; flex-shrink: 1; min-height: 160px;
+  display: flex; flex-direction: column;
 }
 [data-appearance="dark"] .savings-jar {
   --jar-coin: color-mix(in srgb, var(--accent) 90%, white);
   --jar-highlight: rgba(255, 255, 255, .24);
   --jar-shadow: rgba(0, 0, 0, .06);
 }
-.savings-jar canvas { display: block; width: 160px; height: 140px; }
+.sidebar .nav:has(+ .savings-jar) { flex: 0 0 auto; }
+.savings-jar canvas { display: block; width: 160px; height: calc(100% - 20px); min-height: 140px; }
 .jar-caption { text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--label-2); white-space: nowrap; }
 .jar-caption b { font-weight: 600; color: var(--label); font-size: 12px; }
-@media (max-height: 650px) { .savings-jar { margin-top: 0; margin-bottom: 6px; } }
+@media (max-height: 650px) { .savings-jar { margin-top: 6px; } }
+
+.savings-jar canvas { cursor: grab; touch-action: none; }
+.savings-jar canvas:active { cursor: grabbing; }

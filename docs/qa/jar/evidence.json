@@ -1,4 +1,14 @@
 {
+  "model": {
+    "renderer": "webgl2",
+    "triangles": 1488,
+    "dragChangesView": true
+  },
+  "compactLayout": {
+    "noOverlap": true,
+    "underMore": 6,
+    "canvasHeight": 162
+  },
   "flightCount": 1,
   "finalIncome": "本月确认收入 ¥5,280",
   "start": {
@@ -7,6 +17,14 @@
   },
   "oneSecondLater": 109,
   "idleRafDelta": 0,
+  "doubleCheckinEmitted": 56,
+  "reducedMotion": {
+    "animating": "false",
+    "emitted": 84,
+    "flights": 0,
+    "caption": "¥280 / ¥10,000",
+    "newCoins": 0
+  },
   "knownBaselineErrors": [
     "Executing inline script violates the following Content Security Policy directive 'default-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-tpbH5xxWIRstFS+NJlBETWz8/Fj77xYGMQlWGwcVYjU='), or a nonce ('nonce-...') is required to enable inline execution. Note also that 'script-src' was not explicitly set, so 'default-src' is used as a fallback. The action has been blocked."
   ],

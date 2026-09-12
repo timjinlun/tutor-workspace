@@ -1,4 +1,4 @@
-# 推一个 v* tag，就同时用 macOS 和 Windows 的机器打包，产物挂到 Release 上。
+# 推一个 v* tag，用 macOS 机器打包 dmg，产物挂到 Release 上。（3.x 只发 Mac；Windows 以后加回矩阵）
 #   git tag v1.0.0 && git push origin v1.0.0
 #
 # 为什么必须用 CI：Mac 上打不出能正常安装的 Windows 包，Windows 上也打不出 .dmg。
@@ -18,8 +18,6 @@ jobs:
         include:
           - os: macos-latest
             script: build:mac
-          - os: windows-latest
-            script: build:win
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -43,9 +41,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-installer
-          path: |
-            dist/*.dmg
-            dist/*.exe
+          path: dist/*.dmg
           if-no-files-found: warn
 
   release:

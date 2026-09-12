@@ -9,7 +9,7 @@ import { emptyState, normalizeState } from "@/core/types";
 import { uid } from "@/core/id";
 import { todayISO } from "@/core/date";
 import { demoState } from "@/core/demo";
-import { cancelLesson, completeLesson, copyFromLastWeek, logLesson, undoLesson, type DayItem, type LogLessonInput } from "@/core/lesson";
+import { cancelLesson, completeLesson, copyFromLastWeek, logLesson, rescheduleLesson, scheduleLesson, undoLesson, type DayItem, type LogLessonInput } from "@/core/lesson";
 import { createEntitlements, type Entitlements, type Tier } from "@/entitlements";
 import type { Repository } from "@/data/repository";
 import { platform } from "@/platform";
@@ -38,6 +38,8 @@ export interface Store {
   undo(lessonId: ID): void;
   cancel(item: DayItem): void;
   log(input: LogLessonInput): void;
+  schedule(input: LogLessonInput): void;
+  reschedule(item: DayItem, to: { date: ISODate; time: string }): void;
   copyLastWeek(date: ISODate): number;
   /* 学员 / 缴费 */
   addStudent(input: Pick<Student, "name" | "courseIds" | "note">): Student;
@@ -150,6 +152,17 @@ export const useStore = create<Store>((set, get) => {
       const { lessons, audit } = logLesson(get().s, input);
       commit({ lessons });
       audited(audit);
+    },
+    schedule(input) {
+      const { lessons, audit } = scheduleLesson(get().s, input);
+      commit({ lessons });
+      audited(audit);
+    },
+    reschedule(item, to) {
+      const r = rescheduleLesson(get().s, item, to);
+      if (!r) return;
+      commit({ lessons: r.lessons });
+      audited(r.audit);
     },
     copyLastWeek(date) {
       const added = copyFromLastWeek(get().s, date);

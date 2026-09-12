@@ -108,3 +108,43 @@ describe("课时时长", () => {
     expect(addMinutes("23:30", 60)).toBe("00:30");
   });
 });
+
+describe("排课与改期", () => {
+  it("临时排课是 scheduled，打卡后变 done", async () => {
+    const { scheduleLesson } = await import("@/core/lesson");
+    const s = base();
+    const { lessons, audit } = scheduleLesson(s, { studentId: "s1", courseId: "c1", date: TODAY, time: "20:00" });
+    expect(lessons[0]).toMatchObject({ status: "scheduled", source: "manual", price: 280 });
+    expect(audit.kind).toBe("lesson.schedule");
+  });
+
+  it("模板课改到别的日期：新日期出现，原日期留取消占位，不再重复生成", async () => {
+    const { rescheduleLesson } = await import("@/core/lesson");
+    const s = base();
+    const item = lessonsOn(s, TODAY)[0]!;
+    const next = addDays(TODAY, 1);
+    const r = rescheduleLesson(s, item, { date: next, time: "10:00" })!;
+    const s2 = { ...s, lessons: r.lessons };
+    expect(lessonsOn(s2, next).map((l) => l.time)).toEqual(["10:00"]);
+    const orig = lessonsOn(s2, TODAY);
+    expect(orig).toHaveLength(1);
+    expect(orig[0]!.status).toBe("cancelled");
+    expect(orig[0]!.virtual).toBeUndefined();
+  });
+
+  it("同一天只改时间：不留占位", async () => {
+    const { rescheduleLesson } = await import("@/core/lesson");
+    const s = base();
+    const r = rescheduleLesson(s, lessonsOn(s, TODAY)[0]!, { date: TODAY, time: "17:00" })!;
+    const items = lessonsOn({ ...s, lessons: r.lessons }, TODAY);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ time: "17:00", status: "scheduled", templateId: "tp1" });
+  });
+
+  it("已打卡的课不能改期", async () => {
+    const { rescheduleLesson } = await import("@/core/lesson");
+    const s = base();
+    const done = completeLesson(s, lessonsOn(s, TODAY)[0]!).lessons;
+    expect(rescheduleLesson({ ...s, lessons: done }, done[0]!, { date: TODAY, time: "17:00" })).toBeNull();
+  });
+});

@@ -1,25 +1,18 @@
-/** 月视图：一个月的考勤一览。点空格补记，点已上的撤销（二次确认）。 */
+/** 按学员：一个月的考勤一览表。点空格补记，点已上的撤销（二次确认）。 */
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { useStore } from "@/store";
 import { lessonsOn, type DayItem } from "@/core/lesson";
 import { fmtMoney } from "@/core/finance";
-import { WEEKDAY_CN, monthKey, todayISO, weekdayOf } from "@/core/date";
+import { WEEKDAY_CN, todayISO, weekdayOf } from "@/core/date";
 import type { Lesson } from "@/core/types";
 import { Avatar } from "@/ui/primitives";
 import { LogLessonSheet } from "@/ui/widgets/LogLessonSheet";
 import { UndoLessonSheet } from "@/ui/widgets/UndoLessonSheet";
 
-const shiftMonth = (ym: string, d: number) => {
-  const [y, m] = ym.split("-").map(Number);
-  const dt = new Date(y ?? 2026, (m ?? 1) - 1 + d, 1);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-};
-
-export function MonthView() {
+export function StudentTable({ ym }: { ym: string }) {
   const s = useStore((x) => x.s);
   const today = todayISO();
-  const [ym, setYm] = useState(monthKey(today));
   const [y, m] = ym.split("-").map(Number);
   const days = new Date(y ?? 2026, m ?? 1, 0).getDate();
   const dates = useMemo(() => Array.from({ length: days }, (_, i) => `${ym}-${String(i + 1).padStart(2, "0")}`), [ym, days]);
@@ -38,12 +31,7 @@ export function MonthView() {
 
   return (
     <>
-      <div className="month-head">
-        <button onClick={() => setYm(shiftMonth(ym, -1))} aria-label="上个月"><ChevronLeft size={16} /></button>
-        <span className="num">{y} 年 {m} 月</span>
-        <button onClick={() => setYm(shiftMonth(ym, 1))} aria-label="下个月"><ChevronRight size={16} /></button>
-        <span className="month-legend"><i className="done" /> 已上 <i className="sched" /> 待上 <i className="canc" /> 取消</span>
-      </div>
+      <div className="month-legend"><i className="done" /> 已上 <i className="sched" /> 待上 <i className="canc" /> 取消</div>
       <div className="card month-wrap">
         <table className="month">
           <thead>

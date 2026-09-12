@@ -1,0 +1,31 @@
+.week-grid { padding: 0; overflow: hidden; }
+.wg-head, .wg-body { display: grid; grid-template-columns: 56px repeat(var(--n), minmax(0, 1fr)); }
+.wg-head { border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 3; background: inherit; }
+.wg-day { padding: 10px 4px 8px; text-align: center; font-size: 11.5px; color: var(--label-2); border-left: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.wg-day.wk { color: var(--label-3); }
+.wg-day b { font-size: 17px; font-weight: 700; color: var(--label); width: 28px; height: 28px; line-height: 28px; border-radius: 50%; }
+.wg-day.today b { background: var(--accent); color: var(--accent-text); }
+.wg-day.today span { color: var(--accent); font-weight: 600; }
+.wg-scroll { max-height: calc(100vh - 250px); overflow-y: auto; padding-top: 10px; }
+.wg-body { position: relative; }
+.wg-gutter { position: relative; }
+.wg-hour { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--label-3); }
+.wg-col { position: relative; border-left: 1px solid var(--line); background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px var(--hour)); cursor: copy; }
+.wg-col.past { cursor: default; }
+.wg-col.today { background-color: color-mix(in srgb, var(--accent) 5%, transparent); }
+.blk { position: absolute; border-radius: 7px; padding: 3px 6px; font-size: 11.5px; line-height: 1.3; text-align: left; overflow: hidden; display: flex; flex-direction: column; gap: 1px; border-left: 3px solid var(--accent); background: var(--accent-soft); color: var(--label); cursor: default; transition: transform .08s, box-shadow .08s; z-index: 1; }
+.blk:hover { transform: scale(1.02); box-shadow: 0 4px 14px rgba(0,0,0,.12); z-index: 2; }
+.blk .t { font-weight: 600; color: var(--accent); }
+.blk .n { font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.blk .c { color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.blk.short { flex-direction: row; align-items: center; gap: 5px; padding: 0 6px; }
+.blk.short .c { display: none; }
+.blk.done { background: var(--accent); color: var(--accent-text); border-left-color: transparent; }
+.blk.done .t, .blk.done .c { color: color-mix(in srgb, var(--accent-text) 80%, transparent); }
+.blk.cancelled { background: var(--surface-2); color: var(--label-3); border-left-color: var(--fill-2); text-decoration: line-through; }
+.blk.cancelled .t, .blk.cancelled .c { color: var(--label-3); }
+.blk.tpl::after { content: ""; position: absolute; top: 5px; right: 5px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .5; }
+.now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--red); z-index: 2; pointer-events: none; }
+.now-line::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+.week-grid[style*="--n: 14"] .wg-day b { font-size: 14px; width: 24px; height: 24px; line-height: 24px; }
+.week-grid[style*="--n: 14"] .blk .c { display: none; }

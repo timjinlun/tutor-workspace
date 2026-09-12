@@ -106,7 +106,7 @@ export interface Lesson {
 export interface AuditEntry {
   id: ID;
   at: string;
-  kind: "lesson.done" | "lesson.undo" | "lesson.cancel" | "lesson.log" | "payment.add" | "payment.remove" | "student.remove" | "data.import" | "data.reset";
+  kind: "lesson.done" | "lesson.undo" | "lesson.cancel" | "lesson.log" | "lesson.schedule" | "lesson.move" | "payment.add" | "payment.remove" | "student.remove" | "data.import" | "data.reset";
   summary: string;
   payload: Record<string, unknown>;
 }

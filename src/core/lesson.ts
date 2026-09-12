@@ -141,6 +141,49 @@ export function cancelLesson(state: State, item: DayItem, at: string = new Date(
   return { lessons, audit: entry("lesson.cancel", `取消 ${studentName(state, record.studentId)} · ${record.date} ${record.time}`, record, at) };
 }
 
+/** 临时排课：先排上（scheduled），到时候在「今天」打卡 */
+export function scheduleLesson(state: State, input: LogLessonInput, at: string = new Date().toISOString()): LessonChange {
+  const c = courseOf(state, input.courseId);
+  const record: Lesson = {
+    id: uid("l"),
+    studentId: input.studentId,
+    courseId: input.courseId,
+    teacherId: input.teacherId,
+    date: input.date,
+    time: input.time,
+    status: "scheduled",
+    units: input.units && input.units > 0 ? input.units : (c?.unitsPerLesson ?? 1),
+    price: c?.price ?? 0,
+    source: "manual",
+    createdAt: at,
+    note: input.note,
+  };
+  return {
+    lessons: [...state.lessons, record],
+    audit: entry("lesson.schedule", `${studentName(state, record.studentId)} · ${record.date} ${record.time} · 排课`, record, at),
+  };
+}
+
+/**
+ * 改期 / 改时间。只动这一次，不动固定课表。
+ * 固定课表生成的课挪到别的日期时，原日期留一条 cancelled 占位，否则模板下次还会在原日期把它生出来。
+ */
+export function rescheduleLesson(state: State, item: DayItem, to: { date: ISODate; time: string }, at: string = new Date().toISOString()): LessonChange | null {
+  if (item.status !== "scheduled") return null;
+  const base = stripVirtual(item);
+  const moved: Lesson = item.virtual ? { ...base, id: uid("l"), date: to.date, time: to.time, createdAt: at } : { ...base, date: to.date, time: to.time };
+  const sameDay = to.date === item.date;
+  let lessons = item.virtual ? [...state.lessons, moved] : state.lessons.map((l) => (l.id === item.id ? moved : l));
+  if (!sameDay && item.templateId) {
+    const placeholder: Lesson = { ...base, id: uid("l"), status: "cancelled", createdAt: at, note: `改到 ${to.date} ${to.time}` };
+    lessons = [...lessons, placeholder];
+  }
+  return {
+    lessons,
+    audit: entry("lesson.move", `${studentName(state, moved.studentId)} · ${item.date} ${item.time} → ${to.date} ${to.time}`, moved, at),
+  };
+}
+
 /** 从历史推断：这个学员通常在今天这个星期几的几点上课？ */
 export interface Suggestion {
   studentId: ID;

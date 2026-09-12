@@ -370,11 +370,6 @@ table.roll{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:
 .theme-opt b{font-size:13px}.theme-opt span{font-size:11.5px;color:var(--ink-3)}
 
 
-/* ---------- 页内子标签：下划线式，像书页眉的分节 ---------- */
-.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin-bottom:calc(16px*var(--sp));overflow-x:auto;scrollbar-width:none}.subtabs::-webkit-scrollbar{display:none}
-.subtab{padding:9px 14px;font-size:13.5px;font-family:var(--f-display);letter-spacing:.06em;color:var(--ink-2);background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;border-radius:0}
-.subtab:hover{color:var(--qing)}.subtab.on{color:var(--qing);border-bottom-color:var(--qing);font-weight:600}
-
 /* ---------- 响应式 ---------- */
 @media(max-width:980px){.two-col{grid-template-columns:1fr}.kanban{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){
@@ -529,7 +524,7 @@ function loadS(){
   return seedState();
 }
 let S=loadS();
-let UI={view:"home",tab:0,calY:new Date().getFullYear(),calM:new Date().getMonth()+1,modal:null,moreOpen:false,schTeacher:"all",schStudent:"all",todoFilter:"active",recruitDomain:"all",libType:"all",libStu:"all"};
+let UI={view:"home",calY:new Date().getFullYear(),calM:new Date().getMonth()+1,modal:null,moreOpen:false,schTeacher:"all",schStudent:"all",todoFilter:"active",recruitDomain:"all",libType:"all",libStu:"all"};
 function saveS(){if(APP){scheduleSave();return;}localStorage.setItem(KEY,JSON.stringify(S));maybeAutoBackup();}
 function ss(ns){S=normalizeS(ns);saveS();re();}
 function su(p){UI={...UI,...p};re();}
@@ -778,13 +773,6 @@ function rCou(){
     <div class="stu-actions"><button class="btn sm ghost" data-action="editprice" data-cid="${c.id}" data-price="${c.price}">改价</button><button class="btn sm ghost" data-action="editunits" data-cid="${c.id}" data-units="${c.unitsPerSession||1}">改课时</button><button class="btn sm danger" data-action="delcou" data-cid="${c.id}">删除</button></div></div>`).join("");
   return`<div class="section-head"><div class="section-title">课程设置</div><button class="btn" data-action="addcou">+ 添加课程</button></div><div class="card-grid">${cards}</div><div style="font-size:12px;color:var(--ink-3);margin-top:12px">改价只影响之后新打卡的课时；已统计的确认收入按打卡当时的单价锁定</div>`;
 }
-const TABS=["总览","排课日历","考勤打卡","学员管理","老师管理","缴费记录","课程设置"];
-function rHours(){
-  const contents=[rOverview,rSchedule,rAtt,rStuCards,rTeachers,rPay,rCou];
-  const tabs=TABS.map((t,i)=>`<button class="subtab${UI.tab===i?" on":""}" data-action="tab" data-idx="${i}">${t}</button>`).join("");
-  return`<div class="subtabs">${tabs}</div><div>${contents[UI.tab]()}</div>`;
-}
-
 /* ============ 视图：工作台首页（今日要处理） ============ */
 function rHome(){
   const t=todayStr();
@@ -819,7 +807,7 @@ function rHome(){
 function rStudents(){
   const low=lowBalanceStudents();
   const warnBanner=low.length?`<div class="tip-bar red">有 ${low.filter(x=>x.level==="danger").length} 名学员余额不足、${low.length} 名即将用完，请尽快提醒充值。</div>`:`<div class="tip-bar green">全部学员课时充足</div>`;
-  return warnBanner+rStuCards();
+  return warnBanner+rStuCards()+rPay();
 }
 
 /* ============ 视图：日历排课 ============ */
@@ -892,7 +880,7 @@ function rFinance(){
   <div class="section"><div class="section-title">近 6 个月收支对比</div>${svgMonthlyFinance()}</div>
   <div class="two-col">
     <div class="section"><div class="section-head"><div class="section-title">支出分类占比</div></div>${svgPieExpense()}<button class="btn sm" data-action="add-expense" style="margin-top:12px">+ 记一笔支出</button></div>
-    <div class="section"><div class="section-title">课时收入（来自缴费）</div><div style="font-size:13px;color:var(--ink-2);margin-bottom:8px">共 ${fmt(lessonInc)}，详见「课时统计」缴费记录</div><div class="section-title" style="font-size:13px;margin-top:6px">其他收入</div>${incRows||'<div class="empty-state">暂无其他收入</div>'}<button class="btn sm" data-action="add-income" style="margin-top:10px">+ 记一笔其他收入</button></div>
+    <div class="section"><div class="section-title">课时收入（来自缴费）</div><div style="font-size:13px;color:var(--ink-2);margin-bottom:8px">共 ${fmt(lessonInc)}，详见「学员与缴费」</div><div class="section-title" style="font-size:13px;margin-top:6px">其他收入</div>${incRows||'<div class="empty-state">暂无其他收入</div>'}<button class="btn sm" data-action="add-income" style="margin-top:10px">+ 记一笔其他收入</button></div>
   </div>
   <div class="section"><div class="section-head"><div class="section-title">支出明细</div><button class="btn sm" data-action="add-expense">+ 支出</button></div>${expRows||'<div class="empty-state">暂无支出记录</div>'}</div>`;
 }
@@ -1368,6 +1356,8 @@ function rModal(){
 
 /* ============ 导航 / 顶栏 ============ */
 const ICON={home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+stamp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.3 2.3 4.7-5.2"/></svg>',
+book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></svg>',
 chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="3.5" height="8" rx="1"/><rect x="10" y="6" width="3.5" height="14" rx="1"/><rect x="16" y="9" width="3.5" height="11" rx="1"/></svg>',
 users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15 15c3 0 6 2 6 5"/></svg>',
 cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>',
@@ -1377,10 +1367,23 @@ funnel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=
 gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>',
 report:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
 library:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6v14H4zM10 5h6v14h-6zM16 7l3 1-2 12-3-1z"/></svg>'};
-const SHORT={home:"首页",hours:"课时",students:"学员",calendar:"排课",todo:"待办",finance:"收支",recruit:"招生",report:"报表",library:"资料",settings:"设置"};
-const VIEWS=[{id:"home",name:"工作台",icon:"home"},{id:"hours",name:"课时统计",icon:"chart"},{id:"students",name:"学员管理",icon:"users"},{id:"calendar",name:"日历排课",icon:"cal"},{id:"todo",name:"今日待办",icon:"check"},{id:"finance",name:"收支管理",icon:"wallet"},{id:"recruit",name:"招生面板",icon:"funnel"},{id:"report",name:"报表中心",icon:"report",bottom:false},{id:"library",name:"资料库",icon:"library",bottom:false},{id:"settings",name:"设置",icon:"gear"}];
+const SHORT={home:"首页",att:"考勤",students:"学员",calendar:"排课",finance:"收支",todo:"待办",stats:"统计",courses:"课程",recruit:"招生",report:"报表",library:"资料",settings:"设置"};
+const VIEWS=[
+ {id:"home",name:"工作台",icon:"home"},
+ {id:"att",name:"考勤打卡",icon:"stamp"},
+ {id:"students",name:"学员与缴费",icon:"users"},
+ {id:"calendar",name:"日历排课",icon:"cal"},
+ {id:"finance",name:"收支管理",icon:"wallet"},
+ {id:"todo",name:"今日待办",icon:"check"},
+ {id:"stats",name:"课时统计",icon:"chart"},
+ {id:"courses",name:"课程与老师",icon:"book"},
+ {id:"recruit",name:"招生面板",icon:"funnel"},
+ {id:"report",name:"报表中心",icon:"report"},
+ {id:"library",name:"资料库",icon:"library"},
+ {id:"settings",name:"设置",icon:"gear"}
+];
 function badgeFor(v){if(v==="todo"){const n=S.todos.filter(x=>!x.done).length;return n?n:"";}if(v==="students"){const n=lowBalanceStudents().filter(x=>x.level==="danger").length;return n?n:"";}return"";}
-const MORE=["recruit","report","library"];
+const MORE=["stats","courses","recruit","report","library"];
 function rSidebar(){
   const tab=v=>`<button class="nav-item ${UI.view===v.id?"active":""}" data-action="nav" data-view="${v.id}" title="${v.name}"><span class="nav-label">${[...(SHORT[v.id]||v.name)].map(ch=>`<i>${ch}</i>`).join("")}</span>${badgeFor(v.id)?`<span class="nav-badge">${badgeFor(v.id)}</span>`:""}</button>`;
   const main=VIEWS.filter(v=>!MORE.includes(v.id)&&v.id!=="settings").map(tab).join("");
@@ -1399,7 +1402,7 @@ function rTopbar(){
   let extra="";
   if(UI.view==="finance")extra=`<button class="btn sm ghost" data-action="export-finance-csv">导出收支 CSV</button>`;
   if(UI.view==="recruit")extra=`<button class="btn sm ghost" data-action="export-lead-csv">导出线索 CSV</button>`;
-  if(UI.view==="hours")extra=`<button class="btn sm ghost" data-action="export-csv-hours">导出课时 CSV</button>`;
+  if(UI.view==="att"||UI.view==="stats")extra=`<button class="btn sm ghost" data-action="export-csv-hours">导出课时 CSV</button>`;
   const dbIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg>';
   return`<header class="topbar"><h1>${title}</h1><span class="sub">${esc(S.settings.teacherName)}</span>
     <div class="topbar-actions">${extra}<button class="btn sm ghost" data-action="open-datafile">${dbIcon}${APP?"数据库":"数据"}</button></div></header>`;
@@ -1407,7 +1410,9 @@ function rTopbar(){
 function rView(){
   switch(UI.view){
     case "home":return rHome();
-    case "hours":return rHours();
+    case "att":return rAtt();
+    case "stats":return rOverview();
+    case "courses":return rCou()+rTeachers();
     case "students":return rStudents();
     case "calendar":return rCalendar();
     case "todo":return rTodo();
@@ -1473,7 +1478,6 @@ document.addEventListener("click",e=>{
   if(a==="reseed"){if(confirm("将用示例数据覆盖当前全部数据，确定？")){_fileHandle=null;ss(seedState());alert("已恢复示例数据");}return;}
   if(a==="clear-all"){if(confirm("将清空全部数据（保留设置），确定？")){const set=S.settings;S=normalizeS({settings:set});saveS();re();alert("已清空全部数据");}return;}
   /* v8 课时 tab */
-  if(a==="tab"){su({tab:+el.dataset.idx});return;}
   if(a==="cprev"){const m=UI.calM-1;if(m<1)su({calY:UI.calY-1,calM:12});else su({calM:m});return;}
   if(a==="cnext"){const m=UI.calM+1;if(m>12)su({calY:UI.calY+1,calM:1});else su({calM:m});return;}
   if(a==="add-teacher"){su({modal:{type:"add-teacher"}});return;}

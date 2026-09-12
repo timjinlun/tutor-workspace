@@ -40,7 +40,7 @@ app.whenReady().then(async () => {
   t("首次启动灌入了示例数据", boot.students > 0 && boot.courses > 0, boot);
 
   /* ---------- 打卡写进数据库 ---------- */
-  await js(`(()=>{su({view:"hours",tab:2,calY:2026,calM:6});
+  await js(`(()=>{su({view:"att",calY:2026,calM:6});
     setAttendance("s1","2026-06-03","19:30","c1",1); return 1;})()`);
   await sleep(400);
   let state = db.loadState();

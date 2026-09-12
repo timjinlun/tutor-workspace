@@ -5,7 +5,9 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Repeat } from "lucide-react";
 import { useStore } from "@/store";
-import { lessonsOn, type DayItem } from "@/core/lesson";
+import { lessonsOn } from "@/core/lesson";
+import { groupItems, groupStatus, type DayGroup } from "@/core/klass";
+import { ClassLessonSheet } from "@/ui/widgets/ClassLessonSheet";
 import { monthOf, shiftMonth, weeksAround } from "@/core/calendar";
 import { addDays, formatCN, todayISO } from "@/core/date";
 import type { ISODate } from "@/core/types";
@@ -31,14 +33,14 @@ export function SchedulePage() {
   const [span, setSpan] = useState<Span>("1");
   const [anchor, setAnchor] = useState<ISODate>(today);
   const [ym, setYm] = useState(monthOf(today));
-  const [picked, setPicked] = useState<DayItem | null>(null);
+  const [picked, setPicked] = useState<DayGroup | null>(null);
   const [add, setAdd] = useState<{ date: ISODate; time: string } | null>(null);
   const [drawer, setDrawer] = useState(false);
 
   const days = useMemo(() => weeksAround(anchor, span === "2" ? 2 : 1), [anchor, span]);
   const weekStats = useMemo(() => {
-    const all = days.flatMap((d) => lessonsOn(s, d));
-    return { total: all.filter((i) => i.status !== "cancelled").length, done: all.filter((i) => i.status === "done").length };
+    const all = days.flatMap((d) => groupItems(lessonsOn(s, d)));
+    return { total: all.filter((g) => groupStatus(g) !== "cancelled").length, done: all.filter((g) => groupStatus(g) === "done").length };
   }, [s, days]);
   const activeTemplates = s.templates.filter((t) => t.active).length;
 
@@ -79,7 +81,8 @@ export function SchedulePage() {
       {view === "month" && <MonthCalendar ym={ym} onPick={setPicked} />}
       {view === "students" && <StudentTable ym={ym} />}
 
-      <LessonSheet item={picked} onClose={() => setPicked(null)} />
+      <LessonSheet item={picked && !picked.classId ? picked.items[0]! : null} onClose={() => setPicked(null)} />
+      <ClassLessonSheet group={picked?.classId ? picked : null} onClose={() => setPicked(null)} />
       <LogLessonSheet key={add ? add.date + add.time : "none"} open={!!add} onClose={() => setAdd(null)} presetDate={add?.date} presetTime={add?.time} mode="schedule" />
       <TemplatesDrawer open={drawer} onClose={() => setDrawer(false)} />
     </div>

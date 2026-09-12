@@ -16,3 +16,4 @@
 .mchip.cancelled { background: var(--surface-2); color: var(--label-3); border-left-color: var(--fill-2); text-decoration: line-through; }
 .mcal-more { font-size: 11px; color: var(--label-2); padding-left: 6px; }
 @media (max-width: 900px) { .mcal-cell { min-height: 80px; } .mchip { font-size: 10px; } }
+.mchip.klass { border-left-style: double; border-left-width: 4px; }

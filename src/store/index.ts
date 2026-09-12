@@ -4,12 +4,13 @@
  * UI 不能直接 set 状态，只能调 action。
  */
 import { create } from "zustand";
-import type { AuditEntry, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
+import type { AuditEntry, Class, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
 import { emptyState, normalizeState } from "@/core/types";
 import { uid } from "@/core/id";
 import { todayISO } from "@/core/date";
 import { demoState } from "@/core/demo";
 import { cancelLesson, completeLesson, copyFromLastWeek, logLesson, rescheduleLesson, scheduleLesson, undoLesson, type DayItem, type LogLessonInput } from "@/core/lesson";
+import { cancelGroup, completeClass, logClass, scheduleClass, type Attendance, type ClassLessonInput } from "@/core/klass";
 import { createEntitlements, type Entitlements, type Tier } from "@/entitlements";
 import type { Repository } from "@/data/repository";
 import { platform } from "@/platform";
@@ -40,6 +41,14 @@ export interface Store {
   log(input: LogLessonInput): void;
   schedule(input: LogLessonInput): void;
   reschedule(item: DayItem, to: { date: ISODate; time: string }): void;
+  /* 班课 */
+  scheduleClass(input: ClassLessonInput): void;
+  logClass(input: ClassLessonInput): void;
+  completeClass(items: DayItem[], attendance: Attendance): void;
+  cancelGroup(items: DayItem[]): void;
+  addClass(input: Omit<Class, "id" | "active">): { ok: true; cls: Class } | { ok: false; reason: string };
+  updateClass(id: ID, patch: Partial<Class>): { ok: true } | { ok: false; reason: string };
+  removeClass(id: ID): void;
   copyLastWeek(date: ISODate): number;
   /* 学员 / 缴费 */
   addStudent(input: Pick<Student, "name" | "courseIds" | "note">): Student;
@@ -163,6 +172,53 @@ export const useStore = create<Store>((set, get) => {
       if (!r) return;
       commit({ lessons: r.lessons });
       audited(r.audit);
+    },
+    scheduleClass(input) {
+      const r = scheduleClass(get().s, input);
+      if (!r) return;
+      commit({ lessons: r.lessons });
+      audited(r.audit);
+    },
+    logClass(input) {
+      const r = logClass(get().s, input);
+      if (!r) return;
+      commit({ lessons: r.lessons });
+      audited(r.audit);
+    },
+    completeClass(items, attendance) {
+      const r = completeClass(get().s, items, attendance);
+      if (!r) return;
+      commit({ lessons: r.lessons });
+      audited(r.audit);
+    },
+    cancelGroup(items) {
+      const r = cancelGroup(get().s, items);
+      if (!r) return;
+      commit({ lessons: r.lessons });
+      audited(r.audit);
+    },
+    addClass(input) {
+      const s = get().s;
+      const c1 = get().ent.check("classes", s.classes.filter((c) => c.active).length);
+      if (!c1.ok) return c1;
+      const c2 = get().ent.check("classSize", input.studentIds.length - 1);
+      if (!c2.ok) return c2;
+      const cls: Class = { id: uid("k"), active: true, ...input };
+      commit({ classes: [...s.classes, cls] });
+      return { ok: true, cls };
+    },
+    updateClass(id, patch) {
+      if (patch.studentIds) {
+        const c = get().ent.check("classSize", patch.studentIds.length - 1);
+        if (!c.ok) return c;
+      }
+      commit({ classes: get().s.classes.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
+      return { ok: true };
+    },
+    removeClass(id) {
+      const s = get().s;
+      /* 已经打过卡的记录留着（那是真实发生的），只删班级和它的固定课 */
+      commit({ classes: s.classes.filter((c) => c.id !== id), templates: s.templates.filter((t) => t.classId !== id) });
     },
     copyLastWeek(date) {
       const added = copyFromLastWeek(get().s, date);

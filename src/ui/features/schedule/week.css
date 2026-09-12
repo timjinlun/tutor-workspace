@@ -29,3 +29,4 @@
 .now-line::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
 .week-grid[style*="--n: 14"] .wg-day b { font-size: 14px; width: 24px; height: 24px; line-height: 24px; }
 .week-grid[style*="--n: 14"] .blk .c { display: none; }
+.blk.klass { border-left-style: double; border-left-width: 5px; }

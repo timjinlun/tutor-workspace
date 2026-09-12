@@ -1,16 +1,22 @@
 /** 课程与老师：单价、每节扣几课时、1 课时多少分钟。都是排课和算账的前置对象，放一页。 */
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Plus, Trash2, Clock } from "lucide-react";
+import { Plus, Trash2, Clock, Users, Pencil, Pause, Play } from "lucide-react";
 import { useStore } from "@/store";
 import { Button, Chip, Empty, Field, Input, Sheet } from "@/ui/primitives";
+import type { Class } from "@/core/types";
+import { classPrice } from "@/core/klass";
+import { ConfirmSheet } from "@/ui/widgets/ConfirmSheet";
+import { ClassSheet } from "./ClassSheet";
 import "./courses.css";
 
 export function CoursesPage() {
   const s = useStore((x) => x.s);
   const ent = useStore((x) => x.ent);
-  const { updateCourse, removeCourse, addTeacher, updateSettings } = useStore(useShallow((x) => ({ updateCourse: x.updateCourse, removeCourse: x.removeCourse, addTeacher: x.addTeacher, updateSettings: x.updateSettings })));
+  const { updateCourse, removeCourse, addTeacher, updateSettings, updateClass, removeClass } = useStore(useShallow((x) => ({ updateCourse: x.updateCourse, removeCourse: x.removeCourse, addTeacher: x.addTeacher, updateSettings: x.updateSettings, updateClass: x.updateClass, removeClass: x.removeClass })));
   const [addOpen, setAddOpen] = useState(false);
+  const [classOpen, setClassOpen] = useState<{ editing?: Class } | null>(null);
+  const [delClass, setDelClass] = useState<Class | null>(null);
   const [err, setErr] = useState("");
   const [newTeacher, setNewTeacher] = useState("");
   const usersOf = (courseId: string) => s.students.filter((st) => !st.archived && st.courseIds.includes(courseId)).length;
@@ -61,6 +67,30 @@ export function CoursesPage() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
+        <div className="section-title"><Users size={14} /> 班级 <Chip>免费版最多 {ent.limit("classes")} 个班 · 每班 {ent.limit("classSize")} 人</Chip><button className="right link" onClick={() => setClassOpen({})}>+ 开一个班</button></div>
+        {s.classes.length === 0 ? (
+          <div className="muted" style={{ padding: "6px 0 2px", fontSize: 13 }}>几个学员一起上的课在这里开班。打卡时各扣各的课时，单价和缺席扣不扣都由你定。</div>
+        ) : (
+          s.classes.map((k) => {
+            const c = s.courses.find((x) => x.id === k.courseId);
+            const members = k.studentIds.map((id) => s.students.find((st) => st.id === id)?.name).filter(Boolean);
+            return (
+              <div className={`row ${k.active ? "" : "paused"}`} key={k.id}>
+                <div className="klass-badge"><Users size={15} /></div>
+                <div className="grow">
+                  <div className="title">{k.name} <span className="muted" style={{ fontWeight: 400 }}>{c?.name}</span>{!k.active && <Chip>已暂停</Chip>}</div>
+                  <div className="meta">{members.length} 人 · {members.join("、") || "还没拉人"} · ¥{classPrice(s, k)}/人/课时 · 缺席{k.deductOnAbsence ? "照扣" : "不扣"}</div>
+                </div>
+                <Button variant="ghost" size="sm" icon={<Pencil />} title="编辑" onClick={() => setClassOpen({ editing: k })} />
+                <Button variant="ghost" size="sm" icon={k.active ? <Pause /> : <Play />} title={k.active ? "暂停（固定课暂时不生成）" : "恢复"} onClick={() => updateClass(k.id, { active: !k.active })} />
+                <Button variant="ghost" size="sm" icon={<Trash2 />} title="删除" onClick={() => setDelClass(k)} />
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
         <div className="section-title">老师 <Chip>免费版最多 {ent.limit("teachers")} 位</Chip></div>
         {s.teachers.map((t) => (
           <div className="row" key={t.id}>
@@ -75,6 +105,10 @@ export function CoursesPage() {
       </div>
 
       <AddCourseSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      {classOpen && <ClassSheet key={classOpen.editing?.id ?? "new"} open onClose={() => setClassOpen(null)} editing={classOpen.editing} />}
+      <ConfirmSheet open={!!delClass} onClose={() => setDelClass(null)} onConfirm={() => delClass && removeClass(delClass.id)} title={`删除 ${delClass?.name ?? ""}？`} confirmLabel="删除">
+        <p className="muted">只删班级和它的固定课，已经打过卡的记录会留在每个学员名下。</p>
+      </ConfirmSheet>
     </div>
   );
 }

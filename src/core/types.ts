@@ -98,6 +98,8 @@ export interface Lesson {
   /** 班课：属于哪个班；同一次班课的各学员记录共享 groupId */
   classId?: ID;
   groupId?: ID;
+  /** 班课点名结果；一对一没有这个字段 */
+  attendance?: "present" | "absent";
   doneAt?: string;
   createdAt: string;
   note?: string;

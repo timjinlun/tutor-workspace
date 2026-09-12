@@ -162,3 +162,7 @@ textarea.input { height: auto; padding: 10px 12px; min-height: 80px; resize: ver
 .stamp svg { width: 15px; height: 15px; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* 班课的标识：一对一是头像，班课是一个方圆角的"人群"角标 */
+.klass-badge { width: 36px; height: 36px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.klass-badge.lg { width: 48px; height: 48px; border-radius: 14px; }

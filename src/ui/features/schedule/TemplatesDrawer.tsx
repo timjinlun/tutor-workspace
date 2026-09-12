@@ -9,24 +9,28 @@ import { useStore } from "@/store";
 import { WEEK_ORDER } from "@/core/calendar";
 import { WEEKDAY_CN } from "@/core/date";
 import { Avatar, Button, Field, Input, Select, Sheet } from "@/ui/primitives";
+import { Users } from "lucide-react";
+import { classMembers } from "@/core/klass";
 
 export function TemplatesDrawer({ open, onClose, presetWeekday }: { open: boolean; onClose: () => void; presetWeekday?: number }) {
   const s = useStore((x) => x.s);
   const { addTemplate, updateTemplate, removeTemplate } = useStore(useShallow((x) => ({ addTemplate: x.addTemplate, updateTemplate: x.updateTemplate, removeTemplate: x.removeTemplate })));
   const students = s.students.filter((x) => !x.archived);
+  const classes = s.classes.filter((k) => k.active);
   const [studentId, setStudentId] = useState(students[0]?.id ?? "");
-  const student = students.find((x) => x.id === studentId) ?? students[0];
-  const courses = s.courses.filter((c) => (student ? student.courseIds.includes(c.id) : true));
+  const cls = studentId.startsWith("class:") ? classes.find((k) => `class:${k.id}` === studentId) : undefined;
+  const student = cls ? undefined : (students.find((x) => x.id === studentId) ?? students[0]);
+  const courses = cls ? s.courses.filter((c) => c.id === cls.courseId) : s.courses.filter((c) => (student ? student.courseIds.includes(c.id) : true));
   const [courseId, setCourseId] = useState("");
   const effCourse = courses.some((c) => c.id === courseId) ? courseId : (courses[0]?.id ?? "");
   const [wd, setWd] = useState(presetWeekday ?? 1);
   const [time, setTime] = useState("18:00");
-  const sid = student?.id ?? "";
+  const sid = cls ? `class:${cls.id}` : (student?.id ?? "");
   const active = s.templates.filter((t) => t.active).length;
 
   const submit = () => {
     if (!sid || !effCourse) return;
-    addTemplate({ studentId: sid, courseId: effCourse, teacherId: s.teachers[0]?.id, weekday: wd, time });
+    addTemplate({ studentId: cls ? "" : sid, classId: cls?.id, courseId: effCourse, teacherId: s.teachers[0]?.id, weekday: wd, time });
   };
 
   return (
@@ -40,12 +44,13 @@ export function TemplatesDrawer({ open, onClose, presetWeekday }: { open: boolea
               <div className="tpl-day">周{WEEKDAY_CN[d]}</div>
               {items.map((t) => {
                 const st = s.students.find((x) => x.id === t.studentId);
+                const k = s.classes.find((x) => x.id === t.classId);
                 const c = s.courses.find((x) => x.id === t.courseId);
                 return (
                   <div key={t.id} className={`row tpl-row ${t.active ? "" : "paused"}`}>
                     <span className="num tpl-time">{t.time}</span>
-                    <Avatar name={st?.name ?? "?"} size="sm" />
-                    <div className="grow"><div className="title">{st?.name ?? "已删除"}</div><div className="meta">{c?.name}{!t.active && " · 已暂停"}</div></div>
+                    {k ? <div className="klass-badge" style={{ width: 28, height: 28, borderRadius: 8 }}><Users size={13} /></div> : <Avatar name={st?.name ?? "?"} size="sm" />}
+                    <div className="grow"><div className="title">{k ? k.name : (st?.name ?? "已删除")}</div><div className="meta">{c?.name}{k && ` · 班课 ${classMembers(s, k).length} 人`}{!t.active && " · 已暂停"}</div></div>
                     <Button variant="ghost" size="sm" icon={t.active ? <Pause /> : <Play />} title={t.active ? "暂停（比如放假）" : "恢复"} onClick={() => updateTemplate(t.id, { active: !t.active })} />
                     <Button variant="ghost" size="sm" icon={<Trash2 />} title="删除" onClick={() => removeTemplate(t.id)} />
                   </div>
@@ -62,6 +67,7 @@ export function TemplatesDrawer({ open, onClose, presetWeekday }: { open: boolea
           <Field label="学员">
             <Select value={sid} onChange={(e) => setStudentId(e.target.value)}>
               {students.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+              {classes.length > 0 && <optgroup label="班级">{classes.map((k) => <option key={k.id} value={`class:${k.id}`}>{k.name} · {classMembers(s, k).length} 人</option>)}</optgroup>}
             </Select>
           </Field>
           <Field label="课程">

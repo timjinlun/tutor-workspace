@@ -4,9 +4,12 @@
  *   scheduled ──cancel────► cancelled
  * 这里只做纯计算并返回新数组和审计条目，不碰 IO。
  */
-import type { AuditEntry, ID, ISODate, Lesson, LessonTemplate, State } from "./types";
+import type { ID, ISODate, Lesson, LessonTemplate, State } from "./types";
 import { addDays, weekdayOf } from "./date";
 import { uid } from "./id";
+import { entry } from "./audit";
+import { materializeClass } from "./klass";
+import { stripVirtual, type DayItem, type LessonChange } from "./day-item";
 
 /** 一节课多少分钟：课时数 × （课程自己的 1 课时分钟数，或全局默认） */
 export function lessonMinutes(state: State, l: Pick<Lesson, "courseId" | "units">): number {
@@ -22,7 +25,8 @@ export function addMinutes(time: string, minutes: number): string {
 }
 
 /** 「今天」列表里的一项：可能是尚未落库的模板课（virtual） */
-export type DayItem = Lesson & { virtual?: boolean };
+export type { DayItem, LessonChange } from "./day-item";
+export { groupKeyOf } from "./day-item";
 
 const byTime = (a: { time: string }, b: { time: string }) => a.time.localeCompare(b.time);
 
@@ -37,8 +41,13 @@ export function lessonsOn(state: State, date: ISODate): DayItem[] {
   const covered = new Set(real.map((l) => l.templateId).filter(Boolean));
   const virtual: DayItem[] = state.templates
     .filter((t) => t.active && t.weekday === wd && !covered.has(t.id))
-    .filter((t) => state.students.some((s) => s.id === t.studentId && !s.archived))
-    .map((t) => materialize(state, t, date));
+    .flatMap((t) => {
+      if (t.classId) {
+        const cls = state.classes.find((c) => c.id === t.classId && c.active);
+        return cls ? materializeClass(state, t, cls, date) : [];
+      }
+      return state.students.some((s) => s.id === t.studentId && !s.archived) ? [materialize(state, t, date)] : [];
+    });
   return [...real, ...virtual].sort(byTime);
 }
 
@@ -59,11 +68,6 @@ export function materialize(state: State, t: LessonTemplate, date: ISODate): Day
     createdAt: "",
     virtual: true,
   };
-}
-
-export interface LessonChange {
-  lessons: Lesson[];
-  audit: AuditEntry;
 }
 
 function studentName(state: State, id: ID) {
@@ -199,7 +203,7 @@ export function suggestionsFor(state: State, date: ISODate, weeksBack = 8): Sugg
   const tally = new Map<string, Suggestion>();
   for (const l of state.lessons) {
     if (l.status !== "done" || l.date < since || l.date >= date || weekdayOf(l.date) !== wd) continue;
-    if (already.has(l.studentId)) continue;
+    if (already.has(l.studentId) || l.classId) continue;
     const key = `${l.studentId}|${l.time}`;
     const cur = tally.get(key) ?? { studentId: l.studentId, courseId: l.courseId, time: l.time, hits: 0 };
     cur.hits += 1;
@@ -210,7 +214,7 @@ export function suggestionsFor(state: State, date: ISODate, weeksBack = 8): Sugg
 
 /** 从上周同一天复制课（作为临时排课，scheduled） */
 export function copyFromLastWeek(state: State, date: ISODate, at: string = new Date().toISOString()): Lesson[] {
-  const src = lessonsOn(state, addDays(date, -7)).filter((l) => l.status !== "cancelled");
+  const src = lessonsOn(state, addDays(date, -7)).filter((l) => l.status !== "cancelled" && !l.classId);
   const existing = new Set(lessonsOn(state, date).map((l) => `${l.studentId}|${l.time}`));
   return src
     .filter((l) => !existing.has(`${l.studentId}|${l.time}`))
@@ -229,18 +233,4 @@ export function copyFromLastWeek(state: State, date: ISODate, at: string = new D
     }));
 }
 
-function stripVirtual(item: DayItem): Lesson {
-  const copy: DayItem = { ...item };
-  delete copy.virtual;
-  return copy;
-}
 
-function entry(kind: AuditEntry["kind"], summary: string, lesson: Lesson, at: string): AuditEntry {
-  return {
-    id: uid("a"),
-    at,
-    kind,
-    summary,
-    payload: { lessonId: lesson.id, studentId: lesson.studentId, date: lesson.date, time: lesson.time, units: lesson.units, price: lesson.price, source: lesson.source },
-  };
-}

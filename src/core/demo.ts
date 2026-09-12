@@ -21,18 +21,21 @@ export function demoState(today = todayISO()): State {
     { id: "s5", name: "周雨", courseIds: ["c2"], note: "已结课，暑假班", createdAt: d(-200), archived: true, sortOrder: 4 },
   ];
   s.payments = [
-    { id: "p1", studentId: "s1", date: d(-120), amount: 5600, hours: 20, note: "" },
+    { id: "p1", studentId: "s1", date: d(-120), amount: 8400, hours: 30, note: "" },
     { id: "p2", studentId: "s2", date: d(-90), amount: 7800, hours: 30, note: "含一节试听" },
     { id: "p3", studentId: "s3", date: d(-60), amount: 7200, hours: 24, note: "" },
-    { id: "p4", studentId: "s4", date: d(-45), amount: 4480, hours: 16, note: "" },
+    { id: "p4", studentId: "s4", date: d(-45), amount: 8400, hours: 30, note: "" },
   ];
   /* 固定课表：今天这个星期几安排两节，方便第一眼就看到「今天」在工作 */
   const wd = weekdayOf(today);
+  /* 一个小班：张明和陈晨一起上数学，今天 20:00，方便第一眼看到班课长什么样 */
+  s.classes = [{ id: "k1", name: "初二数学小班", courseId: "c1", teacherId: "t1", studentIds: ["s1", "s4"], pricePerUnit: 180, deductOnAbsence: true, active: true }];
   s.templates = [
     { id: "tp1", studentId: "s1", courseId: "c1", teacherId: "t1", weekday: wd, time: "16:00", active: true },
     { id: "tp2", studentId: "s2", courseId: "c2", teacherId: "t1", weekday: wd, time: "18:00", active: true },
     { id: "tp3", studentId: "s3", courseId: "c3", teacherId: "t1", weekday: (wd + 2) % 7, time: "19:30", active: true },
     { id: "tp4", studentId: "s4", courseId: "c1", teacherId: "t1", weekday: (wd + 4) % 7, time: "10:00", active: true },
+    { id: "tp5", studentId: "", classId: "k1", courseId: "c1", teacherId: "t1", weekday: wd, time: "20:00", active: true },
   ];
   /* 过去八周的打卡历史 */
   let n = 0;
@@ -41,6 +44,15 @@ export function demoState(today = todayISO()): State {
       const date = d(-7 * w + ((t.weekday - wd + 7) % 7) - (t.weekday >= wd ? 7 : 0));
       if (date >= today) continue;
       const c = s.courses.find((x) => x.id === t.courseId)!;
+      if (t.classId) {
+        const cls = s.classes.find((x) => x.id === t.classId)!;
+        const groupId = `g-demo-${w}`;
+        for (const sid of cls.studentIds) {
+          const absent = w === 2 && sid === "s4";
+          s.lessons.push({ id: `l${++n}`, studentId: sid, courseId: t.courseId, teacherId: "t1", date, time: t.time, status: "done", units: c.unitsPerLesson, price: cls.pricePerUnit ?? c.price, source: "template", templateId: t.id, classId: cls.id, groupId, attendance: absent ? "absent" : "present", doneAt: `${date}T12:00:00.000Z`, createdAt: `${date}T12:00:00.000Z` });
+        }
+        continue;
+      }
       s.lessons.push({
         id: `l${++n}`,
         studentId: t.studentId,

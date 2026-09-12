@@ -1,0 +1,8 @@
+.att-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.att { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 8px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--surface-2); color: var(--label-2); transition: background .12s, color .12s, transform .08s; }
+button.att:hover { transform: scale(1.04); }
+.att.present { background: var(--green-soft); color: var(--green); }
+.att.absent { background: var(--surface-2); color: var(--label-3); text-decoration: line-through; }
+.att.absent.deducted { background: var(--orange-soft); color: var(--orange); text-decoration: none; }
+.att.off { opacity: .5; }
+.att small { font-size: 10.5px; font-weight: 500; margin-left: 2px; text-decoration: none; }

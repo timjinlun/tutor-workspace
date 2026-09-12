@@ -3,6 +3,8 @@
  * mode = "log" 是上完了才补记（直接 done）；"schedule" 是先排上（scheduled），到时候在「今天」打卡。
  */
 import { useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { classMembers } from "@/core/klass";
 import { Button, Field, Input, Select, Sheet } from "@/ui/primitives";
 import { useStore } from "@/store";
 import { balance } from "@/core/finance";
@@ -10,10 +12,11 @@ import { nowHHMM, todayISO } from "@/core/date";
 
 export function LogLessonSheet({ open, onClose, presetStudentId, presetDate, presetTime, mode = "log" }: { open: boolean; onClose: () => void; presetStudentId?: string; presetDate?: string; presetTime?: string; mode?: "log" | "schedule" }) {
   const s = useStore((x) => x.s);
-  const log = useStore((x) => x.log);
-  const schedule = useStore((x) => x.schedule);
+  const { log, schedule, logClass, scheduleClass } = useStore(useShallow((x) => ({ log: x.log, schedule: x.schedule, logClass: x.logClass, scheduleClass: x.scheduleClass })));
+  const classes = useMemo(() => s.classes.filter((k) => k.active), [s.classes]);
   const students = useMemo(() => s.students.filter((x) => !x.archived), [s.students]);
   const [studentId, setStudentId] = useState(presetStudentId ?? students[0]?.id ?? "");
+  const cls = studentId.startsWith("class:") ? classes.find((k) => `class:${k.id}` === studentId) : undefined;
   const student = students.find((x) => x.id === studentId);
   const courseOptions = useMemo(() => s.courses.filter((c) => (student ? student.courseIds.includes(c.id) : true)), [s.courses, student]);
   const [courseId, setCourseId] = useState(courseOptions[0]?.id ?? "");
@@ -26,6 +29,13 @@ export function LogLessonSheet({ open, onClose, presetStudentId, presetDate, pre
   const scheduling = mode === "schedule";
 
   const submit = () => {
+    if (cls) {
+      const input = { classId: cls.id, date, time };
+      if (scheduling) scheduleClass(input);
+      else logClass(input);
+      onClose();
+      return;
+    }
     if (!studentId || !effectiveCourse) return;
     const u = parseFloat(units);
     const input = { studentId, courseId: effectiveCourse, teacherId, date, time, units: Number.isFinite(u) && u > 0 ? u : undefined };
@@ -43,9 +53,15 @@ export function LogLessonSheet({ open, onClose, presetStudentId, presetDate, pre
               {st.name} · 剩 {balance(s, st.id)} 课时
             </option>
           ))}
+          {classes.length > 0 && (
+            <optgroup label="班级">
+              {classes.map((k) => <option key={k.id} value={`class:${k.id}`}>{k.name} · {classMembers(s, k).length} 人</option>)}
+            </optgroup>
+          )}
         </Select>
       </Field>
-      <div className="grid-2">
+      {cls && <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>班课：{classMembers(s, cls).map((m) => m.name).join("、")}。{scheduling ? "到时候" : "记为已上后"}每人各扣一节。</div>}
+      {!cls && <div className="grid-2">
         <Field label="课程">
           <Select value={effectiveCourse} onChange={(e) => setCourseId(e.target.value)}>
             {courseOptions.map((c) => (
@@ -58,7 +74,7 @@ export function LogLessonSheet({ open, onClose, presetStudentId, presetDate, pre
         <Field label="消耗课时">
           <Input type="number" min={0.5} step={0.5} placeholder={String(course?.unitsPerLesson ?? 1)} value={units} onChange={(e) => setUnits(e.target.value)} />
         </Field>
-      </div>
+      </div>}
       <div className="grid-2">
         <Field label="日期">
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -69,7 +85,7 @@ export function LogLessonSheet({ open, onClose, presetStudentId, presetDate, pre
       </div>
       <div className="sheet-actions">
         <Button onClick={onClose}>取消</Button>
-        <Button variant="primary" onClick={submit} disabled={!studentId || !effectiveCourse}>
+        <Button variant="primary" onClick={submit} disabled={!cls && (!studentId || !effectiveCourse)}>
           {scheduling ? "加入课表" : "记为已上"}
         </Button>
       </div>

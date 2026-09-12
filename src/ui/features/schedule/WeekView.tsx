@@ -4,7 +4,8 @@
  */
 import { useEffect, useMemo, useRef } from "react";
 import { useStore } from "@/store";
-import { lessonMinutes, lessonsOn, type DayItem } from "@/core/lesson";
+import { lessonMinutes, lessonsOn } from "@/core/lesson";
+import { classById, groupItems, groupStatus, type DayGroup } from "@/core/klass";
 import { gridBounds, placeBlocks, timeToMin } from "@/core/calendar";
 import { WEEKDAY_CN, nowHHMM, todayISO, weekdayOf } from "@/core/date";
 import type { ISODate } from "@/core/types";
@@ -12,14 +13,14 @@ import "./week.css";
 
 const HOUR = 52;
 
-export function WeekView({ days, onPick, onEmpty }: { days: ISODate[]; onPick: (item: DayItem) => void; onEmpty: (date: ISODate, time: string) => void }) {
+export function WeekView({ days, onPick, onEmpty }: { days: ISODate[]; onPick: (group: DayGroup) => void; onEmpty: (date: ISODate, time: string) => void }) {
   const s = useStore((x) => x.s);
   const today = todayISO();
   const columns = useMemo(() => {
     const cols = days.map((date) => {
-      const items = lessonsOn(s, date).map((item) => {
-        const start = timeToMin(item.time);
-        return { id: item.id, item, start, end: start + lessonMinutes(s, item) };
+      const items = groupItems(lessonsOn(s, date)).map((group) => {
+        const start = timeToMin(group.time);
+        return { id: group.key, group, start, end: start + lessonMinutes(s, group.items[0]!) };
       });
       return { date, blocks: placeBlocks(items) };
     });
@@ -66,21 +67,25 @@ export function WeekView({ days, onPick, onEmpty }: { days: ISODate[]; onPick: (
           {cols.map(({ date, blocks }) => (
             <div key={date} className={`wg-col ${date === today ? "today" : ""} ${date < today ? "past" : ""}`} onClick={(e) => clickEmpty(date, e)}>
               {blocks.map((b) => {
-                const st = students.find((x) => x.id === b.item.studentId);
-                const c = courses.find((x) => x.id === b.item.courseId);
+                const item = b.group.items[0]!;
+                const cls = classById(s, b.group.classId);
+                const status = groupStatus(b.group);
+                const st = students.find((x) => x.id === item.studentId);
+                const c = courses.find((x) => x.id === item.courseId);
+                const name = cls ? `${cls.name} · ${b.group.items.length} 人` : (st?.name ?? "已删除");
                 const top = ((b.start - lo * 60) / 60) * HOUR;
                 const h = Math.max(22, ((b.end - b.start) / 60) * HOUR - 2);
                 const w = 100 / b.cols;
                 return (
                   <button
                     key={b.id}
-                    className={`blk ${b.item.status} ${b.item.source === "template" ? "tpl" : ""} ${h < 44 ? "short" : ""}`}
+                    className={`blk ${status} ${item.source === "template" ? "tpl" : ""} ${cls ? "klass" : ""} ${h < 44 ? "short" : ""}`}
                     style={{ top, height: h, left: `calc(${w * b.col}% + 2px)`, width: `calc(${w}% - 4px)` }}
-                    onClick={() => onPick(b.item)}
-                    title={`${b.item.time} ${st?.name ?? ""} ${c?.name ?? ""}`}
+                    onClick={() => onPick(b.group)}
+                    title={`${item.time} ${name} ${c?.name ?? ""}`}
                   >
-                    <span className="t num">{b.item.time}</span>
-                    <span className="n">{st?.name ?? "已删除"}</span>
+                    <span className="t num">{item.time}</span>
+                    <span className="n">{name}</span>
                     <span className="c">{c?.name}</span>
                   </button>
                 );

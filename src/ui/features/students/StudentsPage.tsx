@@ -193,7 +193,7 @@ function Profile({ student }: { student: Student }) {
                     <div className="row" key={l.id}>
                       <div className="grow">
                         <div className="title num" style={{ fontWeight: 500 }}>{l.date.slice(5).replace("-", "/")} <span className="muted">{l.time}</span></div>
-                        <div className="meta">{s.courses.find((c) => c.id === l.courseId)?.name} · {l.units} 课时 · {fmtMoney(l.units * l.price)}{l.source === "backfill" && " · 补记"}</div>
+                        <div className="meta">{s.courses.find((c) => c.id === l.courseId)?.name} · {l.units} 课时 · {fmtMoney(l.units * l.price)}{l.classId && ` · ${s.classes.find((k) => k.id === l.classId)?.name ?? "班课"}`}{l.attendance === "absent" && " · 缺席照扣"}{l.source === "backfill" && " · 补记"}</div>
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => setUndoTarget(l)}>撤销</Button>
                     </div>

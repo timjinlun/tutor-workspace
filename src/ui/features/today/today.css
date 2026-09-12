@@ -22,3 +22,7 @@
 .check.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--label); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 200; animation: toast-in .2s var(--spring); }
 @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.lesson.klass .lesson-main { padding-right: 8px; }
+.lesson.klass .att-chips { margin-top: 8px; }
+.link-plain { font: inherit; color: inherit; text-align: left; }
+.link-plain:hover { color: var(--accent); }

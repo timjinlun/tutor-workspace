@@ -4,9 +4,12 @@
  */
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Plus, Copy, CalendarPlus, Bell, Check, Undo2, X } from "lucide-react";
+import { Plus, Copy, CalendarPlus, Bell, Check, Undo2, X, Users } from "lucide-react";
 import { useStore } from "@/store";
 import { addMinutes, lessonMinutes, lessonsOn, suggestionsFor, type DayItem } from "@/core/lesson";
+import { classById, groupItems, groupStatus, type Attendance, type DayGroup } from "@/core/klass";
+import { AttendanceChips } from "@/ui/widgets/AttendanceChips";
+import { ClassLessonSheet } from "@/ui/widgets/ClassLessonSheet";
 import { balance, doneLessonsInWeek, incomeInMonth, lowBalanceStudents, fmtMoney } from "@/core/finance";
 import { formatCN, monthKey, nowHHMM, todayISO } from "@/core/date";
 import type { Lesson } from "@/core/types";
@@ -18,9 +21,13 @@ import "./today.css";
 
 export function TodayPage() {
   const s = useStore((x) => x.s);
-  const { complete, cancel, log, copyLastWeek, toggleTodo, go } = useStore(useShallow((x) => ({ complete: x.complete, cancel: x.cancel, log: x.log, copyLastWeek: x.copyLastWeek, toggleTodo: x.toggleTodo, go: x.go })));
+  const { complete, cancel, log, copyLastWeek, toggleTodo, go, completeClass, cancelGroup } = useStore(useShallow((x) => ({ complete: x.complete, cancel: x.cancel, log: x.log, copyLastWeek: x.copyLastWeek, toggleTodo: x.toggleTodo, go: x.go, completeClass: x.completeClass, cancelGroup: x.cancelGroup })));
   const today = todayISO();
   const items = useMemo(() => lessonsOn(s, today), [s, today]);
+  const groups = useMemo(() => groupItems(items), [items]);
+  const [attendance, setAttendance] = useState<Record<string, Attendance>>({});
+  const [classPick, setClassPick] = useState<DayGroup | null>(null);
+  const toggleAtt = (key: string, sid: string) => setAttendance((a) => ({ ...a, [key]: { ...a[key], [sid]: a[key]?.[sid] === "absent" ? "present" : "absent" } }));
   const suggestions = useMemo(() => suggestionsFor(s, today), [s, today]);
   const low = useMemo(() => lowBalanceStudents(s), [s]);
   const todos = useMemo(() => s.todos.filter((t) => !t.done && t.due <= today).sort((a, b) => a.due.localeCompare(b.due)), [s.todos, today]);
@@ -31,10 +38,10 @@ export function TodayPage() {
 
   const studentOf = (id: string) => s.students.find((x) => x.id === id);
   const courseOf = (id: string) => s.courses.find((x) => x.id === id);
-  const doneCount = items.filter((i) => i.status === "done").length;
-  const pending = items.filter((i) => i.status === "scheduled");
+  const doneCount = groups.filter((g) => groupStatus(g) === "done").length;
+  const pending = groups.filter((g) => groupStatus(g) === "scheduled");
   const now = nowHHMM();
-  const nextUp = pending.find((i) => i.time >= now) ?? pending[0];
+  const nextUp = pending.find((g) => g.time >= now) ?? pending[0];
 
   const onComplete = (item: DayItem) => {
     complete(item);
@@ -62,7 +69,7 @@ export function TodayPage() {
       </div>
 
       <div className="stat-row">
-        <div className="stat">今天 <b>{doneCount}/{items.filter((i) => i.status !== "cancelled").length}</b> 节</div>
+        <div className="stat">今天 <b>{doneCount}/{groups.filter((g) => groupStatus(g) !== "cancelled").length}</b> 节</div>
         <div className="stat">本周已上 <b>{doneLessonsInWeek(s, today)}</b> 节</div>
         <div className="stat">本月确认收入 <b>{fmtMoney(incomeInMonth(s, monthKey(today)))}</b></div>
         {low.length > 0 && <div className={`stat ${low.some((l) => l.level === "danger") ? "danger" : "warn"}`}>该提醒续费 <b>{low.length}</b> 人</div>}
@@ -83,13 +90,51 @@ export function TodayPage() {
             }
           />
         ) : (
-          items.map((item) => {
+          groups.map((g) => {
+            const isNext = nextUp?.key === g.key;
+            if (g.classId) {
+              const cls = classById(s, g.classId);
+              const first = g.items[0]!;
+              const c = courseOf(first.courseId);
+              const status = groupStatus(g);
+              const att = attendance[g.key] ?? {};
+              const absent = Object.values(att).filter((v) => v === "absent").length;
+              return (
+                <div key={g.key} className={`lesson klass ${status} ${isNext ? "next" : ""}`}>
+                  <div className="lesson-time num">{g.time}<span className="lesson-end">– {addMinutes(g.time, lessonMinutes(s, first))}</span>{isNext && <span className="next-tag">接下来</span>}</div>
+                  <div className="lesson-rail"><span className="dot" /></div>
+                  <button className="klass-badge" onClick={() => setClassPick(g)} title="查看这次班课"><Users size={17} /></button>
+                  <div className="lesson-main">
+                    <div className="lesson-title">
+                      <button className="link-plain" onClick={() => setClassPick(g)}>{cls?.name ?? "班课"}</button>
+                      <span className="lesson-course">{c?.name}</span>
+                      <Chip tone="accent">班课 · {g.items.length} 人</Chip>
+                    </div>
+                    <div className="lesson-meta">每人 {first.units} 课时 · {fmtMoney(first.price)}/课时{cls && ` · 缺席${cls.deductOnAbsence ? "照扣" : "不扣"}`}</div>
+                    <AttendanceChips items={g.items} attendance={att} onToggle={status === "scheduled" ? (sid) => toggleAtt(g.key, sid) : undefined} />
+                  </div>
+                  <div className="lesson-actions">
+                    {status === "scheduled" && (
+                      <>
+                        <Button variant="ghost" size="sm" icon={<X />} onClick={() => cancelGroup(g.items)} title="这次班课不上了" />
+                        <Button variant="primary" icon={<Check strokeWidth={3} />} onClick={() => { completeClass(g.items, att); setFresh(g.key); }}>
+                          上完了{absent > 0 && ` · 缺 ${absent}`}
+                        </Button>
+                      </>
+                    )}
+                    {status === "done" && <><Stamp fresh={fresh === g.key} /><Button variant="ghost" size="sm" icon={<Undo2 />} onClick={() => setClassPick(g)} title="按人撤销" /></>}
+                    {status === "cancelled" && <Chip>已取消</Chip>}
+                  </div>
+                </div>
+              );
+            }
+            const item = g.items[0]!;
             const st = studentOf(item.studentId);
             const c = courseOf(item.courseId);
             const key = `${item.studentId}|${item.time}`;
             return (
-              <div key={item.id} className={`lesson ${item.status} ${nextUp && nextUp.id === item.id ? "next" : ""}`}>
-                <div className="lesson-time num">{item.time}<span className="lesson-end">– {addMinutes(item.time, lessonMinutes(s, item))}</span>{nextUp && nextUp.id === item.id && <span className="next-tag">接下来</span>}</div>
+              <div key={item.id} className={`lesson ${item.status} ${isNext ? "next" : ""}`}>
+                <div className="lesson-time num">{item.time}<span className="lesson-end">– {addMinutes(item.time, lessonMinutes(s, item))}</span>{isNext && <span className="next-tag">接下来</span>}</div>
                 <div className="lesson-rail"><span className="dot" /></div>
                 <Avatar name={st?.name ?? "?"} />
                 <div className="lesson-main">
@@ -126,7 +171,7 @@ export function TodayPage() {
             );
           })
         )}
-        {items.length > 0 && pending.length === 0 && doneCount > 0 && <div className="timeline-done">今天的课都上完了 🎉</div>}
+        {groups.length > 0 && pending.length === 0 && doneCount > 0 && <div className="timeline-done">今天的课都上完了 🎉</div>}
       </div>
 
       {/* ---------- 从历史推断的建议 ---------- */}
@@ -193,6 +238,7 @@ export function TodayPage() {
 
       <LogLessonSheet open={logOpen} onClose={() => setLogOpen(false)} />
       <UndoLessonSheet lesson={undoTarget} onClose={() => setUndoTarget(null)} />
+      <ClassLessonSheet group={classPick} onClose={() => setClassPick(null)} />
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

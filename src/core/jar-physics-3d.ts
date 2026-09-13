@@ -10,6 +10,8 @@ export interface AddPhysicsCoinOptions {
   halfHeight: number;
   lessonId?: string;
   random: () => number;
+  position?: { x: number; y: number; z: number };
+  linearVelocity?: { x: number; y: number; z: number };
 }
 
 export interface PhysicsCoinPose {
@@ -41,19 +43,44 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
   const world = new RAPIER.World({ x: 0, y: -32, z: 0 });
   world.timestep = 1 / 60;
   world.maxCcdSubsteps = 2;
+  const container = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+  world.createCollider(
+    RAPIER.ColliderDesc.cylinder(0.06, options.radius)
+      .setTranslation(0, -0.06, 0)
+      .setFriction(0.86)
+      .setRestitution(0.04),
+    container,
+  );
+  const wallSegments = 32;
+  const wallThickness = 0.035;
+  const halfTangent = Math.tan(Math.PI / wallSegments) * (options.radius + wallThickness) * 1.05;
+  for (let i = 0; i < wallSegments; i++) {
+    const angle = i / wallSegments * Math.PI * 2;
+    const rotation = Math.PI / 2 - angle;
+    const distance = options.radius + wallThickness;
+    world.createCollider(
+      RAPIER.ColliderDesc.cuboid(halfTangent, options.height / 2, wallThickness)
+        .setTranslation(Math.cos(angle) * distance, options.height / 2, Math.sin(angle) * distance)
+        .setRotation({ x: 0, y: Math.sin(rotation / 2), z: 0, w: Math.cos(rotation / 2) })
+        .setFriction(0.78)
+        .setRestitution(0.04),
+      container,
+    );
+  }
   const coins = new Map<string, PhysicsCoin>();
   let nextId = 1;
 
   return {
     addCoin(input: AddPhysicsCoinOptions) {
       const id = `coin-${nextId++}`;
+      const position = input.position ?? {
+        x: (input.random() - 0.5) * 0.22,
+        y: options.height - 0.25,
+        z: (input.random() - 0.5) * 0.22,
+      };
       const body = world.createRigidBody(
         RAPIER.RigidBodyDesc.dynamic()
-          .setTranslation(
-            (input.random() - 0.5) * 0.22,
-            options.height - 0.25,
-            (input.random() - 0.5) * 0.22,
-          )
+          .setTranslation(position.x, position.y, position.z)
           .setCcdEnabled(true)
           .setLinearDamping(0.16)
           .setAngularDamping(0.22),
@@ -65,6 +92,7 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
           .setDensity(1),
         body,
       );
+      if (input.linearVelocity) body.setLinvel(input.linearVelocity, true);
       coins.set(id, { id, lessonId: input.lessonId, radius: input.radius, halfHeight: input.halfHeight, body });
       return id;
     },

@@ -14,6 +14,34 @@ describe("旧存档补齐字段", () => {
     expect(s.classes).toEqual([]);
     expect(s.settings.unitMinutes).toBe(60);
     expect(s.settings.teacherName).toBe("T");
+    expect(s.settings.coinPile).toEqual([]);
+    expect(s.settings.pendingCoinDrops).toEqual([]);
     expect(s.lessons).toEqual([]);
+  });
+
+  it("保留有效金币姿态并过滤损坏的持久化物理数据", () => {
+    const valid = {
+      id: "coin-a",
+      lessonId: "lesson-a",
+      position: { x: 0.1, y: 0.25, z: -0.1 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      radius: 0.082,
+      halfHeight: 0.018,
+    };
+    const s = normalizeState({
+      settings: {
+        teacherName: "T",
+        coinPile: [valid, { ...valid, id: "broken", position: { x: Number.NaN, y: 1, z: 0 } }],
+        pendingCoinDrops: [
+          { lessonId: "lesson-a", amount: 280, coinValue: 10, count: 28, radius: 4.5 },
+          { lessonId: "broken", amount: 280, coinValue: 10, count: 0, radius: 4.5 },
+        ],
+      },
+    } as unknown as Partial<State>);
+
+    expect(s.settings.coinPile).toEqual([valid]);
+    expect(s.settings.pendingCoinDrops).toEqual([
+      { lessonId: "lesson-a", amount: 280, coinValue: 10, count: 28, radius: 4.5 },
+    ]);
   });
 });

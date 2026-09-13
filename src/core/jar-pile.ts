@@ -88,3 +88,11 @@ export function buildJarPile(fill: number, count: number, radius: number, halfHe
   }
   return result;
 }
+
+export function selectStablePileRemoval(pile: CoinPilePose[], lessonId: string, count: number, hasActiveCoins: boolean) {
+  const exact = pile.filter((coin) => coin.lessonId === lessonId);
+  if (exact.length) return exact;
+  if (hasActiveCoins) return [];
+  return pile.filter((coin) => !coin.lessonId).slice(-count);
+}
+import type { CoinPilePose } from "./types";

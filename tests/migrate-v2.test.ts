@@ -97,11 +97,18 @@ describe("v2 数据库自动升级到 v3", () => {
 
   it("全新的 v3 库照常工作", () => {
     const dir = mkdtempSync(join(tmpdir(), "tw-mig-"));
-    const store = new SqliteStore(join(dir, "x.db"));
+    const file = join(dir, "x.db");
+    const store = new SqliteStore(file);
     expect(store.hasState()).toBe(false);
-    store.save({ version: 3, settings: { teacherName: "A" }, students: [{ id: "s1", name: "x" }] });
+    const coin = { id: "coin-a", lessonId: "lesson-a", position: { x: 0.1, y: 0.25, z: -0.1 }, rotation: { x: 0, y: 0, z: 0, w: 1 }, radius: 0.082, halfHeight: 0.018 };
+    const pending = { lessonId: "lesson-b", amount: 280, coinValue: 10, count: 28, radius: 4.5 };
+    store.save({ version: 3, settings: { teacherName: "A", coinPile: [coin], pendingCoinDrops: [pending] }, students: [{ id: "s1", name: "x" }] });
     expect(store.load()!.settings.teacherName).toBe("A");
     store.close();
+    const reopened = new SqliteStore(file);
+    expect(reopened.load()!.settings.coinPile).toEqual([coin]);
+    expect(reopened.load()!.settings.pendingCoinDrops).toEqual([pending]);
+    reopened.close();
     rmSync(dir, { recursive: true, force: true });
   });
 });

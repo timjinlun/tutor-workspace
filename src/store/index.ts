@@ -7,7 +7,8 @@ import { create } from "zustand";
 import { incomeInMonth } from "@/core/finance";
 import type { FeedbackPoint } from "@/core/lesson-feedback";
 import { incomeChanges, jarSettings } from "@/core/jar";
-import type { AuditEntry, Class, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
+import { coinEmissionShape } from "@/core/coin-queue";
+import type { AuditEntry, Class, CoinPilePose, Course, Expense, ID, ISODate, Lead, LessonTemplate, Material, OtherIncome, Payment, Settings, State, Student, Teacher, Todo } from "@/core/types";
 import { emptyState, normalizeState } from "@/core/types";
 import { uid } from "@/core/id";
 import { todayISO } from "@/core/date";
@@ -91,6 +92,7 @@ export interface Store {
   addTodo(input: Omit<Todo, "id" | "done">): void;
   /* 设置 / 数据 */
   updateSettings(patch: Partial<Settings>): void;
+  saveCoinPile(coins: CoinPilePose[], settledLessonIds?: ID[]): void;
   replaceState(next: State, reason: AuditEntry["kind"]): void;
   loadDemo(): void;
   clearAll(): void;
@@ -124,6 +126,21 @@ export const useStore = create<Store>((set, get) => {
     const changes = patch.lessons ? incomeChanges(get().s.lessons, patch.lessons) : [];
     const next = { ...get().s, ...patch };
     next.settings = { ...next.settings, ...jarSettings(next, todayISO()) };
+    if (changes.length) {
+      const changedIds = new Set(changes.map((change) => change.id));
+      const pendingCoinDrops = next.settings.pendingCoinDrops.filter((drop) => !changedIds.has(drop.lessonId));
+      for (const change of changes) {
+        if (change.amount <= 0) continue;
+        const shape = coinEmissionShape(change.amount, next.settings.coinValue.amount);
+        pendingCoinDrops.push({
+          lessonId: change.id,
+          amount: change.amount,
+          coinValue: next.settings.coinValue.amount,
+          ...shape,
+        });
+      }
+      next.settings = { ...next.settings, pendingCoinDrops };
+    }
     set({ s: next, ...(changes.length ? { jarFeedback: { seq: get().jarFeedback.seq + 1, changes, origin, monthDelta: incomeInMonth(next, todayISO().slice(0, 7)) - incomeInMonth(get().s, todayISO().slice(0, 7)) } } : {}) });
     persist(get, set);
   };
@@ -384,6 +401,18 @@ export const useStore = create<Store>((set, get) => {
       }
       commit({ settings: { ...get().s.settings, ...patch } });
     },
+    saveCoinPile(coins, settledLessonIds = []) {
+      const settled = new Set(settledLessonIds);
+      commit({ settings: {
+        ...get().s.settings,
+        coinPile: coins.map((coin) => ({
+          ...coin,
+          position: { ...coin.position },
+          rotation: { ...coin.rotation },
+        })),
+        pendingCoinDrops: get().s.settings.pendingCoinDrops.filter((drop) => !settled.has(drop.lessonId)),
+      } });
+    },
     replaceState(next, reason) {
       const s = normalizeState(next);
       s.settings = { ...s.settings, ...jarSettings(s, todayISO()) };
@@ -396,7 +425,7 @@ export const useStore = create<Store>((set, get) => {
     },
     clearAll() {
       const keep = get().s.settings;
-      get().replaceState({ ...emptyState(), settings: { ...keep, onboarded: true } }, "data.reset");
+      get().replaceState({ ...emptyState(), settings: { ...keep, coinPile: [], pendingCoinDrops: [], onboarded: true } }, "data.reset");
     },
     setTier: (t) => set({ ent: createEntitlements(t) }),
   };

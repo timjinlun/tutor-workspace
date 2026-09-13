@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildJarPile, buildJarVisualPile } from "../src/core/jar-pile";
+import { buildJarPile, buildJarVisualPile, selectStablePileRemoval } from "../src/core/jar-pile";
+import type { CoinPilePose } from "../src/core/types";
 
 describe("三维金币小山堆", () => {
   it("确定性生成有界的圆形币堆", () => {
@@ -40,5 +41,21 @@ describe("三维金币小山堆", () => {
     const edgeTop = Math.max(...pile.filter((coin) => Math.hypot(coin.x, coin.z) > 0.65).map((coin) => coin.y));
 
     expect(centerTop - edgeTop).toBeGreaterThan(fill * height * 0.82 * 0.4);
+  });
+
+  it("撤销历史课程只回退匿名金币且不会误删其他课程金币", () => {
+    const pose = (id: string, lessonId?: string): CoinPilePose => ({
+      id,
+      lessonId,
+      position: { x: 0, y: 0.1, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      radius: 0.082,
+      halfHeight: 0.018,
+    });
+    const pile = [pose("legacy-a"), pose("legacy-b"), pose("new-other", "other"), pose("new-target", "target")];
+
+    expect(selectStablePileRemoval(pile, "target", 1, false).map((coin) => coin.id)).toEqual(["new-target"]);
+    expect(selectStablePileRemoval(pile, "historical", 2, false).map((coin) => coin.id)).toEqual(["legacy-a", "legacy-b"]);
+    expect(selectStablePileRemoval(pile, "historical", 2, true)).toEqual([]);
   });
 });

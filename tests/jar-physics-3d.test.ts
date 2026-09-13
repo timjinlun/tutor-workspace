@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createJarPhysics3D, type PhysicsCoinPose } from "../src/core/jar-physics-3d";
+import { buildJarPile } from "../src/core/jar-pile";
 
 describe("Rapier 开放金币堆物理适配层", () => {
   it("声明开放地面场景", async () => {
@@ -28,7 +29,7 @@ describe("Rapier 开放金币堆物理适配层", () => {
       radius: 0.11,
       halfHeight: 0.025,
     });
-    expect(pose!.position.y).toBeCloseTo(4.35);
+    expect(pose!.position.y).toBeCloseTo(0.9);
 
     physics.dispose();
   });
@@ -117,6 +118,42 @@ describe("Rapier 开放金币堆物理适配层", () => {
     physics.dispose();
   });
 
+  it("一课金币落在历史金币堆上后全部留在可见地面", async () => {
+    const radius = 0.082;
+    const halfHeight = 0.018;
+    const stable = buildJarPile(0.5, 240, radius, halfHeight).map((coin, index) => ({
+      id: `stable-${index}`,
+      position: { x: coin.x, y: coin.y, z: coin.z },
+      rotation: { x: 0, y: Math.sin(coin.yaw / 2), z: 0, w: Math.cos(coin.yaw / 2) },
+      radius,
+      halfHeight,
+    }));
+    const oldPileMaxY = Math.max(...stable.map((coin) => coin.position.y));
+    for (const initialSeed of [1, 17, 73, 997, 4099, 65537, 0x12345678, 0xdeadbeef]) {
+      const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+      physics.setStaticPile(stable);
+      let seed = initialSeed;
+      const random = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 0x100000000;
+      };
+      for (let i = 0; i < 28; i++) {
+        physics.addCoin({ radius, halfHeight: radius * 0.22, lessonId: "lesson-stack", random });
+        physics.step();
+      }
+      for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
+
+      const added = physics.poses();
+      expect(added).toHaveLength(28);
+      expect(Math.max(...added.map((coin) => coin.position.y))).toBeGreaterThan(oldPileMaxY);
+      for (const coin of added) {
+        expect(coin.position.y).toBeGreaterThanOrEqual(0);
+        expect(Math.hypot(coin.position.x, coin.position.z)).toBeLessThan(2);
+      }
+      physics.dispose();
+    }
+  });
+
   it("撤销只移除对应课程的刚体", async () => {
     const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
     physics.addCoin({ radius: 0.11, halfHeight: 0.025, lessonId: "a", random: () => 0.5 });
@@ -128,13 +165,13 @@ describe("Rapier 开放金币堆物理适配层", () => {
     physics.dispose();
   });
 
-  it("动态刚体最多保留240枚并可清空重建", async () => {
+  it("动态刚体超过240枚时也不会静默丢失并可清空重建", async () => {
     const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
     for (let i = 0; i < 250; i++) {
       physics.addCoin({ radius: 0.11, halfHeight: 0.025, lessonId: String(i), random: () => 0.5 });
     }
 
-    expect(physics.poses()).toHaveLength(240);
+    expect(physics.poses()).toHaveLength(250);
     physics.clearCoins();
     expect(physics.poses()).toEqual([]);
     physics.dispose();
@@ -170,7 +207,7 @@ describe("Rapier 开放金币堆物理适配层", () => {
     expect(physics.hasActiveBodies()).toBe(false);
 
     physics.addCoin({ radius: 0.11, halfHeight: 0.025, random: () => 0.5 });
-    expect(physics.poses()[1]!.position.y).toBeCloseTo(2.05, 4);
+    expect(physics.poses()[1]!.position.y).toBeCloseTo(0.9, 4);
     physics.dispose();
   });
 });

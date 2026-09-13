@@ -176,9 +176,28 @@ export type Appearance = "system" | "light" | "dark";
 /** 主界面背景：无 / 极光 / 网格 / 自定义图片 */
 export type Background = "none" | "aurora" | "mesh" | "custom";
 
+export interface CoinPilePose {
+  id: string;
+  lessonId?: ID;
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number; w: number };
+  radius: number;
+  halfHeight: number;
+}
+
+export interface PendingCoinDrop {
+  lessonId: ID;
+  amount: number;
+  coinValue: number;
+  count: number;
+  radius: number;
+}
+
 export interface Settings {
   coinValue: { amount: number; month: string };
   jarCapacity: number;
+  coinPile: CoinPilePose[];
+  pendingCoinDrops: PendingCoinDrop[];
   teacherName: string;
   accent: Accent;
   appearance: Appearance;
@@ -212,6 +231,8 @@ export interface State {
 export const DEFAULT_SETTINGS: Settings = {
   coinValue: { amount: 10, month: "" },
   jarCapacity: 10000,
+  coinPile: [],
+  pendingCoinDrops: [],
   teacherName: "老师",
   accent: "coral",
   appearance: "system",
@@ -227,6 +248,14 @@ export function normalizeState(raw: Partial<State> | null | undefined): State {
   const base = emptyState();
   const s: State = { ...base, ...(raw ?? {}), version: 3, settings: { ...DEFAULT_SETTINGS, ...(raw?.settings ?? {}) } };
   s.classes = Array.isArray(s.classes) ? s.classes : [];
+  s.settings.coinPile = Array.isArray(s.settings.coinPile) ? s.settings.coinPile.filter(isCoinPilePose).map((coin) => ({
+    ...coin,
+    position: { ...coin.position },
+    rotation: { ...coin.rotation },
+  })) : [];
+  s.settings.pendingCoinDrops = Array.isArray(s.settings.pendingCoinDrops)
+    ? s.settings.pendingCoinDrops.filter(isPendingCoinDrop).map((drop) => ({ ...drop }))
+    : [];
   s.students = s.students.map((st, i) => ({ ...st, sortOrder: typeof st.sortOrder === "number" ? st.sortOrder : i, archived: !!st.archived }));
   /* 永远有且只有一位「我」：老库里把第一位老师认作我，空库就建一位 */
   if (!s.teachers.some((t) => t.self)) {
@@ -236,6 +265,28 @@ export function normalizeState(raw: Partial<State> | null | undefined): State {
   }
   s.teachers = s.teachers.map((t) => (t.self ? { ...t, name: s.settings.teacherName || "我", payPerUnit: undefined } : t));
   return s;
+}
+
+function isCoinPilePose(value: unknown): value is CoinPilePose {
+  if (!value || typeof value !== "object") return false;
+  const coin = value as Partial<CoinPilePose>;
+  const finiteVector = (vector: unknown, keys: string[]) => !!vector && typeof vector === "object" && keys.every((key) => Number.isFinite((vector as Record<string, unknown>)[key]));
+  return typeof coin.id === "string"
+    && (coin.lessonId === undefined || typeof coin.lessonId === "string")
+    && finiteVector(coin.position, ["x", "y", "z"])
+    && finiteVector(coin.rotation, ["x", "y", "z", "w"])
+    && Number.isFinite(coin.radius) && coin.radius! > 0 && coin.radius! <= 1
+    && Number.isFinite(coin.halfHeight) && coin.halfHeight! > 0 && coin.halfHeight! <= 0.5;
+}
+
+function isPendingCoinDrop(value: unknown): value is PendingCoinDrop {
+  if (!value || typeof value !== "object") return false;
+  const drop = value as Partial<PendingCoinDrop>;
+  return typeof drop.lessonId === "string"
+    && Number.isFinite(drop.amount) && drop.amount! > 0
+    && Number.isFinite(drop.coinValue) && drop.coinValue! > 0
+    && Number.isInteger(drop.count) && drop.count! > 0 && drop.count! <= 240
+    && Number.isFinite(drop.radius) && drop.radius! > 0;
 }
 
 export function emptyState(): State {

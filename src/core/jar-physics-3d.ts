@@ -45,13 +45,13 @@ async function initRapier() {
 
 export async function createJarPhysics3D(options: JarPhysicsOptions) {
   await initRapier();
-  const world = new RAPIER.World({ x: 0, y: -32, z: 0 });
+  const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
   world.timestep = 1 / 60;
   world.maxCcdSubsteps = 2;
   let currentHeight = options.height;
   const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   world.createCollider(
-    RAPIER.ColliderDesc.cuboid(options.radius * 2.25, 0.06, options.radius * 1.45)
+    RAPIER.ColliderDesc.cuboid(options.radius * 8, 0.06, options.radius * 8)
       .setTranslation(0, -0.06, 0)
       .setFriction(0.86)
       .setRestitution(0.04),
@@ -59,21 +59,16 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
   );
   const coins = new Map<string, PhysicsCoin>();
   let staticPileBodies: RAPIER.RigidBody[] = [];
+  let staticPileTop = 0;
   let nextId = 1;
   return {
     sceneKind: "open-ground" as const,
     addCoin(input: AddPhysicsCoinOptions) {
-      while (coins.size >= 240) {
-        const oldest = coins.entries().next().value as [string, PhysicsCoin] | undefined;
-        if (!oldest) break;
-        world.removeRigidBody(oldest[1].body);
-        coins.delete(oldest[0]);
-      }
       const id = `coin-${nextId++}`;
       const localPosition = {
-        x: (input.random() - 0.5) * 0.22,
-        y: currentHeight - 0.25,
-        z: (input.random() - 0.5) * 0.22,
+        x: (input.random() - 0.5) * 0.7,
+        y: Math.min(currentHeight - 0.25, Math.max(0.9, staticPileTop + 0.8)),
+        z: (input.random() - 0.5) * 0.7,
       };
       const position = input.position ?? localPosition;
       const tiltX = (input.random() - 0.5) * 1.1;
@@ -89,18 +84,18 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
           .setTranslation(position.x, position.y, position.z)
           .setRotation(localRotation)
           .setAngvel({
-            x: (input.random() - 0.5) * 9,
-            y: (input.random() - 0.5) * 9,
-            z: (input.random() - 0.5) * 9,
+            x: (input.random() - 0.5) * 4,
+            y: (input.random() - 0.5) * 4,
+            z: (input.random() - 0.5) * 4,
           })
           .setCcdEnabled(true)
-          .setLinearDamping(0.16)
-          .setAngularDamping(0.22),
+          .setLinearDamping(2)
+          .setAngularDamping(2),
       );
       world.createCollider(
         coinCollider(input.radius, input.halfHeight)
           .setFriction(0.72)
-          .setRestitution(0.08)
+          .setRestitution(0.02)
           .setDensity(1),
         body,
       );
@@ -130,6 +125,7 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
     },
     setStaticPile(pile: PhysicsCoinPose[]) {
       for (const body of staticPileBodies) world.removeRigidBody(body);
+      staticPileTop = pile.reduce((top, coin) => Math.max(top, coin.position.y + coin.radius), 0);
       staticPileBodies = pile.map((coin) => {
         const body = world.createRigidBody(
           RAPIER.RigidBodyDesc.fixed()

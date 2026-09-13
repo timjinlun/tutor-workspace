@@ -31,4 +31,14 @@ describe("三维金币小山堆", () => {
     expect(largestGap).toBeLessThanOrEqual(halfHeight * 2.03);
     expect(pile.some((coin) => Math.abs(coin.tiltX) + Math.abs(coin.tiltZ) > 0.03)).toBe(true);
   });
+
+  it("历史金币堆从宽底座向中心形成明显坡面", () => {
+    const fill = 0.5;
+    const height = 4.6;
+    const pile = buildJarVisualPile(fill, height, 0.082, 0.018);
+    const centerTop = Math.max(...pile.filter((coin) => Math.hypot(coin.x, coin.z) < 0.3).map((coin) => coin.y));
+    const edgeTop = Math.max(...pile.filter((coin) => Math.hypot(coin.x, coin.z) > 0.65).map((coin) => coin.y));
+
+    expect(centerTop - edgeTop).toBeGreaterThan(fill * height * 0.82 * 0.4);
+  });
 });

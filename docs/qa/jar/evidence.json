@@ -1,14 +1,13 @@
 {
   "model": {
+    "scene": "open-ground",
     "renderer": "webgl2",
-    "triangles": 1488,
-    "physics": "rapier3d",
-    "depthSpread": 1.4391806857688132,
-    "moundCenter": 1.6905599999999998,
-    "moundEdge": 1.43604,
-    "beforeTilt": "0.001,2.030,0.001,0.000,-0.000;0.214,2.030,0.011,0.000,-0.000;-0.214,2.030,-0.000,-0.001,0.003;-0.106,2.030,-0.188,-0.002,0.000;0.101,2.030,-0.174,-0.002,-0.000;0.098,2.030,0.178,0.001,-0.002;-0.103,2.030,0.174,0.002,0.003;0.001,1.628,-0.386,-0.001,-0.000;0.001,1.628,0.386,0.002,0.000;-0.334,1.628,-0.193,-0.000,-0.000;0.344,1.628,-0.191,0.000,-0.000;0.343,1.628,0.197,0.000,-0.000;-0.332,1.628,0.197,-0.000,0.000;0.405,1.628,-0.003,-0.001,-0.000",
-    "dragChangesView": true,
-    "dragMovesCoins": true
+    "triangles": 448,
+    "physics": "rapier3d-ground",
+    "depthSpread": 1.4328313865900735,
+    "moundCenter": 1.2906,
+    "moundEdge": 0.5634,
+    "groundVisual": true
   },
   "compactLayout": {
     "noOverlap": true,
@@ -20,10 +19,10 @@
   "flightCount": 1,
   "finalIncome": "本月确认收入 ¥5,280",
   "start": {
-    "count": 223,
+    "count": 156,
     "animating": "false"
   },
-  "oneSecondLater": 223,
+  "oneSecondLater": 156,
   "idleRafDelta": 0,
   "doubleCheckinEmitted": 56,
   "doubleFlow": {

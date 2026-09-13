@@ -1,22 +1,22 @@
-.savings-jar {
-  --jar-coin: var(--accent);
-  --jar-highlight: rgba(255, 255, 255, .48);
-  --jar-shadow: rgba(0, 0, 0, .035);
-  --jar-tint: rgba(160, 200, 220, .04);
+.coin-pile {
   width: 160px; height: clamp(180px, calc(100vh - 390px), 340px);
   margin: 16px auto auto; flex-shrink: 1; min-height: 160px;
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; position: relative;
 }
-[data-appearance="dark"] .savings-jar {
-  --jar-coin: color-mix(in srgb, var(--accent) 90%, white);
-  --jar-highlight: rgba(255, 255, 255, .24);
-  --jar-shadow: rgba(0, 0, 0, .06);
+.coin-pile::before {
+  content: ""; position: absolute; z-index: 0;
+  left: 4px; right: 4px; bottom: 15px; height: 34px;
+  border-radius: 50%;
+  background-image: radial-gradient(ellipse at center, rgba(72, 54, 28, .25) 0%, rgba(116, 91, 48, .11) 45%, rgba(84, 67, 42, 0) 74%);
+  transform: scaleY(.52);
+  filter: blur(1.5px);
+  pointer-events: none;
 }
-.sidebar .nav:has(+ .savings-jar) { flex: 0 0 auto; }
-.savings-jar canvas { display: block; width: 160px; height: calc(100% - 20px); min-height: 140px; }
-.jar-caption { text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--label-2); white-space: nowrap; }
-.jar-caption b { font-weight: 600; color: var(--label); font-size: 12px; }
-@media (max-height: 650px) { .savings-jar { margin-top: 6px; } }
-
-.savings-jar canvas { cursor: grab; touch-action: none; }
-.savings-jar canvas:active { cursor: grabbing; }
+[data-appearance="dark"] .coin-pile::before {
+  background-image: radial-gradient(ellipse at center, rgba(0, 0, 0, .52) 0%, rgba(112, 83, 37, .18) 43%, rgba(0, 0, 0, 0) 75%);
+}
+.sidebar .nav:has(+ .coin-pile) { flex: 0 0 auto; }
+.coin-pile canvas { display: block; position: relative; z-index: 1; width: 160px; height: calc(100% - 20px); min-height: 140px; }
+.coin-pile-caption { position: relative; z-index: 2; text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--label-2); white-space: nowrap; }
+.coin-pile-caption b { font-weight: 600; color: var(--label); font-size: 12px; }
+@media (max-height: 650px) { .coin-pile { margin-top: 6px; } }

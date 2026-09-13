@@ -30,7 +30,7 @@ export function buildJarVisualPile(
       const availableDepth = Math.sqrt(Math.max(0, 0.82 ** 2 - x ** 2));
       const z = Math.sin(column * 7.13 + layer * 3.71) * availableDepth * 0.88;
       const radial = Math.hypot(x, z);
-      const localTop = target * (0.7 + 0.3 * Math.max(0, 1 - radial / 0.82) ** 1.7);
+      const localTop = target * (0.14 + 0.86 * Math.max(0, 1 - radial / 0.82) ** 1.35);
       if (radial > 0.82 || y > localTop) continue;
       const index = layer * 12 + column;
       result.push({

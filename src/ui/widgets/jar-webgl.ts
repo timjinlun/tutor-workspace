@@ -1,8 +1,6 @@
-import { goldCoin, jarBody, jarLid, type Mesh, type Quaternion } from "@/core/jar-mesh";
+import { goldCoin, type Mesh, type Quaternion } from "@/core/jar-mesh";
 import type { PhysicsCoinPose } from "@/core/jar-physics-3d";
 import type { Coin } from "@/core/jar-physics";
-
-const IDENTITY: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
 
 export function createJarRenderer(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext("webgl2", { alpha: true, antialias: true, premultipliedAlpha: false });
@@ -84,12 +82,10 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
     };
   };
   const coin = upload(goldCoin());
-  let body = upload(jarBody(4));
-  let lid = upload(jarLid(4));
   let height = 4;
   let sceneHeight = 300;
-  let cameraYaw = 0;
-  let cameraPitch = 0.24;
+  const cameraYaw = 0;
+  const cameraPitch = 0.24;
   const meshDraw = (
     mesh: ReturnType<typeof upload>,
     position: { x: number; y: number; z: number },
@@ -121,28 +117,14 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.CULL_FACE);
   };
-  const finish = (jarRotation: Quaternion) => {
-    gl.depthMask(false);
-    meshDraw(body, { x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1 }, jarRotation, 1);
-    meshDraw(lid, { x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1 }, jarRotation, 1);
-    gl.depthMask(true);
+  const finish = () => {
     canvas.dataset.renderer = "webgl2";
-    canvas.dataset.modelTriangles = String((body.count + lid.count + coin.count) / 3);
+    canvas.dataset.modelTriangles = String(coin.count / 3);
   };
   return {
     resize(nextSceneHeight: number) {
       sceneHeight = nextSceneHeight;
-      const nextHeight = (nextSceneHeight - 45) / 56;
-      if (nextHeight === height) return;
-      height = nextHeight;
-      body.dispose();
-      lid.dispose();
-      body = upload(jarBody(height));
-      lid = upload(jarLid(height));
-    },
-    rotate(horizontal: number, vertical = 0) {
-      cameraYaw += horizontal;
-      cameraPitch = Math.max(0.08, Math.min(0.65, cameraPitch + vertical));
+      height = (nextSceneHeight - 45) / 56;
     },
     draw(coins: Coin[]) {
       begin();
@@ -159,9 +141,9 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
           0,
         );
       }
-      finish(IDENTITY);
+      finish();
     },
-    drawRigid(coins: PhysicsCoinPose[], jarRotation: Quaternion) {
+    drawRigid(coins: PhysicsCoinPose[]) {
       begin();
       gl.depthMask(true);
       for (const item of coins) {
@@ -173,12 +155,10 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
           0,
         );
       }
-      finish(jarRotation);
+      finish();
     },
     dispose() {
       coin.dispose();
-      body.dispose();
-      lid.dispose();
       gl.deleteProgram(program);
     },
   };

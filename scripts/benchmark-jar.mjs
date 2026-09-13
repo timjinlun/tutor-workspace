@@ -1,5 +1,6 @@
 import { createWorld, addCoins, stepWorld } from '../src/core/jar-physics.ts';
 import { createJarPhysics3D } from '../src/core/jar-physics-3d.ts';
+import { buildJarVisualPile } from '../src/core/jar-pile.ts';
 import { writeFileSync } from 'node:fs';
 function runLegacy(staged) {
   let seed = 1;
@@ -21,6 +22,14 @@ async function runRapier(staged) {
   let seed = 1;
   const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+  const staticPile = buildJarVisualPile(1, 4.6, 0.082, 0.018).map((coin, index) => ({
+    id: `stable-${index}`,
+    position: { x: coin.x, y: coin.y, z: coin.z },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    radius: 0.082,
+    halfHeight: 0.018,
+  }));
+  physics.setStaticPile(staticPile);
   let emitted = 0;
   if (!staged) {
     for (let i = 0; i < 240; i++) physics.addCoin({ radius: 0.082, halfHeight: 0.018, random });
@@ -37,7 +46,7 @@ async function runRapier(staged) {
   }
   const active = physics.poses().length;
   physics.dispose();
-  return { active, meanMs: times.reduce((a, b) => a + b) / times.length, maxMs: Math.max(...times) };
+  return { active, static: staticPile.length, meanMs: times.reduce((a, b) => a + b) / times.length, maxMs: Math.max(...times) };
 }
 const result = {
   rapier3dEmission240Over600ms: await runRapier(true),

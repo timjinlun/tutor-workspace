@@ -1,18 +1,20 @@
 {
   "rapier3dEmission240Over600ms": {
     "active": 240,
-    "meanMs": 5.250076518518522,
-    "maxMs": 18.77199999999999
+    "static": 363,
+    "meanMs": 5.946982314814812,
+    "maxMs": 18.89979199999999
   },
   "rapier3dStress240Simultaneous": {
     "active": 240,
-    "meanMs": 16.19652087037039,
-    "maxMs": 217.77212500000007
+    "static": 363,
+    "meanMs": 16.326317166666676,
+    "maxMs": 217.83562500000005
   },
   "legacyPbdEmission240Over600ms": {
     "active": 240,
-    "meanMs": 0.2861388518518374,
-    "maxMs": 0.8945839999998952
+    "meanMs": 0.28552548148147033,
+    "maxMs": 0.9176659999998265
   },
   "note": "Local Node CPU measurement; excludes WebGL drawing. Timing depends on runtime, JIT, and hardware."
 }

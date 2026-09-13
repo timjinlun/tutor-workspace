@@ -4,9 +4,9 @@ import { scheduleCoins, type CoinEmission } from "@/core/coin-queue";
 import { feedbackTiming } from "@/core/lesson-feedback";
 import { jarState } from "@/core/jar";
 import { fmtMoney } from "@/core/finance";
-import { buildJarPile, buildJarVisualPile } from "@/core/jar-pile";
+import { buildJarVisualPile } from "@/core/jar-pile";
 import { createJarPhysics3D, type PhysicsCoinPose } from "@/core/jar-physics-3d";
-import { rotateVectorByQuaternion, type Quaternion } from "@/core/jar-mesh";
+import type { Quaternion } from "@/core/jar-mesh";
 import { useLocalDay } from "./useLocalDay";
 import { createJarRenderer } from "./jar-webgl";
 import "./savings-jar.css";
@@ -20,16 +20,6 @@ function multiplyQuaternion(a: Quaternion, b: Quaternion): Quaternion {
     y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
     z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
     w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
-  };
-}
-
-function seededRandom(seed: number) {
-  return () => {
-    seed |= 0;
-    seed = seed + 0x6d2b79f5 | 0;
-    let value = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    value = value + Math.imul(value ^ value >>> 7, 61 | value) ^ value;
-    return ((value ^ value >>> 14) >>> 0) / 4294967296;
   };
 }
 
@@ -54,14 +44,6 @@ function visualPile(fill: number, height: number): PhysicsCoinPose[] {
   });
 }
 
-function transformStablePose(pose: PhysicsCoinPose, jarRotation: Quaternion): PhysicsCoinPose {
-  return {
-    ...pose,
-    position: rotateVectorByQuaternion(pose.position, jarRotation),
-    rotation: multiplyQuaternion(jarRotation, pose.rotation),
-  };
-}
-
 function poseSignature(poses: PhysicsCoinPose[]) {
   return poses.slice(0, 24).map((pose) => [
     pose.position.x, pose.position.y, pose.position.z,
@@ -69,7 +51,7 @@ function poseSignature(poses: PhysicsCoinPose[]) {
   ].map((value) => value.toFixed(3)).join(",")).join(";");
 }
 
-export function SavingsJar() {
+export function CoinPile() {
   const ref = useRef<HTMLCanvasElement>(null);
   const s = useStore((state) => state.s);
   const state = jarState(s);
@@ -87,7 +69,7 @@ export function SavingsJar() {
         renderer = createJarRenderer(canvas);
       } catch {
         canvas.dataset.renderer = "unavailable";
-        canvas.setAttribute("aria-label", "当前设备无法启用三维储蓄罐");
+        canvas.setAttribute("aria-label", "当前设备无法启用三维金币堆");
         return () => undefined;
       }
       let sceneHeight = Math.max(140, Math.round(canvas.getBoundingClientRect().height));
@@ -111,7 +93,8 @@ export function SavingsJar() {
         canvas.setAttribute("aria-label", "三维物理初始化失败，账目数据未受影响");
         return () => undefined;
       }
-      canvas.dataset.physics = "rapier3d";
+      canvas.dataset.scene = physics.sceneKind;
+      canvas.dataset.physics = "rapier3d-ground";
       canvas.dataset.physicsHeight = physicsHeight.toFixed(4);
       const root = document.documentElement;
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -125,8 +108,6 @@ export function SavingsJar() {
       let hardStopAt = 0;
       let emitted = 0;
       let physicsFrames = 0;
-      let tiltX = 0;
-      let tiltZ = 0;
       let current = jarState(useStore.getState().s);
 
       const updateEvidence = () => {
@@ -139,7 +120,6 @@ export function SavingsJar() {
         canvas.dataset.moundEdge = String(edge.length ? Math.max(...edge) : 0);
       };
       const draw = (now = performance.now()) => {
-        const jarRotation = physics.jarRotation();
         const dynamic = physics.poses();
         const withdrawing = outgoing.map(({ pose, start }) => {
           const progress = Math.min(1, (now - start) / 300);
@@ -150,42 +130,21 @@ export function SavingsJar() {
           };
         });
         renderer.drawRigid([
-          ...stable.map((pose) => transformStablePose(pose, jarRotation)),
+          ...stable,
           ...dynamic,
           ...withdrawing,
-        ], jarRotation);
+        ]);
         canvas.dataset.physicsSignature = poseSignature(dynamic);
         canvas.dataset.dynamicBodies = String(dynamic.length);
-        canvas.dataset.jarRotation = [jarRotation.x, jarRotation.y, jarRotation.z, jarRotation.w].map((value) => value.toFixed(4)).join(",");
-      };
-      const seedSurface = (fill: number) => {
-        if (fill <= 0) return;
-        const random = seededRandom(Math.round(fill * 10000) + 17);
-        const candidates = buildJarPile(fill, 90, 0.1, COIN_HALF_HEIGHT);
-        const unique = [...new Map(candidates.map((coin) => [`${coin.x.toFixed(3)}:${coin.z.toFixed(3)}`, coin])).values()];
-        const target = fill * physicsHeight * 0.82;
-        for (const [index, point] of unique.slice(0, 14).entries()) {
-          const radial = Math.hypot(point.x, point.z);
-          const surface = target * (radial < 0.95 * 0.32 ? 1 : radial < 0.95 * 0.58 ? 0.8 : 0.58);
-          physics.addCoin({
-            radius: COIN_RADIUS,
-            halfHeight: COIN_HALF_HEIGHT,
-            random,
-            position: { x: point.x, y: surface + COIN_HALF_HEIGHT + 0.02 + index * 0.002, z: point.z },
-          });
-        }
-        for (let i = 0; i < 240 && physics.hasActiveBodies(); i++) physics.step();
       };
       const rebuild = (resetDynamic = true) => {
         current = jarState(useStore.getState().s);
         const pendingAmount = [...unsettled.values()].reduce((sum, amount) => sum + amount, 0);
         const fill = Math.max(0, Math.min(1, (current.amount - pendingAmount) / current.capacity));
         stable = visualPile(fill, physicsHeight);
-        physics.setBulkFill(fill);
+        physics.setStaticPile(stable);
         if (resetDynamic) {
           physics.clearCoins();
-          physics.setJarTilt(tiltX, tiltZ);
-          seedSurface(fill);
         }
         updateEvidence();
         draw();
@@ -286,24 +245,6 @@ export function SavingsJar() {
         startLoop(now, outgoing.length ? 0 : Math.max(0, (pending[0]?.at ?? now) - now));
       });
 
-      let pointerX: number | null = null;
-      let pointerY = 0;
-      const down = (event: PointerEvent) => {
-        pointerX = event.clientX;
-        pointerY = event.clientY;
-        canvas.setPointerCapture(event.pointerId);
-      };
-      const move = (event: PointerEvent) => {
-        if (pointerX === null || reduce.matches) return;
-        tiltZ = Math.max(-0.22, Math.min(0.22, tiltZ - (event.clientX - pointerX) * 0.004));
-        tiltX = Math.max(-0.22, Math.min(0.22, tiltX + (event.clientY - pointerY) * 0.004));
-        pointerX = event.clientX;
-        pointerY = event.clientY;
-        physics.setJarTilt(tiltX, tiltZ);
-        draw();
-        startLoop();
-      };
-      const up = () => { pointerX = null; };
       const redraw = () => {
         const nextHeight = resize();
         if (Math.abs(nextHeight - physicsHeight) >= 0.001) {
@@ -336,10 +277,6 @@ export function SavingsJar() {
         canvas.dataset.physicsHeight = physicsHeight.toFixed(4);
         finishLedgerAnimation();
       };
-      canvas.addEventListener("pointerdown", down);
-      canvas.addEventListener("pointermove", move);
-      canvas.addEventListener("pointerup", up);
-      canvas.addEventListener("pointercancel", up);
       canvas.addEventListener("webglcontextlost", lost);
       canvas.addEventListener("webglcontextrestored", restored);
       const observer = new MutationObserver(redraw);
@@ -363,10 +300,6 @@ export function SavingsJar() {
         reduce.removeEventListener("change", reduceChanged);
         window.removeEventListener("resize", redraw);
         window.removeEventListener("focus", refresh);
-        canvas.removeEventListener("pointerdown", down);
-        canvas.removeEventListener("pointermove", move);
-        canvas.removeEventListener("pointerup", up);
-        canvas.removeEventListener("pointercancel", up);
         canvas.removeEventListener("webglcontextlost", lost);
         canvas.removeEventListener("webglcontextrestored", restored);
       };
@@ -381,8 +314,8 @@ export function SavingsJar() {
       teardown?.();
     };
   }, []);
-  return <div className="savings-jar" title={`已确认收入 ${fmtMoney(state.amount)}，容量 ${fmtMoney(state.capacity)}`}>
-    <canvas ref={ref} aria-label={`储蓄罐，${Math.round(state.fill * 100)}% 满，${fmtMoney(state.amount)}`} role="img" />
-    <div className="jar-caption"><b>{fmtMoney(state.amount)}</b><span> / {fmtMoney(state.capacity)}</span></div>
+  return <div className="coin-pile" title={`已确认收入 ${fmtMoney(state.amount)}，目标 ${fmtMoney(state.capacity)}`}>
+    <canvas ref={ref} aria-label={`金币堆，已达目标的 ${Math.round(state.fill * 100)}%，${fmtMoney(state.amount)}`} role="img" />
+    <div className="coin-pile-caption"><b>{fmtMoney(state.amount)}</b><span> / {fmtMoney(state.capacity)}</span></div>
   </div>;
 }

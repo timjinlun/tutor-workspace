@@ -68,6 +68,8 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
     );
   }
   const coins = new Map<string, PhysicsCoin>();
+  let bulkColliders: RAPIER.Collider[] = [];
+  let jarRotation = { x: 0, y: 0, z: 0, w: 1 };
   let nextId = 1;
 
   return {
@@ -115,6 +117,41 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
     },
     hasActiveBodies() {
       return [...coins.values()].some((coin) => !coin.body.isSleeping());
+    },
+    setBulkFill(fill: number) {
+      for (const collider of bulkColliders) world.removeCollider(collider, false);
+      bulkColliders = [];
+      const target = Math.max(0, Math.min(1, fill)) * options.height * 0.82;
+      if (!target) return;
+      for (const terrace of [
+        { radius: options.radius * 0.82, height: target * 0.58 },
+        { radius: options.radius * 0.58, height: target * 0.8 },
+        { radius: options.radius * 0.32, height: target },
+      ]) {
+        bulkColliders.push(world.createCollider(
+          RAPIER.ColliderDesc.cylinder(terrace.height / 2, terrace.radius)
+            .setTranslation(0, terrace.height / 2, 0)
+            .setFriction(0.26)
+            .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+            .setRestitution(0.02),
+          container,
+        ));
+      }
+    },
+    setJarTilt(x: number, z: number) {
+      const hx = x / 2;
+      const hz = z / 2;
+      jarRotation = {
+        x: Math.cos(hz) * Math.sin(hx),
+        y: Math.sin(hz) * Math.sin(hx),
+        z: Math.sin(hz) * Math.cos(hx),
+        w: Math.cos(hz) * Math.cos(hx),
+      };
+      container.setNextKinematicRotation(jarRotation);
+      for (const coin of coins.values()) coin.body.wakeUp();
+    },
+    jarRotation() {
+      return { ...jarRotation };
     },
     removeLesson(lessonId: string) {
       for (const [id, coin] of coins) {

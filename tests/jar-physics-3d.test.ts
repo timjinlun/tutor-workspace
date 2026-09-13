@@ -93,4 +93,27 @@ describe("Rapier 储蓄罐物理适配层", () => {
     expect(physics.poses().map((pose) => pose.lessonId)).toEqual(["b"]);
     physics.dispose();
   });
+
+  it("罐体倾斜后表层金币滑动并翻滚", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    physics.setBulkFill(0.35);
+    physics.addCoin({
+      radius: 0.11,
+      halfHeight: 0.025,
+      random: () => 0.5,
+      position: { x: 0.08, y: 2, z: 0.06 },
+    });
+    for (let i = 0; i < 180; i++) physics.step();
+    const before = physics.poses()[0]!;
+
+    physics.setJarTilt(0.32, -0.18);
+    for (let i = 0; i < 120; i++) physics.step();
+    const after = physics.poses()[0]!;
+
+    expect(Math.hypot(after.position.x - before.position.x, after.position.z - before.position.z)).toBeGreaterThan(0.03);
+    expect(Math.abs(after.rotation.x - before.rotation.x) + Math.abs(after.rotation.z - before.rotation.z)).toBeGreaterThan(0.02);
+    for (let i = 0; i < 480 && physics.hasActiveBodies(); i++) physics.step();
+    expect(physics.hasActiveBodies()).toBe(false);
+    physics.dispose();
+  });
 });

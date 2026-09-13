@@ -116,4 +116,43 @@ describe("Rapier 储蓄罐物理适配层", () => {
     expect(physics.hasActiveBodies()).toBe(false);
     physics.dispose();
   });
+
+  it("动态刚体最多保留240枚并可清空重建", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    for (let i = 0; i < 250; i++) {
+      physics.addCoin({ radius: 0.11, halfHeight: 0.025, lessonId: String(i), random: () => 0.5 });
+    }
+
+    expect(physics.poses()).toHaveLength(240);
+    physics.clearCoins();
+    expect(physics.poses()).toEqual([]);
+    physics.dispose();
+  });
+
+  it("新金币带有初始倾角和角速度", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    physics.addCoin({ radius: 0.11, halfHeight: 0.025, random: () => 0.75 });
+    const before = physics.poses()[0]!.rotation;
+
+    physics.step();
+    const after = physics.poses()[0]!.rotation;
+
+    expect(Math.abs(before.x) + Math.abs(before.y) + Math.abs(before.z)).toBeGreaterThan(0.05);
+    expect(Math.abs(after.x - before.x) + Math.abs(after.y - before.y) + Math.abs(after.z - before.z)).toBeGreaterThan(0.005);
+    physics.dispose();
+  });
+
+  it("罐体倾斜后新金币从旋转后的投币口生成", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    physics.setJarTilt(0, 0.2);
+
+    physics.addCoin({ radius: 0.11, halfHeight: 0.025, random: () => 0.5 });
+
+    const [pose] = physics.poses();
+    const localHeight = 4.6 - 0.25;
+    expect(pose!.position.x).toBeCloseTo(-Math.sin(0.2) * localHeight, 4);
+    expect(pose!.position.y).toBeCloseTo(Math.cos(0.2) * localHeight, 4);
+    expect(pose!.rotation.z).toBeCloseTo(Math.sin(0.1), 4);
+    physics.dispose();
+  });
 });

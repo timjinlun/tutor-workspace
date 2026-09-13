@@ -33,6 +33,29 @@ interface PhysicsCoin {
 
 let rapierReady: Promise<void> | undefined;
 
+type Rotation = { x: number; y: number; z: number; w: number };
+
+function rotateVector(vector: { x: number; y: number; z: number }, rotation: Rotation) {
+  const { x, y, z, w } = rotation;
+  const tx = 2 * (y * vector.z - z * vector.y);
+  const ty = 2 * (z * vector.x - x * vector.z);
+  const tz = 2 * (x * vector.y - y * vector.x);
+  return {
+    x: vector.x + w * tx + (y * tz - z * ty),
+    y: vector.y + w * ty + (z * tx - x * tz),
+    z: vector.z + w * tz + (x * ty - y * tx),
+  };
+}
+
+function multiplyRotation(a: Rotation, b: Rotation): Rotation {
+  return {
+    x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+    y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+    z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+    w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+  };
+}
+
 async function initRapier() {
   rapierReady ??= RAPIER.init();
   await rapierReady;
@@ -74,15 +97,37 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
 
   return {
     addCoin(input: AddPhysicsCoinOptions) {
+      while (coins.size >= 240) {
+        const oldest = coins.entries().next().value as [string, PhysicsCoin] | undefined;
+        if (!oldest) break;
+        world.removeRigidBody(oldest[1].body);
+        coins.delete(oldest[0]);
+      }
       const id = `coin-${nextId++}`;
-      const position = input.position ?? {
+      const localPosition = {
         x: (input.random() - 0.5) * 0.22,
         y: options.height - 0.25,
         z: (input.random() - 0.5) * 0.22,
       };
+      const position = input.position ?? rotateVector(localPosition, jarRotation);
+      const tiltX = (input.random() - 0.5) * 1.1;
+      const tiltZ = (input.random() - 0.5) * 1.1;
+      const localRotation = {
+        x: Math.cos(tiltZ / 2) * Math.sin(tiltX / 2),
+        y: Math.sin(tiltZ / 2) * Math.sin(tiltX / 2),
+        z: Math.sin(tiltZ / 2) * Math.cos(tiltX / 2),
+        w: Math.cos(tiltZ / 2) * Math.cos(tiltX / 2),
+      };
+      const rotation = multiplyRotation(jarRotation, localRotation);
       const body = world.createRigidBody(
         RAPIER.RigidBodyDesc.dynamic()
           .setTranslation(position.x, position.y, position.z)
+          .setRotation(rotation)
+          .setAngvel({
+            x: (input.random() - 0.5) * 9,
+            y: (input.random() - 0.5) * 9,
+            z: (input.random() - 0.5) * 9,
+          })
           .setCcdEnabled(true)
           .setLinearDamping(0.16)
           .setAngularDamping(0.22),
@@ -159,6 +204,10 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
         world.removeRigidBody(coin.body);
         coins.delete(id);
       }
+    },
+    clearCoins() {
+      for (const coin of coins.values()) world.removeRigidBody(coin.body);
+      coins.clear();
     },
     dispose() {
       coins.clear();

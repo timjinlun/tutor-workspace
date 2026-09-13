@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildJarPile } from "../src/core/jar-pile";
+import { buildJarPile, buildJarVisualPile } from "../src/core/jar-pile";
 
 describe("三维金币小山堆", () => {
   it("确定性生成有界的圆形币堆", () => {
@@ -20,5 +20,15 @@ describe("三维金币小山堆", () => {
     expect(center.length).toBeGreaterThan(0);
     expect(edge.length).toBeGreaterThan(0);
     expect(Math.max(...center.map((coin) => coin.y))).toBeGreaterThan(Math.max(...edge.map((coin) => coin.y)));
+  });
+
+  it("历史可见币层接近真实厚度并带有自然倾角", () => {
+    const halfHeight = 0.018;
+    const pile = buildJarVisualPile(0.5, 4.6, 0.082, halfHeight);
+    const levels = [...new Set(pile.map((coin) => coin.y))].sort((a, b) => a - b);
+    const largestGap = Math.max(...levels.slice(1).map((level, index) => level - levels[index]!));
+
+    expect(largestGap).toBeLessThanOrEqual(halfHeight * 2.03);
+    expect(pile.some((coin) => Math.abs(coin.tiltX) + Math.abs(coin.tiltZ) > 0.03)).toBe(true);
   });
 });

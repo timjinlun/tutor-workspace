@@ -4,7 +4,7 @@ import { scheduleCoins, type CoinEmission } from "@/core/coin-queue";
 import { feedbackTiming } from "@/core/lesson-feedback";
 import { jarState } from "@/core/jar";
 import { fmtMoney } from "@/core/finance";
-import { buildJarPile } from "@/core/jar-pile";
+import { buildJarPile, buildJarVisualPile } from "@/core/jar-pile";
 import { createJarPhysics3D, type PhysicsCoinPose } from "@/core/jar-physics-3d";
 import { rotateVectorByQuaternion, type Quaternion } from "@/core/jar-mesh";
 import { useLocalDay } from "./useLocalDay";
@@ -34,30 +34,24 @@ function seededRandom(seed: number) {
 }
 
 function visualPile(fill: number, height: number): PhysicsCoinPose[] {
-  if (fill <= 0) return [];
-  const target = Math.max(0.08, fill * height * 0.82);
-  const poses: PhysicsCoinPose[] = [];
-  const rowStep = COIN_HALF_HEIGHT * 2.8;
-  for (let row = 0; row * rowStep + COIN_HALF_HEIGHT <= target; row++) {
-    const y = COIN_HALF_HEIGHT + row * rowStep;
-    for (let column = 0; column < 12; column++) {
-      const x = -0.76 + column * 0.138 + (row % 2) * 0.025;
-      const availableDepth = Math.sqrt(Math.max(0, 0.82 ** 2 - x ** 2));
-      const z = Math.sin(column * 7.13 + row * 3.71) * availableDepth * 0.88;
-      const radial = Math.hypot(x, z);
-      const localTop = target * (0.7 + 0.3 * Math.max(0, 1 - radial / 0.82) ** 1.7);
-      if (radial > 0.82 || y > localTop) continue;
-      const yaw = ((row * 12 + column) * 0.61803398875 % 1) * Math.PI * 2;
-      poses.push({
-        id: `stable-${row}-${column}`,
-        position: { x, y, z },
-        rotation: { x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) },
-        radius: COIN_RADIUS,
-        halfHeight: COIN_HALF_HEIGHT,
-      });
-    }
-  }
-  return poses;
+  return buildJarVisualPile(fill, height, COIN_RADIUS, COIN_HALF_HEIGHT).map((coin, index) => {
+    const hx = coin.tiltX / 2;
+    const hz = coin.tiltZ / 2;
+    const tilt = {
+      x: Math.cos(hz) * Math.sin(hx),
+      y: Math.sin(hz) * Math.sin(hx),
+      z: Math.sin(hz) * Math.cos(hx),
+      w: Math.cos(hz) * Math.cos(hx),
+    };
+    const yaw = { x: 0, y: Math.sin(coin.yaw / 2), z: 0, w: Math.cos(coin.yaw / 2) };
+    return {
+      id: `stable-${index}`,
+      position: { x: coin.x, y: coin.y, z: coin.z },
+      rotation: multiplyQuaternion(yaw, tilt),
+      radius: COIN_RADIUS,
+      halfHeight: COIN_HALF_HEIGHT,
+    };
+  });
 }
 
 function transformStablePose(pose: PhysicsCoinPose, jarRotation: Quaternion): PhysicsCoinPose {

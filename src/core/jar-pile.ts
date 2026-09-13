@@ -5,6 +5,48 @@ export interface PileCoin {
   yaw: number;
 }
 
+export interface VisualPileCoin extends PileCoin {
+  tiltX: number;
+  tiltZ: number;
+}
+
+/** Dense visible shell for historical value; layers nearly touch and avoid a flat grid look. */
+export function buildJarVisualPile(
+  fill: number,
+  height: number,
+  radius: number,
+  halfHeight: number,
+): VisualPileCoin[] {
+  const safeFill = Math.max(0, Math.min(1, fill));
+  if (!safeFill) return [];
+  const target = Math.max(radius, safeFill * height * 0.82);
+  const result: VisualPileCoin[] = [];
+  const layerStep = halfHeight * 2.02;
+  for (let layer = 0; layer * layerStep + halfHeight <= target && result.length < 1200; layer++) {
+    const beforeLayer = result.length;
+    const y = halfHeight + layer * layerStep;
+    for (let column = 0; column < 12 && result.length < 1200; column++) {
+      const x = -0.76 + column * 0.138 + (layer % 2) * 0.025;
+      const availableDepth = Math.sqrt(Math.max(0, 0.82 ** 2 - x ** 2));
+      const z = Math.sin(column * 7.13 + layer * 3.71) * availableDepth * 0.88;
+      const radial = Math.hypot(x, z);
+      const localTop = target * (0.7 + 0.3 * Math.max(0, 1 - radial / 0.82) ** 1.7);
+      if (radial > 0.82 || y > localTop) continue;
+      const index = layer * 12 + column;
+      result.push({
+        x,
+        y,
+        z,
+        yaw: ((index * 0.61803398875) % 1) * Math.PI * 2,
+        tiltX: Math.sin(index * 2.17) * 0.055,
+        tiltZ: Math.cos(index * 1.73) * 0.055,
+      });
+    }
+    if (result.length === beforeLayer) break;
+  }
+  return result;
+}
+
 /** Deterministic bounded coin columns with a higher center and tapered edge. */
 export function buildJarPile(fill: number, count: number, radius: number, halfHeight: number): PileCoin[] {
   const safeFill = Math.max(0, Math.min(1, fill));
@@ -46,4 +88,3 @@ export function buildJarPile(fill: number, count: number, radius: number, halfHe
   }
   return result;
 }
-

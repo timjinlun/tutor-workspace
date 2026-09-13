@@ -1,23 +1,44 @@
-import { goldCoin, jarBody, jarLid, type Mesh } from "@/core/jar-mesh";
+import { goldCoin, jarBody, jarLid, type Mesh, type Quaternion } from "@/core/jar-mesh";
+import type { PhysicsCoinPose } from "@/core/jar-physics-3d";
 import type { Coin } from "@/core/jar-physics";
+
+const IDENTITY: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
 
 export function createJarRenderer(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext("webgl2", { alpha: true, antialias: true, premultipliedAlpha: false });
   if (!gl) throw new Error("WebGL 2 unavailable");
   const shader = (kind: number, source: string) => {
-    const s = gl.createShader(kind)!; gl.shaderSource(s, source); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { const error = gl.getShaderInfoLog(s); gl.deleteShader(s); throw new Error(error ?? "Shader compile failed"); } return s;
+    const result = gl.createShader(kind)!;
+    gl.shaderSource(result, source);
+    gl.compileShader(result);
+    if (!gl.getShaderParameter(result, gl.COMPILE_STATUS)) {
+      const error = gl.getShaderInfoLog(result);
+      gl.deleteShader(result);
+      throw new Error(error ?? "Shader compile failed");
+    }
+    return result;
   };
-  const vs = shader(gl.VERTEX_SHADER, `#version 300 es
+  const vertex = shader(gl.VERTEX_SHADER, `#version 300 es
     in vec3 position; in vec3 normal;
-    uniform vec3 offset; uniform float scale; uniform float tilt; uniform float yaw; uniform float height; uniform float aspect; uniform float spin; uniform float pitch;
+    uniform vec3 offset; uniform vec3 objectScale; uniform vec4 objectRotation;
+    uniform float cameraYaw; uniform float cameraPitch; uniform float height; uniform float aspect;
     out vec3 n; out vec3 p;
     mat3 rx(float a){return mat3(1,0,0,0,cos(a),sin(a),0,-sin(a),cos(a));}
     mat3 ry(float a){return mat3(cos(a),0,-sin(a),0,1,0,sin(a),0,cos(a));}
-    void main(){mat3 local=rx(tilt); mat3 view=rx(pitch)*ry(yaw); vec3 q=local*position*scale+offset; q.y-=height*.5;
-    p=view*q; n=view*local*normal; p.xy=mat2(cos(spin),sin(spin),-sin(spin),cos(spin))*p.xy;
-    gl_Position=vec4(p.x/1.40,p.y/(1.40*aspect),-p.z/10.,1.);}`);
-  const fs = shader(gl.FRAGMENT_SHADER, `#version 300 es
+    mat3 quaternion(vec4 q){
+      float x=q.x,y=q.y,z=q.z,w=q.w;
+      return mat3(
+        1.-2.*(y*y+z*z), 2.*(x*y+z*w), 2.*(x*z-y*w),
+        2.*(x*y-z*w), 1.-2.*(x*x+z*z), 2.*(y*z+x*w),
+        2.*(x*z+y*w), 2.*(y*z-x*w), 1.-2.*(x*x+y*y));
+    }
+    void main(){
+      mat3 object=quaternion(objectRotation); mat3 view=rx(cameraPitch)*ry(cameraYaw);
+      vec3 q=object*(position*objectScale)+offset; q.y-=height*.5;
+      p=view*q; n=view*object*normalize(normal/objectScale);
+      gl_Position=vec4(p.x/1.40,p.y/(1.40*aspect),-p.z/10.,1.);
+    }`);
+  const fragment = shader(gl.FRAGMENT_SHADER, `#version 300 es
     precision highp float; in vec3 n; in vec3 p; uniform float glass; uniform float opacity; uniform float dark; out vec4 color;
     void main(){vec3 N=normalize(n); if(!gl_FrontFacing)N=-N;
       vec3 L=normalize(vec3(-.6,1.,1.5)); float light=max(0.,dot(N,L));
@@ -25,34 +46,140 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
       float fres=pow(1.-abs(N.z),3.);
       if(glass>.5){color=vec4(mix(mix(vec3(.28,.40,.46),vec3(.72,.85,.92),dark),vec3(1.),light*.65+spec*.3),(.045+fres*(.45+dark*.35)+spec*.3)*opacity);}
       else{vec3 gold=mix(vec3(.34,.16,.025),vec3(1.,.73,.24),.28+.72*light); float band=pow(.5+.5*sin(N.x*9.+N.y*5.),10.); color=vec4(gold+vec3(1.,.9,.62)*(spec*.75+band*.13),opacity);}}`);
-  const program = gl.createProgram()!; gl.attachShader(program,vs); gl.attachShader(program,fs); gl.linkProgram(program);
-  gl.deleteShader(vs); gl.deleteShader(fs);
-  if (!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? "Shader link failed");
-  const uniform = (name: string) => gl.getUniformLocation(program,name);
-  const u = Object.fromEntries(["offset","scale","tilt","yaw","height","aspect","glass","opacity","spin","pitch","dark"].map(n=>[n,uniform(n)]));
+  const program = gl.createProgram()!;
+  gl.attachShader(program, vertex);
+  gl.attachShader(program, fragment);
+  gl.linkProgram(program);
+  gl.deleteShader(vertex);
+  gl.deleteShader(fragment);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? "Shader link failed");
+  const uniform = (name: string) => gl.getUniformLocation(program, name);
+  const u = Object.fromEntries([
+    "offset", "objectScale", "objectRotation", "cameraYaw", "cameraPitch", "height", "aspect", "glass", "opacity", "dark",
+  ].map((name) => [name, uniform(name)]));
   const upload = (mesh: Mesh) => {
-    const vao=gl.createVertexArray()!; gl.bindVertexArray(vao); const buffers: WebGLBuffer[]=[];
-    for(const [name,values] of [["position",mesh.positions],["normal",mesh.normals]] as const){const b=gl.createBuffer()!;buffers.push(b);gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(values),gl.STATIC_DRAW);const a=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,0,0);}
-    const b=gl.createBuffer()!;buffers.push(b);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,b);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(mesh.indices),gl.STATIC_DRAW);
-    return {vao,count:mesh.indices.length,dispose(){buffers.forEach(b=>gl.deleteBuffer(b));gl.deleteVertexArray(vao);}};
+    const vao = gl.createVertexArray()!;
+    gl.bindVertexArray(vao);
+    const buffers: WebGLBuffer[] = [];
+    for (const [name, values] of [["position", mesh.positions], ["normal", mesh.normals]] as const) {
+      const buffer = gl.createBuffer()!;
+      buffers.push(buffer);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(values), gl.STATIC_DRAW);
+      const attribute = gl.getAttribLocation(program, name);
+      gl.enableVertexAttribArray(attribute);
+      gl.vertexAttribPointer(attribute, 3, gl.FLOAT, false, 0, 0);
+    }
+    const indexBuffer = gl.createBuffer()!;
+    buffers.push(indexBuffer);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), gl.STATIC_DRAW);
+    return {
+      vao,
+      count: mesh.indices.length,
+      dispose() {
+        buffers.forEach((buffer) => gl.deleteBuffer(buffer));
+        gl.deleteVertexArray(vao);
+      },
+    };
   };
-  const coin=upload(goldCoin()); let body=upload(jarBody(4)),lid=upload(jarLid(4)),height=4,sceneHeight=300,yaw=0,pitch=.24;
-  const meshDraw=(m:ReturnType<typeof upload>,x:number,y:number,z:number,size:number,tilt:number,glass:number,opacity=1)=>{
-    gl.uniform3f(u.offset!,x,y,z);gl.uniform1f(u.scale!,size);gl.uniform1f(u.tilt!,tilt);gl.uniform1f(u.glass!,glass);gl.uniform1f(u.opacity!,opacity);gl.bindVertexArray(m.vao);gl.drawElements(gl.TRIANGLES,m.count,gl.UNSIGNED_SHORT,0);
+  const coin = upload(goldCoin());
+  let body = upload(jarBody(4));
+  let lid = upload(jarLid(4));
+  let height = 4;
+  let sceneHeight = 300;
+  let cameraYaw = 0;
+  let cameraPitch = 0.24;
+  const meshDraw = (
+    mesh: ReturnType<typeof upload>,
+    position: { x: number; y: number; z: number },
+    scale: { x: number; y: number; z: number },
+    rotation: Quaternion,
+    glass: number,
+    opacity = 1,
+  ) => {
+    gl.uniform3f(u.offset!, position.x, position.y, position.z);
+    gl.uniform3f(u.objectScale!, scale.x, scale.y, scale.z);
+    gl.uniform4f(u.objectRotation!, rotation.x, rotation.y, rotation.z, rotation.w);
+    gl.uniform1f(u.glass!, glass);
+    gl.uniform1f(u.opacity!, opacity);
+    gl.bindVertexArray(mesh.vao);
+    gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+  };
+  const begin = () => {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(program);
+    gl.uniform1f(u.dark!, document.documentElement.dataset.appearance === "dark" ? 1 : 0);
+    gl.uniform1f(u.height!, height);
+    gl.uniform1f(u.aspect!, sceneHeight / 160);
+    gl.uniform1f(u.cameraYaw!, cameraYaw);
+    gl.uniform1f(u.cameraPitch!, cameraPitch);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.disable(gl.CULL_FACE);
+  };
+  const finish = (jarRotation: Quaternion) => {
+    gl.depthMask(false);
+    meshDraw(body, { x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1 }, jarRotation, 1);
+    meshDraw(lid, { x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1 }, jarRotation, 1);
+    gl.depthMask(true);
+    canvas.dataset.renderer = "webgl2";
+    canvas.dataset.modelTriangles = String((body.count + lid.count + coin.count) / 3);
   };
   return {
-    resize(h:number){sceneHeight=h;const next=(h-45)/56;if(next!==height){height=next;body.dispose();lid.dispose();body=upload(jarBody(height));lid=upload(jarLid(height));}},
-    rotate(delta:number, vertical=0){yaw+=delta;pitch=Math.max(.08,Math.min(.65,pitch+vertical));},
-    draw(coins:Coin[]){
-      gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);
-      gl.uniform1f(u.dark!,document.documentElement.dataset.appearance === "dark" ? 1 : 0);gl.uniform1f(u.height!,height);gl.uniform1f(u.aspect!,sceneHeight/160);gl.uniform1f(u.yaw!,yaw);gl.uniform1f(u.spin!,0);gl.uniform1f(u.pitch!,pitch);
-      gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-      gl.depthMask(true);gl.disable(gl.CULL_FACE);
-      for(const c of coins){const x=(c.x-80)/56;const z=Math.sin(c.x*7+c.y*.3)*Math.sqrt(Math.max(0,.8-x*x))*.75;
-        meshDraw(coin,x,(sceneHeight-16-c.y)/56+.09,z,c.r/56,c.phase??Math.sin(c.x+c.y)*.24,0);}
-      gl.depthMask(false);meshDraw(body,0,0,0,1,0,1);meshDraw(lid,0,0,0,1,0,1);gl.depthMask(true);
-      canvas.dataset.renderer="webgl2";canvas.dataset.modelTriangles=String((body.count+lid.count+coin.count)/3);
+    resize(nextSceneHeight: number) {
+      sceneHeight = nextSceneHeight;
+      const nextHeight = (nextSceneHeight - 45) / 56;
+      if (nextHeight === height) return;
+      height = nextHeight;
+      body.dispose();
+      lid.dispose();
+      body = upload(jarBody(height));
+      lid = upload(jarLid(height));
     },
-    dispose(){coin.dispose();body.dispose();lid.dispose();gl.deleteProgram(program);}
+    rotate(horizontal: number, vertical = 0) {
+      cameraYaw += horizontal;
+      cameraPitch = Math.max(0.08, Math.min(0.65, cameraPitch + vertical));
+    },
+    draw(coins: Coin[]) {
+      begin();
+      gl.depthMask(true);
+      for (const item of coins) {
+        const tilt = item.phase ?? Math.sin(item.x + item.y) * 0.24;
+        const rotation = { x: Math.sin(tilt / 2), y: 0, z: 0, w: Math.cos(tilt / 2) };
+        const radius = item.r / 56;
+        meshDraw(
+          coin,
+          { x: (item.x - 80) / 56, y: (sceneHeight - 16 - item.y) / 56 + 0.09, z: Math.sin(item.x * 7 + item.y * 0.3) * 0.42 },
+          { x: radius, y: radius, z: radius },
+          rotation,
+          0,
+        );
+      }
+      finish(IDENTITY);
+    },
+    drawRigid(coins: PhysicsCoinPose[], jarRotation: Quaternion) {
+      begin();
+      gl.depthMask(true);
+      for (const item of coins) {
+        meshDraw(
+          coin,
+          item.position,
+          { x: item.radius, y: item.halfHeight / 0.17, z: item.radius },
+          item.rotation,
+          0,
+        );
+      }
+      finish(jarRotation);
+    },
+    dispose() {
+      coin.dispose();
+      body.dispose();
+      lid.dispose();
+      gl.deleteProgram(program);
+    },
   };
 }

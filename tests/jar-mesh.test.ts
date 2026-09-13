@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { jarBody, jarLid, goldCoin } from '../src/core/jar-mesh';
+import { jarBody, jarLid, goldCoin, rotateVectorByQuaternion } from '../src/core/jar-mesh';
 describe('true 3D models', () => {
   it('exports finite indexed geometry with normalized normals and depth', () => {
     for (const mesh of [jarBody(4.8), jarLid(4.8), goldCoin()]) {
@@ -26,5 +26,17 @@ describe('true 3D models', () => {
       const x=vertices.reduce((n,v)=>n+v[0]!,0)/3,z=vertices.reduce((n,v)=>n+v[2]!,0)/3;
       expect(Math.abs(x)<.429 && Math.abs(z)<.054).toBe(false);
     }
+  });
+  it('rotates a coin normal with a unit quaternion without changing its length', () => {
+    const half = Math.sqrt(0.5);
+    const normal = rotateVectorByQuaternion(
+      { x: 0, y: 1, z: 0 },
+      { x: 0, y: 0, z: half, w: half },
+    );
+
+    expect(normal.x).toBeCloseTo(-1);
+    expect(normal.y).toBeCloseTo(0);
+    expect(normal.z).toBeCloseTo(0);
+    expect(Math.hypot(normal.x, normal.y, normal.z)).toBeCloseTo(1);
   });
 });

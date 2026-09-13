@@ -1,5 +1,18 @@
 /** Indexed triangle meshes; Y is up. Shared by WebGL and the model exporter. */
 export interface Mesh { positions: number[]; normals: number[]; indices: number[] }
+export interface Vector3 { x: number; y: number; z: number }
+export interface Quaternion extends Vector3 { w: number }
+
+export function rotateVectorByQuaternion(vector: Vector3, rotation: Quaternion): Vector3 {
+  const tx = 2 * (rotation.y * vector.z - rotation.z * vector.y);
+  const ty = 2 * (rotation.z * vector.x - rotation.x * vector.z);
+  const tz = 2 * (rotation.x * vector.y - rotation.y * vector.x);
+  return {
+    x: vector.x + rotation.w * tx + rotation.y * tz - rotation.z * ty,
+    y: vector.y + rotation.w * ty + rotation.z * tx - rotation.x * tz,
+    z: vector.z + rotation.w * tz + rotation.x * ty - rotation.y * tx,
+  };
+}
 export function lathe(profile: [number, number][], segments = 64): Mesh {
   const positions: number[] = [], normals: number[] = [], indices: number[] = [];
   for (let j = 0; j < profile.length - 1; j++) {

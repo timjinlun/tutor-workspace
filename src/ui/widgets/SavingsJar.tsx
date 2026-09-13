@@ -11,7 +11,6 @@ import { useLocalDay } from "./useLocalDay";
 import { createJarRenderer } from "./jar-webgl";
 import "./savings-jar.css";
 
-const IDENTITY: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
 const COIN_RADIUS = 0.082;
 const COIN_HALF_HEIGHT = 0.018;
 
@@ -98,15 +97,16 @@ export function SavingsJar() {
         return () => undefined;
       }
       let sceneHeight = Math.max(140, Math.round(canvas.getBoundingClientRect().height));
-      const physicsHeight = Math.max(1.7, (sceneHeight - 45) / 56);
+      let physicsHeight = Math.max(1.7, (sceneHeight - 45) / 56);
       const resize = () => {
         const dpr = window.devicePixelRatio || 1;
         sceneHeight = Math.max(140, Math.round(canvas.getBoundingClientRect().height));
         canvas.width = Math.round(160 * dpr);
         canvas.height = Math.round(sceneHeight * dpr);
         renderer.resize(sceneHeight);
+        return Math.max(1.7, (sceneHeight - 45) / 56);
       };
-      resize();
+      physicsHeight = resize();
       let physics;
       try {
         physics = await createJarPhysics3D({ height: physicsHeight, radius: 0.95 });
@@ -118,6 +118,7 @@ export function SavingsJar() {
         return () => undefined;
       }
       canvas.dataset.physics = "rapier3d";
+      canvas.dataset.physicsHeight = physicsHeight.toFixed(4);
       const root = document.documentElement;
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
       let stable: PhysicsCoinPose[] = [];
@@ -181,15 +182,17 @@ export function SavingsJar() {
         }
         for (let i = 0; i < 240 && physics.hasActiveBodies(); i++) physics.step();
       };
-      const rebuild = () => {
+      const rebuild = (resetDynamic = true) => {
         current = jarState(useStore.getState().s);
         const pendingAmount = [...unsettled.values()].reduce((sum, amount) => sum + amount, 0);
         const fill = Math.max(0, Math.min(1, (current.amount - pendingAmount) / current.capacity));
         stable = visualPile(fill, physicsHeight);
-        physics.clearCoins();
         physics.setBulkFill(fill);
-        physics.setJarTilt(tiltX, tiltZ);
-        seedSurface(fill);
+        if (resetDynamic) {
+          physics.clearCoins();
+          physics.setJarTilt(tiltX, tiltZ);
+          seedSurface(fill);
+        }
         updateEvidence();
         draw();
       };
@@ -284,7 +287,7 @@ export function SavingsJar() {
         pending = scheduleCoins(pending, changes, value, now, delay);
         canvas.dataset.pendingCoins = String(pending.length);
         canvas.dataset.nextCoinDelay = String((pending[0]?.at ?? now) - now);
-        rebuild();
+        rebuild(false);
         draw(now);
         startLoop(now, outgoing.length ? 0 : Math.max(0, (pending[0]?.at ?? now) - now));
       });
@@ -307,7 +310,25 @@ export function SavingsJar() {
         startLoop();
       };
       const up = () => { pointerX = null; };
-      const redraw = () => { resize(); draw(); };
+      const redraw = () => {
+        const nextHeight = resize();
+        if (Math.abs(nextHeight - physicsHeight) >= 0.001) {
+          const ledgerAnimationInProgress = pending.length > 0 || outgoing.length > 0 || unsettled.size > 0;
+          physicsHeight = nextHeight;
+          physics.setHeight(physicsHeight);
+          rebuild(false);
+          canvas.dataset.physicsHeight = physicsHeight.toFixed(4);
+          if (!ledgerAnimationInProgress || reduce.matches) {
+            for (let i = 0; i < 240 && physics.hasActiveBodies(); i++) physics.step();
+            draw();
+            stopLoop();
+          } else {
+            startLoop();
+          }
+          return;
+        }
+        draw();
+      };
       const lost = (event: Event) => {
         event.preventDefault();
         stopLoop();
@@ -316,7 +337,10 @@ export function SavingsJar() {
       const restored = () => {
         renderer.dispose();
         renderer = createJarRenderer(canvas);
-        redraw();
+        physicsHeight = resize();
+        physics.setHeight(physicsHeight);
+        canvas.dataset.physicsHeight = physicsHeight.toFixed(4);
+        finishLedgerAnimation();
       };
       canvas.addEventListener("pointerdown", down);
       canvas.addEventListener("pointermove", move);

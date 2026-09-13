@@ -66,6 +66,7 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
   const world = new RAPIER.World({ x: 0, y: -32, z: 0 });
   world.timestep = 1 / 60;
   world.maxCcdSubsteps = 2;
+  let currentHeight = options.height;
   const container = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
   world.createCollider(
     RAPIER.ColliderDesc.cylinder(0.06, options.radius)
@@ -77,23 +78,68 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
   const wallSegments = 32;
   const wallThickness = 0.035;
   const halfTangent = Math.tan(Math.PI / wallSegments) * (options.radius + wallThickness) * 1.05;
-  for (let i = 0; i < wallSegments; i++) {
-    const angle = i / wallSegments * Math.PI * 2;
-    const rotation = Math.PI / 2 - angle;
-    const distance = options.radius + wallThickness;
-    world.createCollider(
-      RAPIER.ColliderDesc.cuboid(halfTangent, options.height / 2, wallThickness)
-        .setTranslation(Math.cos(angle) * distance, options.height / 2, Math.sin(angle) * distance)
-        .setRotation({ x: 0, y: Math.sin(rotation / 2), z: 0, w: Math.cos(rotation / 2) })
-        .setFriction(0.78)
-        .setRestitution(0.04),
-      container,
-    );
-  }
+  const wallColliders: RAPIER.Collider[] = [];
   const coins = new Map<string, PhysicsCoin>();
-  let bulkColliders: RAPIER.Collider[] = [];
+  const bulkColliders: RAPIER.Collider[] = [];
+  let bulkFill = 0;
   let jarRotation = { x: 0, y: 0, z: 0, w: 1 };
   let nextId = 1;
+
+  const rebuildWalls = () => {
+    for (let i = 0; i < wallSegments; i++) {
+      const angle = i / wallSegments * Math.PI * 2;
+      const rotation = Math.PI / 2 - angle;
+      const distance = options.radius + wallThickness;
+      const translation = { x: Math.cos(angle) * distance, y: currentHeight / 2, z: Math.sin(angle) * distance };
+      const existing = wallColliders[i];
+      if (existing) {
+        existing.setHalfExtents({ x: halfTangent, y: currentHeight / 2, z: wallThickness });
+        existing.setTranslationWrtParent(translation);
+      } else {
+        wallColliders.push(world.createCollider(
+          RAPIER.ColliderDesc.cuboid(halfTangent, currentHeight / 2, wallThickness)
+          .setTranslation(Math.cos(angle) * distance, currentHeight / 2, Math.sin(angle) * distance)
+          .setRotation({ x: 0, y: Math.sin(rotation / 2), z: 0, w: Math.cos(rotation / 2) })
+          .setFriction(0.78)
+          .setRestitution(0.04),
+          container,
+        ));
+      }
+    }
+  };
+  const rebuildBulk = () => {
+    const target = bulkFill * currentHeight * 0.82;
+    if (!target) {
+      for (const collider of bulkColliders) collider.setEnabled(false);
+      return;
+    }
+    const terraces = [
+      { radius: options.radius * 0.82, height: target * 0.58 },
+      { radius: options.radius * 0.58, height: target * 0.8 },
+      { radius: options.radius * 0.32, height: target },
+    ];
+    for (const [index, terrace] of terraces.entries()) {
+      let collider = bulkColliders[index];
+      if (!collider) {
+        collider = world.createCollider(
+          RAPIER.ColliderDesc.cylinder(terrace.height / 2, terrace.radius)
+          .setTranslation(0, terrace.height / 2, 0)
+          .setFriction(0.26)
+          .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+          .setRestitution(0.02),
+          container,
+        );
+        bulkColliders.push(collider);
+      }
+      collider.setEnabled(target > 0);
+      if (target > 0) {
+        collider.setHalfHeight(terrace.height / 2);
+        collider.setRadius(terrace.radius);
+        collider.setTranslationWrtParent({ x: 0, y: terrace.height / 2, z: 0 });
+      }
+    }
+  };
+  rebuildWalls();
 
   return {
     addCoin(input: AddPhysicsCoinOptions) {
@@ -106,7 +152,7 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
       const id = `coin-${nextId++}`;
       const localPosition = {
         x: (input.random() - 0.5) * 0.22,
-        y: options.height - 0.25,
+        y: currentHeight - 0.25,
         z: (input.random() - 0.5) * 0.22,
       };
       const position = input.position ?? rotateVector(localPosition, jarRotation);
@@ -164,24 +210,16 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
       return [...coins.values()].some((coin) => !coin.body.isSleeping());
     },
     setBulkFill(fill: number) {
-      for (const collider of bulkColliders) world.removeCollider(collider, false);
-      bulkColliders = [];
-      const target = Math.max(0, Math.min(1, fill)) * options.height * 0.82;
-      if (!target) return;
-      for (const terrace of [
-        { radius: options.radius * 0.82, height: target * 0.58 },
-        { radius: options.radius * 0.58, height: target * 0.8 },
-        { radius: options.radius * 0.32, height: target },
-      ]) {
-        bulkColliders.push(world.createCollider(
-          RAPIER.ColliderDesc.cylinder(terrace.height / 2, terrace.radius)
-            .setTranslation(0, terrace.height / 2, 0)
-            .setFriction(0.26)
-            .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
-            .setRestitution(0.02),
-          container,
-        ));
-      }
+      bulkFill = Math.max(0, Math.min(1, fill));
+      rebuildBulk();
+    },
+    setHeight(height: number) {
+      const nextHeight = Math.max(0.5, height);
+      if (Math.abs(nextHeight - currentHeight) < 0.001) return;
+      currentHeight = nextHeight;
+      rebuildWalls();
+      rebuildBulk();
+      for (const coin of coins.values()) coin.body.wakeUp();
     },
     setJarTilt(x: number, z: number) {
       const hx = x / 2;

@@ -155,4 +155,25 @@ describe("Rapier 储蓄罐物理适配层", () => {
     expect(pose!.rotation.z).toBeCloseTo(Math.sin(0.1), 4);
     physics.dispose();
   });
+
+  it("罐体高度变化时同步碰撞容器、现有金币和投币口", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    physics.addCoin({
+      radius: 0.11,
+      halfHeight: 0.025,
+      random: () => 0.5,
+      position: { x: 0, y: 2.3, z: 0 },
+    });
+
+    physics.setHeight(2.3);
+    expect(physics.poses()[0]!.position.y).toBeCloseTo(2.3, 4);
+
+    for (let i = 0; i < 240 && physics.hasActiveBodies(); i++) physics.step();
+    expect(physics.poses()[0]!.position.y).toBeGreaterThanOrEqual(0.02);
+    expect(physics.hasActiveBodies()).toBe(false);
+
+    physics.addCoin({ radius: 0.11, halfHeight: 0.025, random: () => 0.5 });
+    expect(physics.poses()[1]!.position.y).toBeCloseTo(2.05, 4);
+    physics.dispose();
+  });
 });

@@ -40,7 +40,7 @@ app.whenReady().then(async()=>{
   const afterJarRotation=await win.webContents.executeJavaScript(`document.querySelector('.savings-jar canvas').dataset.jarRotation`);
   fs.writeFileSync(path.join(output,'tilted-3d.png'),rotated);model.dragChangesView=!!beforeJarRotation&&afterJarRotation!==beforeJarRotation;model.dragMovesCoins=!!model.beforeTilt&&afterTilt!==model.beforeTilt;
   win.setSize(920,600);await pause(200);
-  const compactLayout=await win.webContents.executeJavaScript(`(()=>{const jar=document.querySelector('.savings-jar').getBoundingClientRect(),foot=document.querySelector('.sidebar-foot').getBoundingClientRect(),nav=document.querySelector('.nav').getBoundingClientRect();return {noOverlap:jar.bottom<=foot.top,underMore:jar.top-nav.bottom,canvasHeight:document.querySelector('.savings-jar canvas').getBoundingClientRect().height}})()`);
+  const compactLayout=await win.webContents.executeJavaScript(`(()=>{const jar=document.querySelector('.savings-jar').getBoundingClientRect(),foot=document.querySelector('.sidebar-foot').getBoundingClientRect(),nav=document.querySelector('.nav').getBoundingClientRect(),canvas=document.querySelector('.savings-jar canvas');return {noOverlap:jar.bottom<=foot.top,underMore:jar.top-nav.bottom,canvasHeight:canvas.getBoundingClientRect().height,physicsHeight:Number(canvas.dataset.physicsHeight),animating:canvas.dataset.animating}})()`);
   fs.writeFileSync(path.join(output,'compact.png'),(await win.webContents.capturePage()).toPNG());
   win.setSize(1240,820);await pause(200);
   await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='上完了').click()`);
@@ -59,9 +59,16 @@ app.whenReady().then(async()=>{
   win.webContents.send('state',double);await pause(250);
   const doubleBefore=await win.webContents.executeJavaScript(`({buttons:Array.from(document.querySelectorAll('button')).filter(b=>b.textContent.trim()==='上完了').length,animating:document.querySelector('.savings-jar canvas').dataset.animating})`);
   const emittedBefore=await win.webContents.executeJavaScript(`Number(document.querySelector('.savings-jar canvas').dataset.emitted||0)`);
-  const doubleClicked=await win.webContents.executeJavaScript(`(()=>{const buttons=Array.from(document.querySelectorAll('button')).filter(b=>b.textContent.trim()==='上完了');buttons.forEach(b=>b.click());return buttons.length})()`);
-  await pause(2000);
+  const firstClicked=await win.webContents.executeJavaScript(`(()=>{const button=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='上完了');button.click();return 1})()`);
+  await pause(1100);
+  const firstDynamic=await win.webContents.executeJavaScript(`Number(document.querySelector('.savings-jar canvas').dataset.dynamicBodies||0)`);
+  const secondClicked=await win.webContents.executeJavaScript(`(()=>{const button=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='上完了');button.click();return 1})()`);
+  await pause(1100);
+  const secondDynamic=await win.webContents.executeJavaScript(`Number(document.querySelector('.savings-jar canvas').dataset.dynamicBodies||0)`);
   const emittedAfter=await win.webContents.executeJavaScript(`Number(document.querySelector('.savings-jar canvas').dataset.emitted||0)`);
+  const canLoseContext=await win.webContents.executeJavaScript(`(()=>{const gl=document.querySelector('.savings-jar canvas').getContext('webgl2'),ext=gl&&gl.getExtension('WEBGL_lose_context');if(!ext)return false;ext.loseContext();setTimeout(()=>ext.restoreContext(),80);return true})()`);
+  await pause(500);
+  const contextRecovery=await win.webContents.executeJavaScript(`(()=>{const c=document.querySelector('.savings-jar canvas');return {renderer:c.dataset.renderer,animating:c.dataset.animating,pending:Number(c.dataset.pendingCoins||0),caption:document.querySelector('.jar-caption').textContent}})()`);
   const doubleAfter=await win.webContents.executeJavaScript(`(()=>{const c=document.querySelector('.savings-jar canvas');return {buttons:Array.from(document.querySelectorAll('button')).filter(b=>b.textContent.trim()==='上完了').length,animating:c.dataset.animating,pending:c.dataset.pendingCoins,nextDelay:c.dataset.nextCoinDelay}})()`);
   win.webContents.debugger.attach('1.3');
   await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
@@ -69,9 +76,9 @@ app.whenReady().then(async()=>{
   await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='上完了').click()`);await pause(100);
   const reduced=await win.webContents.executeJavaScript(`({animating:document.querySelector('.savings-jar canvas').dataset.animating,emitted:Number(document.querySelector('.savings-jar canvas').dataset.emitted||0),flights:document.querySelectorAll('.income-flight').length,caption:document.querySelector('.jar-caption').textContent})`);
   win.webContents.debugger.detach();
-  const result={model,compactLayout,flightCount,finalIncome,start,oneSecondLater:end,idleRafDelta:end-start.count,doubleCheckinEmitted:emittedAfter-emittedBefore,doubleFlow:{before:doubleBefore,clicked:doubleClicked,after:doubleAfter},reducedMotion:{...reduced,newCoins:reduced.emitted-emittedAfter},knownBaselineErrors,unexpectedErrors};
+  const result={model,compactLayout,flightCount,finalIncome,start,oneSecondLater:end,idleRafDelta:end-start.count,doubleCheckinEmitted:emittedAfter-emittedBefore,doubleFlow:{before:doubleBefore,clicked:firstClicked+secondClicked,firstDynamic,secondDynamic,after:doubleAfter},contextRecovery:{...contextRecovery,supported:canLoseContext},reducedMotion:{...reduced,newCoins:reduced.emitted-emittedAfter},knownBaselineErrors,unexpectedErrors};
   fs.writeFileSync(path.join(output,'evidence.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify(result));
-  if(model.renderer!=="webgl2"||model.physics!=="rapier3d"||model.triangles<100||model.depthSpread<.5||model.moundCenter<=model.moundEdge||!model.dragChangesView||!model.dragMovesCoins||!compactLayout.noOverlap||reduced.animating!=="false"||reduced.emitted!==emittedAfter||reduced.flights!==0||emittedAfter-emittedBefore!==56||flightCount!==1||!finalIncome.includes('5,280')||start.animating!=='false'||end!==start.count||unexpectedErrors.length)process.exitCode=1;
+  if(model.renderer!=="webgl2"||model.physics!=="rapier3d"||model.triangles<100||model.depthSpread<.5||model.moundCenter<=model.moundEdge||!model.dragChangesView||!model.dragMovesCoins||!compactLayout.noOverlap||compactLayout.animating!=="false"||Math.abs(compactLayout.physicsHeight-Math.max(1.7,(compactLayout.canvasHeight-45)/56))>.01||!canLoseContext||contextRecovery.renderer!=="webgl2"||contextRecovery.animating!=="false"||contextRecovery.pending!==0||!contextRecovery.caption.includes('560')||reduced.animating!=="false"||reduced.emitted!==emittedAfter||reduced.flights!==0||emittedAfter-emittedBefore!==56||firstDynamic<28||secondDynamic<56||flightCount!==1||!finalIncome.includes('5,280')||start.animating!=='false'||end!==start.count||unexpectedErrors.length)process.exitCode=1;
  }catch(e){console.error(e);process.exitCode=1;}finally{win.destroy();app.exit(process.exitCode||0);}
 });

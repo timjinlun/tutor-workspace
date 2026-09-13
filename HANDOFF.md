@@ -30,4 +30,4 @@ node scripts/benchmark-jar.mjs
 脚本使用临时目录和内存数据，绝不打开正式数据库。
 原有 src/index.html 内联外观恢复脚本被 CSP 阻止，验收 evidence.json 单列该基线问题；未放宽 CSP。
 
-三维模型：src/core/jar-mesh.ts；渲染：src/ui/widgets/jar-webgl.ts；导出：node scripts/export-jar-models.mjs。旋转不改变账目，完整三维颗粒物理尚未实现。
+三维模型：src/core/jar-mesh.ts；渲染：src/ui/widgets/jar-webgl.ts；物理：src/core/jar-physics-3d.ts；导出：node scripts/export-jar-models.mjs。Rapier 圆柱刚体已接入落币、堆叠、碰撞和拖拽倾斜；旋转不改变账目。

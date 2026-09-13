@@ -2,22 +2,52 @@
   "model": {
     "renderer": "webgl2",
     "triangles": 1488,
-    "dragChangesView": true
+    "physics": "rapier3d",
+    "depthSpread": 1.4379146831786636,
+    "moundCenter": 1.8827999999999998,
+    "moundEdge": 1.4291999999999998,
+    "beforeTilt": "0.001,2.030,0.001,0.000,-0.000;0.214,2.030,0.011,0.000,-0.000;-0.214,2.030,-0.000,-0.001,0.003;-0.106,2.030,-0.188,-0.002,0.000;0.101,2.030,-0.174,-0.002,-0.000;0.098,2.030,0.178,0.001,-0.002;-0.103,2.030,0.174,0.002,0.003;0.001,1.628,-0.386,-0.001,-0.000;0.001,1.628,0.386,0.002,0.000;-0.334,1.628,-0.193,-0.000,-0.000;0.344,1.628,-0.191,0.000,-0.000;0.343,1.628,0.197,0.000,-0.000;-0.332,1.628,0.197,-0.000,0.000;0.405,1.628,-0.003,-0.001,-0.000",
+    "dragChangesView": true,
+    "dragMovesCoins": true
   },
   "compactLayout": {
     "noOverlap": true,
     "underMore": 6,
-    "canvasHeight": 162
+    "canvasHeight": 162,
+    "physicsHeight": 2.0893,
+    "animating": "false"
   },
   "flightCount": 1,
   "finalIncome": "本月确认收入 ¥5,280",
   "start": {
-    "count": 109,
+    "count": 223,
     "animating": "false"
   },
-  "oneSecondLater": 109,
+  "oneSecondLater": 223,
   "idleRafDelta": 0,
   "doubleCheckinEmitted": 56,
+  "doubleFlow": {
+    "before": {
+      "buttons": 2,
+      "animating": "false"
+    },
+    "clicked": 2,
+    "firstDynamic": 28,
+    "secondDynamic": 56,
+    "after": {
+      "buttons": 0,
+      "animating": "false",
+      "pending": "0",
+      "nextDelay": "500"
+    }
+  },
+  "contextRecovery": {
+    "renderer": "webgl2",
+    "animating": "false",
+    "pending": 0,
+    "caption": "¥560 / ¥10,000",
+    "supported": true
+  },
   "reducedMotion": {
     "animating": "false",
     "emitted": 84,
@@ -26,7 +56,7 @@
     "newCoins": 0
   },
   "knownBaselineErrors": [
-    "Executing inline script violates the following Content Security Policy directive 'default-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-tpbH5xxWIRstFS+NJlBETWz8/Fj77xYGMQlWGwcVYjU='), or a nonce ('nonce-...') is required to enable inline execution. Note also that 'script-src' was not explicitly set, so 'default-src' is used as a fallback. The action has been blocked."
+    "Executing inline script violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-tpbH5xxWIRstFS+NJlBETWz8/Fj77xYGMQlWGwcVYjU='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked."
   ],
   "unexpectedErrors": []
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createJarPhysics3D, type PhysicsCoinPose } from "../src/core/jar-physics-3d";
+import { coinAxisVertical, createJarPhysics3D, type PhysicsCoinPose } from "../src/core/jar-physics-3d";
 import { buildJarPile } from "../src/core/jar-pile";
 
 describe("Rapier 开放金币堆物理适配层", () => {
@@ -141,6 +141,10 @@ describe("Rapier 开放金币堆物理适配层", () => {
         physics.addCoin({ radius, halfHeight: radius * 0.22, lessonId: "lesson-stack", random });
         physics.step();
       }
+      for (let pass = 0; pass < 6; pass++) {
+        for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
+        if (physics.tipUprightCoins() === 0) break;
+      }
       for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
 
       const added = physics.poses();
@@ -149,6 +153,7 @@ describe("Rapier 开放金币堆物理适配层", () => {
       for (const coin of added) {
         expect(coin.position.y).toBeGreaterThanOrEqual(0);
         expect(Math.hypot(coin.position.x, coin.position.z)).toBeLessThan(2);
+        expect(coinAxisVertical(coin.rotation)).toBeGreaterThanOrEqual(0.45);
       }
       physics.dispose();
     }
@@ -187,6 +192,24 @@ describe("Rapier 开放金币堆物理适配层", () => {
 
     expect(Math.abs(before.x) + Math.abs(before.y) + Math.abs(before.z)).toBeGreaterThan(0.05);
     expect(Math.abs(after.x - before.x) + Math.abs(after.y - before.y) + Math.abs(after.z - before.z)).toBeGreaterThan(0.005);
+    physics.dispose();
+  });
+
+  it("接近竖立的金币会被放倒后重新参与物理结算", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    physics.addCoin({
+      radius: 0.082,
+      halfHeight: 0.018,
+      random: () => 0.5,
+      position: { x: 0, y: 0.082, z: 0 },
+      rotation: { x: Math.sin(Math.PI / 4), y: 0, z: 0, w: Math.cos(Math.PI / 4) },
+    });
+
+    expect(physics.tipUprightCoins()).toBe(1);
+    for (let i = 0; i < 240 && physics.hasActiveBodies(); i++) physics.step();
+
+    const rotation = physics.poses()[0]!.rotation;
+    expect(Math.abs(1 - 2 * (rotation.x ** 2 + rotation.z ** 2))).toBeGreaterThanOrEqual(0.45);
     physics.dispose();
   });
 

@@ -11,6 +11,7 @@ export interface AddPhysicsCoinOptions {
   lessonId?: string;
   random: () => number;
   position?: { x: number; y: number; z: number };
+  rotation?: { x: number; y: number; z: number; w: number };
   linearVelocity?: { x: number; y: number; z: number };
 }
 
@@ -21,6 +22,10 @@ export interface PhysicsCoinPose {
   rotation: { x: number; y: number; z: number; w: number };
   radius: number;
   halfHeight: number;
+}
+
+export function coinAxisVertical(rotation: PhysicsCoinPose["rotation"]) {
+  return Math.abs(1 - 2 * (rotation.x ** 2 + rotation.z ** 2));
 }
 
 interface PhysicsCoin {
@@ -82,7 +87,7 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
       const body = world.createRigidBody(
         RAPIER.RigidBodyDesc.dynamic()
           .setTranslation(position.x, position.y, position.z)
-          .setRotation(localRotation)
+          .setRotation(input.rotation ?? localRotation)
           .setAngvel({
             x: (input.random() - 0.5) * 4,
             y: (input.random() - 0.5) * 4,
@@ -122,6 +127,21 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
     },
     hasActiveBodies() {
       return [...coins.values()].some((coin) => !coin.body.isSleeping());
+    },
+    tipUprightCoins(minAxisVertical = 0.45) {
+      let tipped = 0;
+      for (const coin of coins.values()) {
+        if (coinAxisVertical(coin.body.rotation()) >= minAxisVertical) continue;
+        const position = coin.body.translation();
+        const direction = Number(coin.id.replace(/\D/g, "")) % 2 ? 1 : -1;
+        const tilt = direction * 0.08;
+        coin.body.setTranslation({ x: position.x, y: position.y + coin.radius * 0.75, z: position.z }, true);
+        coin.body.setRotation({ x: Math.sin(tilt / 2), y: 0, z: 0, w: Math.cos(tilt / 2) }, true);
+        coin.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        coin.body.setAngvel({ x: 0, y: 0, z: direction * 0.35 }, true);
+        tipped++;
+      }
+      return tipped;
     },
     setStaticPile(pile: PhysicsCoinPose[]) {
       for (const body of staticPileBodies) world.removeRigidBody(body);

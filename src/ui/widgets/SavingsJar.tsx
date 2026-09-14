@@ -5,7 +5,7 @@ import { feedbackTiming } from "@/core/lesson-feedback";
 import { jarState } from "@/core/jar";
 import { fmtMoney } from "@/core/finance";
 import { buildJarPile, selectStablePileRemoval } from "@/core/jar-pile";
-import { createJarPhysics3D, type PhysicsCoinPose } from "@/core/jar-physics-3d";
+import { coinAxisVertical, createJarPhysics3D, type PhysicsCoinPose } from "@/core/jar-physics-3d";
 import type { CoinPilePose, PendingCoinDrop } from "@/core/types";
 import { useLocalDay } from "./useLocalDay";
 import { createJarRenderer } from "./jar-webgl";
@@ -118,6 +118,7 @@ export function CoinPile() {
       const initialState = useStore.getState().s;
       let stable: PhysicsCoinPose[] = clonePile(initialState.settings.coinPile);
       let recovery = recoverPendingDrops(initialState.settings.pendingCoinDrops, stable, performance.now());
+      let fulfilledRecoveryLessonIds = recovery.fulfilledLessonIds;
       let outgoing: { pose: PhysicsCoinPose; start: number }[] = [];
       let pending: CoinEmission[] = recovery.emissions;
       const unsettled = recovery.unsettled;
@@ -133,6 +134,26 @@ export function CoinPile() {
         canvas.dataset.stableBodies = String(stable.length);
         canvas.dataset.pileSignature = poseSignature(stable);
         useStore.getState().saveCoinPile(stable, settledLessonIds);
+      };
+      const repairUprightStableCoins = () => {
+        const upright = stable.filter((pose) => coinAxisVertical(pose.rotation) < 0.45);
+        if (!upright.length) return false;
+        const uprightIds = new Set(upright.map((pose) => pose.id));
+        stable = stable.filter((pose) => !uprightIds.has(pose.id));
+        physics.setStaticPile(stable);
+        for (const pose of upright) {
+          physics.addCoin({
+            radius: pose.radius,
+            halfHeight: pose.halfHeight,
+            lessonId: pose.lessonId,
+            position: { ...pose.position },
+            rotation: { ...pose.rotation },
+            random: () => 0.5,
+          });
+        }
+        physics.tipUprightCoins();
+        unsettled.set("__upright-pose-repair__", upright.length);
+        return true;
       };
 
       const updateEvidence = () => {
@@ -173,9 +194,10 @@ export function CoinPile() {
           saveStable();
         }
         physics.setStaticPile(stable);
+        const repairingUprightCoins = repairUprightStableCoins();
         updateEvidence();
         draw();
-        if (recovery.fulfilledLessonIds.length) saveStable(recovery.fulfilledLessonIds);
+        if (recovery.fulfilledLessonIds.length && !repairingUprightCoins) saveStable(recovery.fulfilledLessonIds);
       };
       const stopLoop = () => {
         clearTimeout(delayTimer);
@@ -195,10 +217,17 @@ export function CoinPile() {
         for (const entry of pending) addEmission(entry);
         pending = [];
         canvas.dataset.pendingCoins = "0";
+        for (let pass = 0; pass < 6; pass++) {
+          for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
+          if (physics.tipUprightCoins() === 0) break;
+        }
         for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
         const settledAt = Date.now();
         const dynamic = physics.poses();
-        const settledLessonIds = [...new Set(dynamic.flatMap((pose) => pose.lessonId ? [pose.lessonId] : []))];
+        const settledLessonIds = [...new Set([
+          ...fulfilledRecoveryLessonIds,
+          ...dynamic.flatMap((pose) => pose.lessonId ? [pose.lessonId] : []),
+        ])];
         const settled = dynamic.map((pose, index) => ({
           ...pose,
           id: `saved-${settledAt}-${index}-${pose.id}`,
@@ -256,7 +285,7 @@ export function CoinPile() {
       };
 
       initializePile();
-      if (pending.length > 0) startLoop();
+      if (pending.length > 0 || unsettled.size > 0 || physics.hasActiveBodies()) startLoop();
       else canvas.dataset.animating = "false";
       const unsubscribe = useStore.subscribe((next, previous) => {
         if (next.s === previous.s) return;
@@ -272,6 +301,7 @@ export function CoinPile() {
           physics.clearCoins();
           stable = clonePile(next.s.settings.coinPile);
           recovery = recoverPendingDrops(next.s.settings.pendingCoinDrops, stable, performance.now());
+          fulfilledRecoveryLessonIds = recovery.fulfilledLessonIds;
           pending = recovery.emissions;
           for (const [lessonId, amount] of recovery.unsettled) unsettled.set(lessonId, amount);
           current = jarState(next.s);
@@ -280,10 +310,11 @@ export function CoinPile() {
             stable = legacyPile(historicalAmount / current.capacity, Math.round(historicalAmount / Math.max(1, next.s.settings.coinValue.amount)));
           }
           physics.setStaticPile(stable);
+          const repairingUprightCoins = repairUprightStableCoins();
           updateEvidence();
           draw();
-          if (recovery.fulfilledLessonIds.length) saveStable(recovery.fulfilledLessonIds);
-          if (pending.length > 0) startLoop();
+          if (recovery.fulfilledLessonIds.length && !repairingUprightCoins) saveStable(recovery.fulfilledLessonIds);
+          if (pending.length > 0 || unsettled.size > 0 || physics.hasActiveBodies()) startLoop();
           return;
         }
         const now = performance.now();

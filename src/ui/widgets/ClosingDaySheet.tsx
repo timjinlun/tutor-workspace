@@ -3,11 +3,13 @@ import { MotionConfig } from "motion/react";
 import QRCode from "qrcode";
 import { useStore } from "@/store";
 import { closingDayData } from "@/core/closing-day";
+import { closingEncouragement } from "@/core/closing-encouragement";
 import { todayISO } from "@/core/date";
 import type { LanAddress } from "@/core/poster-share-types";
 import { platform, isApp } from "@/platform";
 import { Button, Sheet } from "@/ui/primitives";
 import { drawClosingPoster } from "./closing-poster";
+import { ClosingConfetti } from "./ClosingConfetti";
 import "./closing-day.css";
 
 export function ClosingDaySheet({ onClose }: { onClose: () => void }) {
@@ -25,6 +27,7 @@ export function ClosingDaySheet({ onClose }: { onClose: () => void }) {
   const [seconds, setSeconds] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [encouragement] = useState(() => closingEncouragement(data));
   const watermark = !ent.can("scorecard.noWatermark");
   useEffect(() => {
     let mounted = true;
@@ -94,7 +97,7 @@ export function ClosingDaySheet({ onClose }: { onClose: () => void }) {
           {isApp && !qr && !busy && <Button onClick={() => void share(poster)}>重新生成二维码</Button>}
           <p className="muted closing-watermark">{watermark ? "免费版带「记一课」水印" : "商业版 · 无水印"}</p>
         </div>
-      </div> : <div className="closing-summary"><div className="closing-number">{data.lessons}<span> 节课</span></div><p>这个月已经上了 {data.monthLessons} 节</p><p className="muted">连续第 {data.streak} 天有课</p><div className="closing-coins" aria-hidden="true">{Array.from({length:18}, (_, i) => <i key={i} />)}</div></div>}
+      </div> : <div className="closing-summary"><ClosingConfetti /><div className="closing-number">{data.lessons}<span> 节课</span></div><p>这个月已经上了 {data.monthLessons} 节</p><p className="muted">连续第 {data.streak} 天有课</p><p className="closing-encouragement">{encouragement}</p><div className="closing-coins" aria-hidden="true">{Array.from({length:18}, (_, i) => <i key={i} />)}</div></div>}
       {message && <p className="closing-message" role="status">{message}</p>}
       <div className="sheet-actions"><Button onClick={onClose}>关闭</Button>{poster ? <Button variant="primary" onClick={() => void save()}>保存到电脑</Button> : <Button variant="primary" disabled={busy} onClick={() => void generate()}>生成海报</Button>}</div>
     </div>

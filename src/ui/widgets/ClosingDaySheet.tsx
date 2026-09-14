@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { useStore } from "@/store";
 import { closingDayData } from "@/core/closing-day";
 import { closingEncouragement } from "@/core/closing-encouragement";
+import { confirmedIncome } from "@/core/finance";
 import { todayISO } from "@/core/date";
 import type { LanAddress } from "@/core/poster-share-types";
 import { platform, isApp } from "@/platform";
@@ -20,6 +21,7 @@ export function ClosingDaySheet({ onClose }: { onClose: () => void }) {
   const session = useRef<string | undefined>(undefined);
   const generation = useRef(0);
   const [poster, setPoster] = useState("");
+  const [showIncome, setShowIncome] = useState(false);
   const [qr, setQr] = useState("");
   const [addresses, setAddresses] = useState<LanAddress[]>([]);
   const [address, setAddress] = useState("");
@@ -76,7 +78,11 @@ export function ClosingDaySheet({ onClose }: { onClose: () => void }) {
       const css = getComputedStyle(host.current);
       const color = (name: string) => css.getPropertyValue(name).trim();
       const canvas = document.createElement("canvas");
-      drawClosingPoster(canvas, data, { paper: color("--poster-paper"), ink: color("--poster-ink"), muted: color("--poster-muted"), line: color("--poster-line"), accent: color("--accent") }, watermark);
+      drawClosingPoster(canvas, data, { paper: color("--poster-paper"), ink: color("--poster-ink"), muted: color("--poster-muted"), line: color("--poster-line"), accent: color("--accent") }, watermark, {
+        showIncome,
+        income: confirmedIncome({ ...s, lessons: s.lessons.filter((lesson) => lesson.date === data.date) }),
+        encouragement,
+      });
       const image = canvas.toDataURL("image/png"); setPoster(image);
       if (isApp) await share(image);
       else setBusy(false);
@@ -88,6 +94,14 @@ export function ClosingDaySheet({ onClose }: { onClose: () => void }) {
   };
   return <MotionConfig reducedMotion="user"><Sheet open onClose={onClose} title="今天收工了" sub={`今天上了 ${data.lessons} 节课，${Number(data.units.toFixed(2))} 课时。`} wide>
     <div ref={host} className="closing-day">
+      <label className="closing-income-option">
+        <span>显示今日收入<small>展示授课核算金额，非今日到账</small></span>
+        <input type="checkbox" role="switch" checked={showIncome} disabled={busy} onChange={(e) => {
+          setShowIncome(e.target.checked);
+          generation.current++; setPoster(""); setQr(""); setExpiresAt(0); setMessage("");
+          void platform.posterShare.stop().catch(() => {});
+        }} />
+      </label>
       {poster ? <div className="closing-export">
         <img className="closing-poster" src={poster} alt={`${data.date} 收工海报`} />
         <div className="closing-share">

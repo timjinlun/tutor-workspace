@@ -30,6 +30,7 @@ app.whenReady().then(async()=>{
   win.webContents.send('data:imported',state);await pause(350);
   const click=async text=>win.webContents.executeJavaScript(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing button');b.click()})()`);
   await click('收工');await pause(350);
+  if(await win.webContents.executeJavaScript(`document.querySelector('[role="switch"]').checked`))throw new Error('Income should default to hidden');
   fs.writeFileSync(path.join(output,'closing-card.png'),(await win.webContents.capturePage()).toPNG());
   await click('生成海报');
   for(let i=0;i<100;i++){if(shareResult)break;await pause(50);}
@@ -42,6 +43,19 @@ app.whenReady().then(async()=>{
   const qrVisible=await win.webContents.executeJavaScript(`!!document.querySelector('.closing-qr')`);
   await click('保存到电脑');await pause(150);
   const saved=fs.readFileSync(path.join(output,'saved-poster.png'));
+  const oldUrl=shareResult.url;
+  await win.webContents.executeJavaScript(`document.querySelector('[role="switch"]').click()`);await pause(200);
+  if(await win.webContents.executeJavaScript(`!!document.querySelector('.closing-poster') || !!document.querySelector('.closing-qr')`))throw new Error('Old export remains after toggle');
+  let oldClosed=false;try{await getImage(oldUrl);}catch{oldClosed=true;}
+  if(!oldClosed)throw new Error('Old share still available');
+  shareResult=undefined;
+  await click('生成海报');
+  for(let i=0;i<100;i++){if(shareResult)break;await pause(50);}
+  await pause(350);
+  const incomeSrc=await win.webContents.executeJavaScript(`document.querySelector('.closing-poster').src`);
+  const incomePng=Buffer.from(incomeSrc.split(',')[1],'base64');
+  fs.writeFileSync(path.join(output,'poster-income.png'),incomePng);
+  if(incomePng.equals(png))throw new Error('Income toggle did not change export');
   await click('关闭');await pause(150);
   let closed=false;try{await getImage(shareResult.url);}catch{closed=true;}
   const evidence={width:png.readUInt32BE(16),height:png.readUInt32BE(20),httpStatus:served ? 200 : null,servedMatchesPoster:served?.equals(png) ?? false,networkError,netDiagnostics,savedMatchesPoster:saved.equals(png),qrVisible,closed,physicalPhoneScan:'not verified'};

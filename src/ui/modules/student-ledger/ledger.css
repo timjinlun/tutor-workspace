@@ -1,0 +1,11 @@
+.ledger-totals { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--label-2); margin-bottom: 16px; }
+.ledger-totals b { font: 700 23px var(--font-num); color: var(--label); }
+.ledger-totals small { width: 100%; font-size: 12px; }
+.ledger-row { display: flex; align-items: center; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.ledger-description { min-width: 0; flex: 1; }
+.ledger-description b { font-weight: 600; }
+.ledger-description p { color: var(--label-2); font-size: 12px; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-scroll .ledger-description p { white-space: normal; overflow-wrap: anywhere; }
+.ledger-more summary { cursor: pointer; padding: 5px 8px; list-style: none; color: var(--label-2); }
+.ledger-more[open] { display: flex; }
+.student-ledger .card + .card { margin-top: 14px; }

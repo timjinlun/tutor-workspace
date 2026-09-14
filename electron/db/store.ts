@@ -6,6 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
 import { archiveV2Tables, isV2, readV2State } from "./migrate-v2";
+import { studentDossierCollections } from "./collections/student-dossier";
 
 /* 与 src/core/types.ts 的 State 对齐；主进程不 import 渲染层代码，这里只需要形状 */
 type Row = { id: string; [k: string]: unknown };
@@ -24,6 +25,7 @@ export interface AuditLike {
 
 /** 每个集合按哪些键建索引 */
 const COLLECTIONS: Record<string, [string?, string?]> = {
+  ...studentDossierCollections,
   teachers: [],
   courses: [],
   students: ["archived"],

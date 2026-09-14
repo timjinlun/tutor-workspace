@@ -1,39 +1,12 @@
-.students-body { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
-.students-list { padding: 12px 14px; position: sticky; top: 0; max-height: calc(100vh - 120px); overflow-y: auto; }
-.search { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 9px; padding: 0 10px; height: 32px; margin-bottom: 8px; color: var(--label-3); }
-.search input { flex: 1; background: none; border: none; outline: none; font-size: 13px; color: var(--label); }
-.grip { color: var(--label-3); cursor: grab; padding: 4px 2px; margin-left: -6px; border-radius: 6px; touch-action: none; }
-.grip:hover { color: var(--label-2); background: var(--surface-2); }
-.row.dragging { background: var(--surface); box-shadow: var(--shadow-sheet); z-index: 5; position: relative; }
-.balance-pill { display: flex; align-items: baseline; gap: 2px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); color: var(--label); }
-.balance-pill span { font-size: 11px; font-weight: 500; color: var(--label-2); }
-.balance-pill.low { background: var(--orange-soft); color: var(--orange); }
-.balance-pill.low span { color: var(--orange); }
-.balance-pill.danger, .balance-pill.done { background: var(--red-soft); color: var(--red); }
-.balance-pill.danger span, .balance-pill.done span { color: var(--red); }
-.archived-group { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 6px; }
-.archived-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 6px; font-size: 12.5px; font-weight: 600; color: var(--label-2); border-radius: 8px; }
-.archived-head:hover { background: var(--surface-2); }
-.archived-head .num { background: var(--surface-2); padding: 0 7px; border-radius: 999px; font-size: 11px; }
-.row.archived { opacity: .65; }
-.row.archived.on { opacity: 1; }
-
-/* ---------- 档案 ---------- */
-.profile-head { display: flex; align-items: center; gap: 16px; }
-.profile-name { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
-.profile-courses { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-.profile-nums { display: flex; gap: 18px; margin-top: 10px; font-size: 13px; color: var(--label-2); flex-wrap: wrap; }
-.profile-nums b { color: var(--label); font-weight: 700; }
-.profile-balance { text-align: right; padding-left: 16px; }
-.profile-balance .big { font-size: 44px; font-weight: 700; line-height: 1; color: var(--accent); }
-.profile-balance .lbl { font-size: 12px; color: var(--label-2); margin-top: 4px; }
-.profile-actions { display: flex; gap: 8px; margin: 14px 0 16px; align-items: center; flex-wrap: wrap; }
-.profile-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
-.profile-side { display: flex; flex-direction: column; gap: 16px; }
-.profile-side .card { margin-top: 0; }
-.month-group + .month-group { margin-top: 10px; }
-.month-label { font-size: 12.5px; font-weight: 600; color: var(--label-2); padding: 6px 0 2px; }
-.pay-amt { font-weight: 700; font-size: 15px; }
-.link { color: var(--accent); font-weight: 600; font-size: 12.5px; }
-.link:hover { text-decoration: underline; }
-@media (max-width: 1000px) { .students-body, .profile-grid { grid-template-columns: 1fr; } .students-list { position: static; max-height: none; } }
+.students-body { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 22px; align-items: start; }
+.students-detail { min-width: 0; }
+.students.page .card { background: color-mix(in srgb, var(--surface) 97%, transparent); }
+.dossier-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; padding: 15px 0; }
+.dossier-more { margin-left: auto; position: relative; font-size: 12px; }
+.dossier-more summary { padding: 8px; cursor: pointer; list-style: none; color: var(--label-2); }
+.dossier-more > div { position: absolute; top: 36px; right: 0; display: flex; flex-direction: column; padding: 8px; background: var(--surface); box-shadow: var(--shadow-sheet); border-radius: var(--radius); z-index: 3; }
+.dossier-tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--line); margin: 0 0 18px; }
+.dossier-tabs button { color: var(--label-2); padding: 12px 1px; font-size: 14px; font-weight: 600; border-bottom: 2px solid transparent; }
+.dossier-tabs button[aria-selected="true"] { color: var(--label); border-color: var(--accent); }
+@media (max-width: 1120px) { .students-body { grid-template-columns: 230px minmax(0, 1fr); gap: 16px; } .students.page { padding-left: 22px; padding-right: 22px; } }
+@media (max-width: 880px) { .students-body { grid-template-columns: 1fr; } .students .student-directory { position: static; max-height: 270px; } }

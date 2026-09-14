@@ -1,4 +1,8 @@
-/** 领域模型。纯类型，无逻辑。所有日期为 YYYY-MM-DD，时间为 HH:mm。 */
+/** 领域模型聚合与旧存档兼容入口。日期为 YYYY-MM-DD，时间为 HH:mm。 */
+import type { StudentDetails } from "./student-profile/types";
+import type { LearningRecord } from "./learning-records/types";
+import { normalizeLearningRecords } from "./learning-records/selectors";
+import { cleanTags } from "./student-profile/selectors";
 
 export type ID = string;
 export type ISODate = string;
@@ -42,7 +46,7 @@ export interface Class {
   active: boolean;
 }
 
-export interface Student {
+export interface Student extends StudentDetails {
   id: ID;
   name: string;
   courseIds: ID[];
@@ -220,6 +224,7 @@ export interface State {
   payments: Payment[];
   templates: LessonTemplate[];
   lessons: Lesson[];
+  learningRecords: LearningRecord[];
   todos: Todo[];
   expenses: Expense[];
   otherIncomes: OtherIncome[];
@@ -256,7 +261,8 @@ export function normalizeState(raw: Partial<State> | null | undefined): State {
   s.settings.pendingCoinDrops = Array.isArray(s.settings.pendingCoinDrops)
     ? s.settings.pendingCoinDrops.filter(isPendingCoinDrop).map((drop) => ({ ...drop }))
     : [];
-  s.students = s.students.map((st, i) => ({ ...st, sortOrder: typeof st.sortOrder === "number" ? st.sortOrder : i, archived: !!st.archived }));
+  s.students = s.students.map((st, i) => ({ ...st, tags: cleanTags(st.tags), sortOrder: typeof st.sortOrder === "number" ? st.sortOrder : i, archived: !!st.archived }));
+  s.learningRecords = normalizeLearningRecords(s.learningRecords, new Set(s.students.map((st) => st.id)), new Map(s.lessons.map((l) => [l.id, l.studentId])));
   /* 永远有且只有一位「我」：老库里把第一位老师认作我，空库就建一位 */
   if (!s.teachers.some((t) => t.self)) {
     s.teachers = s.teachers.length
@@ -299,6 +305,7 @@ export function emptyState(): State {
     payments: [],
     templates: [],
     lessons: [],
+    learningRecords: [],
     todos: [],
     expenses: [],
     otherIncomes: [],

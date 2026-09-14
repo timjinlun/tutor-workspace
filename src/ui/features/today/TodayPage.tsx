@@ -170,6 +170,7 @@ export function TodayPage() {
                   {item.status === "done" && (
                     <>
                       <Stamp fresh={fresh === key} />
+                      {!item.virtual && <Button variant="ghost" size="sm" onClick={() => go({ page: "students", studentId: item.studentId, recordLessonId: item.id })}>写评语</Button>}
                       {!item.virtual && (
                         <Button variant="ghost" size="sm" icon={<Undo2 />} onClick={() => setUndoTarget(item)} title="撤销打卡（需确认）" />
                       )}

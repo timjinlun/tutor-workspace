@@ -1,0 +1,13 @@
+.learning-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.learning-meta { display: flex; align-items: center; gap: 10px; color: var(--label-2); font-size: 12px; }
+.learning-meta time { color: var(--label); font-weight: 600; }
+.learning-meta .btn { margin-left: auto; }
+.learning-lesson { color: var(--label-2); font-size: 12px; margin: 5px 0; }
+.learning-excerpt, .learning-text { margin-top: 8px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.learning-excerpt { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.learning-empty { padding: 34px 12px; text-align: center; }
+.learning-empty h3 { font-size: 17px; margin-bottom: 10px; }
+.learning-empty p { max-width: 390px; margin: 0 auto 20px; color: var(--label-2); line-height: 1.7; }
+textarea.learning-editor { min-height: 200px; }
+.learning-visibility { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; }
+.learning-visibility input { accent-color: var(--accent); }

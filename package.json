@@ -18,7 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint src electron --ext .ts,.tsx",
+    "lint": "node scripts/check-module-boundaries.mjs && eslint src electron --ext .ts,.tsx",
     "pack": "electron-vite build && electron-builder --dir",
     "build:mac": "electron-vite build && electron-builder --mac"
   },

@@ -2,6 +2,10 @@ import type { ISODate } from "./types";
 
 const p2 = (n: number) => String(n).padStart(2, "0");
 
+export function validISODate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+}
+
 /** 本地日期，不走 toISOString（那会按 UTC 切日，晚上十点会变成明天） */
 export function toISODate(d: Date): ISODate {
   return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;

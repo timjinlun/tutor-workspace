@@ -14,25 +14,35 @@ export interface ParentReportInput {
   teacherName: string;
   /** 老师寄语，可空 */
   note?: string;
+  start?: string;
+  end?: string;
 }
 
 export function parentReport(state: State, input: ParentReportInput): string {
   const st = state.students.find((x) => x.id === input.studentId);
   if (!st) return "";
+  const start = input.start ?? `${input.ym}-01`;
+  const end = input.end ?? `${input.ym}-31`;
+  if (start > end) return "";
   const lessons = state.lessons
-    .filter((l) => l.studentId === st.id && l.status === "done" && monthKey(l.date) === input.ym)
+    .filter((l) => l.studentId === st.id && l.status === "done" && l.date >= start && l.date <= end)
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const units = lessons.reduce((a, l) => a + l.units, 0);
   const courseNames = [...new Set(lessons.map((l) => state.courses.find((c) => c.id === l.courseId)?.name).filter(Boolean))].join("、");
   const lines = [
-    `【${st.name} 学习月报 · ${ymCN(input.ym)}】`,
+    input.start ? `【${st.name} 阶段反馈 · ${start} 至 ${end}】` : `【${st.name} 学习月报 · ${ymCN(input.ym)}】`,
     "",
-    `本月上课 ${lessons.length} 次，共 ${units} 课时${courseNames ? `（${courseNames}）` : ""}。`,
+    `${input.start ? "本阶段" : "本月"}上课 ${lessons.length} 次，共 ${units} 课时${courseNames ? `（${courseNames}）` : ""}。`,
     `累计已上 ${usedUnits(state, st.id)} 课时，剩余 ${balance(state, st.id)} 课时（已购 ${purchasedHours(state, st.id)} 课时）。`,
   ];
   if (lessons.length) {
     lines.push("", "上课记录：");
-    for (const l of lessons) lines.push(`· ${l.date.slice(5).replace("-", "/")} ${l.time}${l.note ? ` · ${l.note}` : ""}`);
+    for (const l of lessons) lines.push(`· ${l.date.slice(5).replace("-", "/")} ${l.time}`);
+  }
+  const observations = (state.learningRecords ?? []).filter((r) => r.studentId === st.id && r.visibility === "parent" && r.date >= start && r.date <= end).sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+  if (observations.length) {
+    lines.push("", "课堂观察与学习变化：");
+    for (const r of observations) lines.push(`· ${r.date}：${r.text}`);
   }
   if (input.note?.trim()) lines.push("", "老师的话：", input.note.trim());
   const b = balance(state, st.id);

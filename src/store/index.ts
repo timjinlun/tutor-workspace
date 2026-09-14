@@ -18,15 +18,19 @@ import { cancelGroup, completeClass, logClass, scheduleClass, type Attendance, t
 import { createEntitlements, type Entitlements, type Tier } from "@/entitlements";
 import type { Repository } from "@/data/repository";
 import { platform } from "@/platform";
+import { createStudentProfileActions, type StudentProfileActions } from "./student-profile";
+import { createLearningRecordActions, type LearningRecordActions } from "./learning-records";
 
 export type Page = "today" | "students" | "schedule" | "courses" | "finance" | "more" | "settings" | "leads" | "materials" | "referral";
 export interface Route {
   page: Page;
   studentId?: ID;
+  /** 导航意图：打开该学员某节课的学习记录编辑器。 */
+  recordLessonId?: ID;
 }
 
 export interface JarFeedback { origin?: FeedbackPoint; monthDelta?: number; seq: number; changes: { id: string; amount: number }[] }
-export interface Store {
+export interface Store extends StudentProfileActions, LearningRecordActions {
   jarFeedback: JarFeedback;
   refreshJarSettings(): void;
   s: State;
@@ -150,6 +154,8 @@ export const useStore = create<Store>((set, get) => {
   };
 
   return {
+    ...createStudentProfileActions(() => get().s, commit),
+    ...createLearningRecordActions(() => get().s, commit),
     s: emptyState(),
     jarFeedback: { seq: 0, changes: [] },
     refreshJarSettings() {
@@ -283,6 +289,7 @@ export const useStore = create<Store>((set, get) => {
       const st = s.students.find((x) => x.id === id);
       commit({
         students: s.students.filter((x) => x.id !== id),
+        learningRecords: s.learningRecords.filter((x) => x.studentId !== id),
         payments: s.payments.filter((x) => x.studentId !== id),
         lessons: s.lessons.filter((x) => x.studentId !== id),
         templates: s.templates.filter((x) => x.studentId !== id),

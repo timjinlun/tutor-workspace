@@ -1,0 +1,15 @@
+.dossier-header { display: flex; align-items: flex-start; gap: 14px; }
+.dossier-identity { flex: 1; min-width: 0; }
+.dossier-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dossier-name h2 { font-size: 23px; overflow-wrap: anywhere; }
+.dossier-school { font-size: 12px; margin-top: 5px; }
+.dossier-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.dossier-goal { margin-top: 12px; font-size: 13px; color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dossier-balance { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding-left: 12px; }
+.dossier-balance b { font: 700 38px var(--font-num); }
+.dossier-balance span { font-size: 12px; color: var(--label-2); }
+.dossier-balance.low b { color: var(--orange); }
+.dossier-balance.danger b, .dossier-balance.done b { color: var(--red); }
+.profile-course-choices { display: flex; flex-wrap: wrap; gap: 14px; }
+.profile-course-choices label { display: flex; align-items: center; gap: 5px; }
+.profile-course-choices input { accent-color: var(--accent); }

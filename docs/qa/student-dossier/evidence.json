@@ -1,0 +1,18 @@
+{
+  "isolatedData": "/var/folders/tz/t6gh9x7x1kd_9mfvypfcrzch0000gn/T/lessonlog-dossier-qa-zf0OjT",
+  "productionDataTouched": false,
+  "records": 27,
+  "summaryLimit": 3,
+  "historyPageSize": 12,
+  "monthFilter": true,
+  "editedProfilePersisted": true,
+  "tagsAndFilter": true,
+  "renewalSuccessAndFailure": true,
+  "reportPrivacy": true,
+  "reload": true,
+  "compactNoHorizontalOverflow": true,
+  "rendererErrors": [],
+  "baselineWarnings": [
+    "Executing inline script violates the following Content Security Policy directive 'script-src 'self' 'wasm-unsafe-eval''. Either the 'unsafe-inline' keyword, a hash ('sha256-tpbH5xxWIRstFS+NJlBETWz8/Fj77xYGMQlWGwcVYjU='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked."
+  ]
+}

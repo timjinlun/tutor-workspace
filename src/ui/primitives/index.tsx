@@ -109,13 +109,13 @@ export function Empty({ title, desc, actions }: { title: string; desc?: string; 
 }
 
 /* ---------- Sheet（弹层，弹簧入场） ---------- */
-export function Sheet({ open, onClose, title, sub, wide, children }: { open: boolean; onClose: () => void; title: string; sub?: ReactNode; wide?: boolean; children: ReactNode }) {
+export function Sheet({ open, onClose, title, sub, wide, children, className = "" }: { open: boolean; onClose: () => void; title: string; sub?: ReactNode; wide?: boolean; children: ReactNode; className?: string }) {
   return (
     <AnimatePresence>
       {open && (
         <motion.div className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
           <motion.div
-            className={`sheet ${wide ? "wide" : ""}`}
+            className={`sheet ${wide ? "wide" : ""} ${className}`}
             role="dialog"
             aria-modal="true"
             initial={{ opacity: 0, y: 18, scale: 0.98 }}

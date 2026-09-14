@@ -27,6 +27,8 @@ button { cursor: default; background: none; border: none; }
 .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .mono { font-variant-numeric: tabular-nums; }
 .muted { color: var(--label-2); }
+.link { color: var(--accent); font-weight: 600; font-size: 12.5px; }
+.link:hover { text-decoration: underline; }
 .faint { color: var(--label-3); }
 .select-text { user-select: text; }
 

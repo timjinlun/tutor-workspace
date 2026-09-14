@@ -1,0 +1,29 @@
+.student-directory { padding: 12px; position: sticky; top: 12px; max-height: calc(100vh - 130px); overflow-y: auto; }
+.directory-search { font-size: 12px; height: 34px; }
+.directory-tools { display: flex; gap: 6px; align-items: center; justify-content: space-between; margin: 8px 0; }
+.directory-tools .select { width: 114px; height: 30px; font-size: 12px; background-position: calc(100% - 16px) 12px, calc(100% - 11px) 12px; }
+.directory-filters { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px; font-size: 12px; max-height: 260px; overflow: auto; }
+.directory-filters p { color: var(--label-2); }
+.directory-filters fieldset { border: 0; padding: 8px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.directory-filters legend { color: var(--label-2); }
+.directory-filters label { display: flex; gap: 5px; align-items: center; }
+.directory-filters input { accent-color: var(--accent); }
+.directory-selected { display: flex; align-items: center; font-size: 11px; color: var(--accent); margin: 6px 0; }
+.directory-selected span { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.directory-row { display: flex; gap: 3px; border-radius: var(--radius-sm); padding: 10px 5px; }
+.directory-row.selected, .directory-archived-row.selected { background: var(--accent-soft); }
+.directory-row:hover { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.directory-person { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; text-align: left; }
+.directory-name { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 3px; }
+.directory-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.directory-name small { font-size: 11px; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.directory-balance { text-align: right; font-size: 13px; font-weight: 600; }
+.directory-balance small { display: block; font-size: 10px; color: var(--label-2); font-weight: 400; }
+.directory-balance.low { color: var(--orange); }
+.directory-balance.danger, .directory-balance.done { color: var(--red); }
+.directory-grip { color: var(--label-3); opacity: 0; touch-action: none; cursor: grab; }
+.directory-row:hover .directory-grip, .directory-grip:focus-visible { opacity: 1; }
+.directory-archived { border-top: 1px solid var(--line); margin-top: 10px; font-size: 12px; color: var(--label-2); padding-top: 12px; }
+.directory-archived summary { cursor: pointer; }
+.directory-archived-row { padding: 10px 7px; border-radius: 6px; display: flex; justify-content: space-between; width: 100%; }
+.directory-empty { padding: 20px 8px; color: var(--label-2); font-size: 12px; }

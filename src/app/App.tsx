@@ -21,7 +21,7 @@ const NAV: { page: Page; label: string; icon: ReactElement }[] = [
   { page: "today", label: "今天", icon: <Sun /> },
   { page: "students", label: "学员", icon: <Users /> },
   { page: "schedule", label: "课表", icon: <CalendarDays /> },
-  { page: "courses", label: "课程", icon: <BookOpen /> },
+  { page: "courses", label: "教学管理", icon: <BookOpen /> },
   { page: "finance", label: "收支", icon: <Wallet /> },
   { page: "more", label: "更多", icon: <LayoutGrid /> },
 ];

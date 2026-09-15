@@ -1,0 +1,25 @@
+.setup-panel { min-width: 0; }
+.setup-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 18px; }
+.setup-panel-head h2 { font-size: 21px; letter-spacing: -.02em; }
+.setup-panel-head p { font-size: 13px; color: var(--label-2); margin-top: 6px; line-height: 1.65; }
+.setup-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+.setup-list { display: grid; gap: 12px; }
+.setup-item { background: color-mix(in srgb, var(--surface) 96%, transparent); border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; min-width: 0; box-shadow: 0 2px 8px rgba(0,0,0,.025); }
+.setup-item-heading { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.setup-item-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.setup-item-title h3 { font-size: 17px; overflow-wrap: anywhere; }
+.setup-item-icon { display: grid; place-items: center; width: 38px; height: 38px; background: var(--accent-soft); color: var(--accent); border-radius: 11px; flex: 0 0 auto; }
+.setup-item-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin-top: 14px; }
+.setup-item-meta > div { display: grid; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.setup-item-meta dt { font-size: 12px; color: var(--label-2); }
+.setup-item-meta dd { margin: 0; font-size: 15px; font-weight: 600; }
+.setup-item-note { font-size: 12px; line-height: 1.65; color: var(--label-2); margin-top: 10px; overflow-wrap: anywhere; }
+.setup-footer { margin-top: 18px; font-size: 12px; color: var(--label-2); line-height: 1.7; }
+.setup-form-note { font-size: 13px; color: var(--label-2); line-height: 1.7; background: var(--surface-2); padding: 12px 14px; border-radius: 10px; margin: 10px 0 18px; }
+.setup-form-error { margin-bottom: 14px; }
+.setup-danger { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+@media (max-width: 1050px) {
+  .setup-panel-head { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+  .setup-item { padding: 18px; }
+  .setup-item-meta { gap: 18px; }
+}

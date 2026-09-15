@@ -1,161 +1,68 @@
-/** 课程与老师：单价、每节扣几课时、1 课时多少分钟。都是排课和算账的前置对象，放一页。 */
+/** Composition root: route navigation and injected commands, no form logic. */
 import { useState } from "react";
-import { useShallow } from "zustand/react/shallow";
-import { Plus, Trash2, Clock, Users, Pencil, Pause, Play } from "lucide-react";
+import { BookOpen, Users, GraduationCap } from "lucide-react";
 import { useStore } from "@/store";
-import { Button, Chip, Empty, Field, Input, Sheet } from "@/ui/primitives";
-import type { Class } from "@/core/types";
-import { classPrice } from "@/core/klass";
-import { nextTeacherColor, TEACHER_COLORS } from "@/core/teacher";
+import type { Class, Course, Teacher } from "@/core/types";
+import { nextTeacherColor } from "@/core/teacher";
+import { CourseCatalog } from "@/ui/modules/course-catalog";
+import { ClassManagement } from "@/ui/modules/class-management";
+import { TeacherManagement } from "@/ui/modules/teacher-management";
 import { ConfirmSheet } from "@/ui/widgets/ConfirmSheet";
-import { ClassSheet } from "./ClassSheet";
 import "./courses.css";
 
+type Tab = "courses" | "classes" | "teachers";
+type Deletion = { kind: "course"; item: Course } | { kind: "class"; item: Class } | { kind: "teacher"; item: Teacher };
+
 export function CoursesPage() {
-  const s = useStore((x) => x.s);
-  const ent = useStore((x) => x.ent);
-  const { updateCourse, removeCourse, addTeacher, updateTeacher, removeTeacher, updateSettings, updateClass, removeClass, go } = useStore(useShallow((x) => ({ updateCourse: x.updateCourse, removeCourse: x.removeCourse, addTeacher: x.addTeacher, updateTeacher: x.updateTeacher, removeTeacher: x.removeTeacher, updateSettings: x.updateSettings, updateClass: x.updateClass, removeClass: x.removeClass, go: x.go })));
-  const [addOpen, setAddOpen] = useState(false);
-  const [classOpen, setClassOpen] = useState<{ editing?: Class } | null>(null);
-  const [delClass, setDelClass] = useState<Class | null>(null);
-  const [err, setErr] = useState("");
-  const [newTeacher, setNewTeacher] = useState("");
-  const usersOf = (courseId: string) => s.students.filter((st) => !st.archived && st.courseIds.includes(courseId)).length;
-
-  return (
-    <div className="page">
-      <div className="page-head">
-        <h1>课程</h1>
-        <div className="sub">{s.courses.length} 门 · 默认 1 课时 = {s.settings.unitMinutes} 分钟</div>
-        <div className="actions">
-          <Button variant="primary" icon={<Plus />} onClick={() => setAddOpen(true)}>新课程</Button>
-        </div>
-      </div>
-      {err && <div className="banner-error">{err}</div>}
-
-      <div className="card">
-        <div className="section-title"><Clock size={14} /> 1 课时默认多少分钟</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Input type="number" min={5} step={5} style={{ width: 120 }} value={s.settings.unitMinutes} onChange={(e) => updateSettings({ unitMinutes: Math.max(5, Number(e.target.value) || 60) })} />
-          <span className="muted">分钟。单门课可以在下面单独设。「今天」和课表用它算每节课的结束时间。</span>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="section-title">课程与单价</div>
-        {s.courses.length === 0 ? (
-          <Empty title="还没有课程" desc="先建课，学员和缴费都挂在课程下。" actions={<Button variant="primary" icon={<Plus />} onClick={() => setAddOpen(true)}>新课程</Button>} />
-        ) : (
-          <>
-            <div className="course-head">
-              <span>课程</span><span>单价 / 课时</span><span>每节扣</span><span>1 课时 =</span><span>在读</span><span />
-            </div>
-            {s.courses.map((c) => (
-              <div className="course-row" key={c.id}>
-                <Input value={c.name} onChange={(e) => updateCourse(c.id, { name: e.target.value })} />
-                <div className="with-unit"><span>¥</span><Input type="number" min={0} value={c.price} onChange={(e) => updateCourse(c.id, { price: Number(e.target.value) || 0 })} /></div>
-                <div className="with-unit"><Input type="number" min={0.5} step={0.5} value={c.unitsPerLesson} onChange={(e) => updateCourse(c.id, { unitsPerLesson: Math.max(0.5, Number(e.target.value) || 1) })} /><span>课时</span></div>
-                <div className="with-unit"><Input type="number" min={5} step={5} placeholder={String(s.settings.unitMinutes)} value={c.unitMinutes ?? ""} onChange={(e) => updateCourse(c.id, { unitMinutes: e.target.value ? Math.max(5, Number(e.target.value)) : undefined })} /><span>分钟</span></div>
-                <div className="num muted">{usersOf(c.id)} 人</div>
-                <Button variant="ghost" size="sm" icon={<Trash2 />} title="删除" onClick={() => { const r = removeCourse(c.id); setErr(r.ok ? "" : r.reason); }} />
-              </div>
-            ))}
-            <div className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
-              一节课的费用 = 每节扣的课时 × 单价。比如物理每节扣 2 课时、单价 ¥150，一节就是 ¥300，时长 2 × 45 = 90 分钟。已经打卡的课不受改动影响。
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="section-title"><Users size={14} /> 班级 <Chip>免费版最多 {ent.limit("classes")} 个班 · 每班 {ent.limit("classSize")} 人</Chip><button className="right link" onClick={() => setClassOpen({})}>+ 开一个班</button></div>
-        {s.classes.length === 0 ? (
-          <div className="muted" style={{ padding: "6px 0 2px", fontSize: 13 }}>几个学员一起上的课在这里开班。打卡时各扣各的课时，单价和缺席扣不扣都由你定。</div>
-        ) : (
-          s.classes.map((k) => {
-            const c = s.courses.find((x) => x.id === k.courseId);
-            const members = k.studentIds.map((id) => s.students.find((st) => st.id === id)?.name).filter(Boolean);
-            return (
-              <div className={`row ${k.active ? "" : "paused"}`} key={k.id}>
-                <div className="klass-badge"><Users size={15} /></div>
-                <div className="grow">
-                  <div className="title">{k.name} <span className="muted" style={{ fontWeight: 400 }}>{c?.name}</span>{!k.active && <Chip>已暂停</Chip>}</div>
-                  <div className="meta">{members.length} 人 · {members.join("、") || "还没拉人"} · ¥{classPrice(s, k)}/人/课时 · 缺席{k.deductOnAbsence ? "照扣" : "不扣"}</div>
-                </div>
-                <Button variant="ghost" size="sm" icon={<Pencil />} title="编辑" onClick={() => setClassOpen({ editing: k })} />
-                <Button variant="ghost" size="sm" icon={k.active ? <Pause /> : <Play />} title={k.active ? "暂停（固定课暂时不生成）" : "恢复"} onClick={() => updateClass(k.id, { active: !k.active })} />
-                <Button variant="ghost" size="sm" icon={<Trash2 />} title="删除" onClick={() => setDelClass(k)} />
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="section-title"><Users size={14} /> 老师 <Chip>免费版最多 {ent.limit("teachers")} 位（含你自己）</Chip></div>
-        <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
-          加了合作老师之后，排课和打卡可以指定「谁上的」，收支页会按人算该结多少课时费。
-        </div>
-        <div className="teacher-head"><span>老师</span><span>颜色</span><span>课时费（每课时给他）</span><span /></div>
-        {s.teachers.map((t) => (
-          <div className="teacher-row" key={t.id}>
-            {t.self ? (
-              <div className="with-unit"><span className="dot" style={{ background: t.color }} /><b>{t.name || "我"}</b><Chip>我</Chip></div>
-            ) : (
-              <Input value={t.name} onChange={(e) => updateTeacher(t.id, { name: e.target.value })} />
-            )}
-            <div className="color-pick">
-              {TEACHER_COLORS.map((c) => (
-                <button key={c} className={`swatch ${t.color === c ? "on" : ""}`} style={{ background: c }} onClick={() => updateTeacher(t.id, { color: c })} aria-label="换颜色" />
-              ))}
-            </div>
-            {t.self ? (
-              <span className="muted" style={{ fontSize: 12.5 }}>课都是你自己的，不用结算。称呼在<button className="link" onClick={() => go({ page: "settings" })}>设置</button>里改。</span>
-            ) : (
-              <div className="with-unit"><span>¥</span><Input type="number" min={0} value={t.payPerUnit ?? ""} placeholder="不结算" onChange={(e) => updateTeacher(t.id, { payPerUnit: e.target.value ? Math.max(0, Number(e.target.value)) : undefined })} /><span>/ 课时</span></div>
-            )}
-            {t.self ? <span /> : <Button variant="ghost" size="sm" icon={<Trash2 />} title="删除" onClick={() => { const r = removeTeacher(t.id); setErr(r.ok ? "" : r.reason); }} />}
-          </div>
-        ))}
-        <div className="row">
-          <div className="grow"><Input placeholder="合作老师姓名" value={newTeacher} onChange={(e) => setNewTeacher(e.target.value)} /></div>
-          <Button icon={<Plus />} disabled={!newTeacher.trim()} onClick={() => { const r = addTeacher({ name: newTeacher.trim(), color: nextTeacherColor(s) }); setErr(r.ok ? "" : r.reason); if (r.ok) setNewTeacher(""); }}>添加</Button>
-        </div>
-      </div>
-
-      <AddCourseSheet open={addOpen} onClose={() => setAddOpen(false)} />
-      {classOpen && <ClassSheet key={classOpen.editing?.id ?? "new"} open onClose={() => setClassOpen(null)} editing={classOpen.editing} />}
-      <ConfirmSheet open={!!delClass} onClose={() => setDelClass(null)} onConfirm={() => delClass && removeClass(delClass.id)} title={`删除 ${delClass?.name ?? ""}？`} confirmLabel="删除">
-        <p className="muted">只删班级和它的固定课，已经打过卡的记录会留在每个学员名下。</p>
-      </ConfirmSheet>
-    </div>
-  );
-}
-
-function AddCourseSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const addCourse = useStore((x) => x.addCourse);
-  const unitMinutes = useStore((x) => x.s.settings.unitMinutes);
-  const [v, setV] = useState({ name: "", price: "", units: "1", minutes: "" });
-  const submit = () => {
-    if (!v.name.trim()) return;
-    addCourse({ name: v.name.trim(), price: Number(v.price) || 0, unitsPerLesson: Math.max(0.5, Number(v.units) || 1), unitMinutes: v.minutes ? Math.max(5, Number(v.minutes)) : undefined });
-    setV({ name: "", price: "", units: "1", minutes: "" });
-    onClose();
+  const s = useStore(x => x.s);
+  const ent = useStore(x => x.ent);
+  const [tab, setTab] = useState<Tab>("courses");
+  const [deletion, setDeletion] = useState<Deletion | null>(null);
+  const [error, setError] = useState("");
+  const tabs = [
+    { id: "courses" as const, label: "课程", description: "教什么 · 如何收费", count: s.courses.length, icon: <BookOpen size={20} /> },
+    { id: "classes" as const, label: "班级", description: "一起上课 · 集中管理", count: s.classes.length, icon: <Users size={20} /> },
+    { id: "teachers" as const, label: "老师", description: "谁来授课 · 如何结算", count: s.teachers.length, icon: <GraduationCap size={20} /> },
+  ];
+  const switchTab = (next: Tab) => { setTab(next); setError(""); };
+  const remove = () => {
+    if (!deletion) return;
+    const actions = useStore.getState();
+    if (deletion.kind === "class") { actions.removeClass(deletion.item.id); return; }
+    if (deletion.kind === "course" && actions.s.classes.some(c => c.courseId === deletion.item.id)) {
+      setError("还有班级使用这门课，请先修改或删除关联班级。"); return;
+    }
+    const result = deletion.kind === "course" ? actions.removeCourse(deletion.item.id) : actions.removeTeacher(deletion.item.id);
+    setError(result.ok ? "" : result.reason);
   };
-  return (
-    <Sheet open={open} onClose={onClose} title="新课程">
-      <div className="grid-2">
-        <Field label="课程名"><Input autoFocus value={v.name} placeholder="数学" onChange={(e) => setV({ ...v, name: e.target.value })} /></Field>
-        <Field label="单价（每课时）"><Input type="number" min={0} value={v.price} placeholder="280" onChange={(e) => setV({ ...v, price: e.target.value })} /></Field>
-      </div>
-      <div className="grid-2">
-        <Field label="每节扣几课时"><Input type="number" min={0.5} step={0.5} value={v.units} onChange={(e) => setV({ ...v, units: e.target.value })} /></Field>
-        <Field label="1 课时多少分钟（可空）"><Input type="number" min={5} step={5} value={v.minutes} placeholder={String(unitMinutes)} onChange={(e) => setV({ ...v, minutes: e.target.value })} /></Field>
-      </div>
-      <div className="sheet-actions">
-        <Button onClick={onClose}>取消</Button>
-        <Button variant="primary" onClick={submit} disabled={!v.name.trim()}>添加</Button>
-      </div>
-    </Sheet>
-  );
+  return <div className="page teaching-page">
+    <header className="page-head teaching-heading"><div><h1>教学管理</h1><p>把课程、班级和授课老师安排清楚。</p></div></header>
+    <div className="teaching-tabs" role="tablist" aria-label="教学管理分类">
+      {tabs.map((item, index) => <button type="button" key={item.id} id={`teaching-tab-${item.id}`} role="tab" aria-controls={`teaching-panel-${item.id}`} aria-selected={tab === item.id} tabIndex={tab === item.id ? 0 : -1} onClick={() => switchTab(item.id)} onKeyDown={event => {
+        const next = event.key === "ArrowRight" ? (index + 1) % 3 : event.key === "ArrowLeft" ? (index + 2) % 3 : event.key === "Home" ? 0 : event.key === "End" ? 2 : -1;
+        if (next < 0) return;
+        event.preventDefault(); const id = tabs[next]!.id; switchTab(id); document.getElementById(`teaching-tab-${id}`)?.focus();
+      }}><span className="teaching-tab-icon">{item.icon}</span><span className="teaching-tab-copy"><span className="teaching-tab-title">{item.label}<span className="teaching-tab-count">{item.count}</span></span><span className="teaching-tab-desc">{item.description}</span></span></button>)}
+    </div>
+    {error && <div className="banner-error" role="alert">{error}</div>}
+    <div className="teaching-content" role="tabpanel" tabIndex={0} id={`teaching-panel-${tab}`} aria-labelledby={`teaching-tab-${tab}`}>
+      {tab === "courses" && <CourseCatalog courses={s.courses} students={s.students} unitMinutes={s.settings.unitMinutes} onSave={(id, value) => { const actions = useStore.getState(); if (id) actions.updateCourse(id, value); else actions.addCourse(value); return { ok: true }; }} onDelete={item => setDeletion({ kind: "course", item })} onRules={unitMinutes => useStore.getState().updateSettings({ unitMinutes })} />}
+      {tab === "classes" && <ClassManagement classes={s.classes} courses={s.courses} students={s.students} teachers={s.teachers} limit={ent.limit("classes")} memberLimit={ent.limit("classSize")} onCourses={() => switchTab("courses")} onSave={(id, value) => { const actions = useStore.getState(); return id ? actions.updateClass(id, value) : actions.addClass(value); }} onToggle={cls => {
+        const actions = useStore.getState();
+        if (!cls.active) { const check = actions.ent.check("classes", actions.s.classes.filter(c => c.active).length); if (!check.ok) return check; }
+        return actions.updateClass(cls.id, { active: !cls.active });
+      }} onDelete={item => setDeletion({ kind: "class", item })} />}
+      {tab === "teachers" && <TeacherManagement teachers={s.teachers} defaultColor={nextTeacherColor(s)} limit={ent.limit("teachers")} onSave={(id, value) => {
+        const actions = useStore.getState();
+        if (!id) return actions.addTeacher(value);
+        const self = actions.s.teachers.find(t => t.id === id)?.self;
+        if (self) { actions.updateTeacher(id, { color: value.color }); actions.updateSettings({ teacherName: value.name }); }
+        else actions.updateTeacher(id, value);
+        return { ok: true };
+      }} onDelete={item => setDeletion({ kind: "teacher", item })} />}
+    </div>
+    <ConfirmSheet open={!!deletion} onClose={() => setDeletion(null)} onConfirm={remove} title={`删除 ${deletion?.item.name ?? ""}？`} confirmLabel="确认删除">
+      <p className="muted">{deletion?.kind === "class" ? "班级和它的固定课会被移除，已经打卡的记录保留。" : deletion?.kind === "teacher" ? "已上课记录保留，以后的排课和班级会改回由你授课。" : "存在关联学员或班级时不能删除。删除后，该课程的固定课也会移除。"}</p>
+    </ConfirmSheet>
+  </div>;
 }

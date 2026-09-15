@@ -4,6 +4,7 @@
  */
 import type { Appearance, State } from "@/core/types";
 import type { LanAddress, ShareResult } from "@/core/poster-share-types";
+import { pickWallpaper } from "./wallpaper";
 
 export const isApp = typeof window !== "undefined" && !!window.tw;
 
@@ -63,31 +64,7 @@ export const platform = {
       else localStorage.removeItem("tutor-workspace-wallpaper");
     },
     /** 让用户选一张图，等比缩到 2000px 以内，转成 JPEG data URL */
-    pick(): Promise<string | null> {
-      return new Promise((resolve) => {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = "image/*";
-        input.onchange = () => {
-          const f = input.files?.[0];
-          if (!f) return resolve(null);
-          const img = new Image();
-          img.onload = () => {
-            const max = 2000;
-            const k = Math.min(1, max / Math.max(img.width, img.height));
-            const c = document.createElement("canvas");
-            c.width = Math.round(img.width * k);
-            c.height = Math.round(img.height * k);
-            c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-            resolve(c.toDataURL("image/jpeg", 0.86));
-            URL.revokeObjectURL(img.src);
-          };
-          img.onerror = () => resolve(null);
-          img.src = URL.createObjectURL(f);
-        };
-        input.click();
-      });
-    },
+    pick: pickWallpaper,
   },
   data: {
     async info() {

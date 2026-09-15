@@ -14,18 +14,39 @@ export function SettingsPage() {
   const [info, setInfo] = useState<{ path: string; sizeBytes: number; snapshots: number } | null>(null);
   const wallpaper = useStore((x) => x.wallpaper);
   const setWallpaper = useStore((x) => x.setWallpaper);
+  const [wallpaperBusy, setWallpaperBusy] = useState(false);
+  const [wallpaperFeedback, setWallpaperFeedback] = useState<{ error: boolean; text: string } | null>(null);
   const pickWallpaper = async () => {
-    const url = await platform.wallpaper.pick();
-    if (!url) return;
-    if (await platform.wallpaper.set(url)) {
+    setWallpaperBusy(true);
+    setWallpaperFeedback(null);
+    let saving = false;
+    try {
+      const url = await platform.wallpaper.pick();
+      if (!url) return;
+      saving = true;
+      if (!await platform.wallpaper.set(url)) throw new Error("图片未能保存，请换一张较小的图片重试。");
       setWallpaper(url);
       updateSettings({ background: "custom" });
+      setWallpaperFeedback({ error: false, text: "已设为背景，图片已保存在本机。" });
+    } catch (error) {
+      setWallpaperFeedback({ error: true, text: saving ? "图片保存失败，请检查本机存储空间后重试。" : error instanceof Error ? error.message : "图片处理失败，请重新选择。" });
+    } finally {
+      setWallpaperBusy(false);
     }
   };
   const clearWallpaper = async () => {
-    await platform.wallpaper.clear();
-    setWallpaper(null);
-    updateSettings({ background: "aurora" });
+    setWallpaperBusy(true);
+    setWallpaperFeedback(null);
+    try {
+      await platform.wallpaper.clear();
+      setWallpaper(null);
+      updateSettings({ background: "aurora" });
+      setWallpaperFeedback({ error: false, text: "已移除图片，恢复极光背景。" });
+    } catch {
+      setWallpaperFeedback({ error: true, text: "图片移除失败，请重试。" });
+    } finally {
+      setWallpaperBusy(false);
+    }
   };
   const [confirm, setConfirm] = useState<"demo" | "clear" | null>(null);
   const [msg, setMsg] = useState("");
@@ -62,11 +83,12 @@ export function SettingsPage() {
         <Field label="背景">
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <Segmented<Background> value={s.settings.background} options={[{ value: "none", label: "纯色" }, { value: "aurora", label: "极光" }, { value: "mesh", label: "网格" }, ...(wallpaper ? [{ value: "custom" as Background, label: "我的图片" }] : [])]} onChange={(background) => updateSettings({ background })} />
-            <Button icon={<ImagePlus />} onClick={pickWallpaper}>{wallpaper ? "换一张图片…" : "用自己的图片…"}</Button>
-            {wallpaper && <Button variant="ghost" size="sm" icon={<X />} onClick={clearWallpaper}>移除图片</Button>}
+            <Button icon={<ImagePlus />} onClick={pickWallpaper} disabled={wallpaperBusy}>{wallpaperBusy ? "正在选择或处理图片…" : wallpaper ? "换一张图片…" : "用自己的图片…"}</Button>
+            {wallpaper && <Button variant="ghost" size="sm" icon={<X />} onClick={clearWallpaper} disabled={wallpaperBusy}>移除图片</Button>}
           </div>
         </Field>
         {wallpaper && <div className="wallpaper-preview" style={{ backgroundImage: `url(${wallpaper})` }} />}
+        {wallpaperFeedback && <div role={wallpaperFeedback.error ? "alert" : "status"} className={wallpaperFeedback.error ? "banner-error" : "chip green"} style={{ marginBottom: 10 }}>{wallpaperFeedback.text}</div>}
         <div className="muted" style={{ fontSize: 12.5 }}>有背景时卡片会变成半透明的毛玻璃。图片只存在这台电脑上，不进数据备份。</div>
       </div>
 

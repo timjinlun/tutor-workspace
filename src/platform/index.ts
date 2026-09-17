@@ -16,7 +16,7 @@ export const platform = {
     },
     async stop(sessionId?: string): Promise<void> { if (isApp) await window.tw!.posterShare.stop(sessionId); },
   },
-  /** macOS 系统强调色，取不到返回 null */
+  /** macOS / Windows 系统强调色，取不到返回 null */
   async systemAccent(): Promise<string | null> {
     if (!isApp) return null;
     return window.tw!.system.accentColor();

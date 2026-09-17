@@ -1,19 +1,21 @@
 /**
  * 主进程：窗口、菜单、平台能力、数据库。
- * 数据在 ~/Library/Application Support/LessonLog/data/data.db，与浏览器缓存无关。
+ * 数据在系统应用数据目录下的 LessonLog/data/data.db，与浏览器缓存无关。
  * 目录名和显示名是两件事，见 datadir.ts。
  */
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, systemPreferences } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { SqliteStore } from "./db/store";
 import { PosterShare } from "./poster-share";
 import { adoptOrphanWal, dataDir, dbFile, setupUserData, wallpaperFile } from "./datadir";
+import { systemAccent, watchSystemAccent } from "./system-appearance";
 
 const IS_MAC = process.platform === "darwin";
 let win: BrowserWindow | null = null;
 let store: SqliteStore | null = null;
 const posterShare = new PosterShare();
+let stopWatchingAccent = () => {};
 
 
 /* ============================== 窗口 ============================== */
@@ -25,13 +27,18 @@ function createWindow() {
     minWidth: 920,
     minHeight: 600,
     title: "记一课",
+    ...(process.platform === "win32" ? {
+      icon: app.isPackaged ? path.join(process.resourcesPath, "icon.png") : path.join(__dirname, "../../build/icon.png"),
+    } : {}),
     show: false,
-    /* 苹果感的三件事：隐藏标题栏、侧栏毛玻璃、跟随深浅色 */
-    titleBarStyle: IS_MAC ? "hiddenInset" : "default",
-    trafficLightPosition: { x: 18, y: 18 },
-    vibrancy: IS_MAC ? "sidebar" : undefined,
-    visualEffectState: "active",
-    backgroundColor: IS_MAC ? "#00000000" : "#f5f5f7",
+    /* macOS uses native vibrancy; Windows keeps its native title bar and controls. */
+    ...(IS_MAC ? {
+      titleBarStyle: "hiddenInset" as const,
+      trafficLightPosition: { x: 18, y: 18 },
+      vibrancy: "sidebar" as const,
+      visualEffectState: "active" as const,
+    } : { titleBarStyle: "default" as const }),
+    backgroundColor: IS_MAC ? "#00000000" : nativeTheme.shouldUseDarkColors ? "#1e1e20" : "#f5f5f7",
     webPreferences: {
       preload: path.join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
@@ -231,7 +238,7 @@ function wireIpc() {
     }
   });
 
-  ipcMain.handle("system:accentColor", () => accentHex());
+  ipcMain.handle("system:accentColor", () => systemAccent());
   ipcMain.handle("system:setAppearance", (_e, a: string) => {
     nativeTheme.themeSource = a === "light" || a === "dark" ? a : "system";
   });
@@ -240,20 +247,11 @@ function wireIpc() {
   });
 }
 
-/** macOS 系统强调色：RRGGBBAA → #RRGGBB */
-function accentHex(): string | null {
-  if (!IS_MAC) return null;
-  try {
-    return "#" + systemPreferences.getAccentColor().slice(0, 6);
-  } catch {
-    return null;
-  }
-}
-
 /* ============================== 生命周期 ============================== */
 
 /* 必须在任何人读 userData 之前：钉住数据目录，并把旧目录搬过来 */
 const moved = setupUserData();
+if (process.platform === "win32") app.setAppUserModelId("com.tim.tutorworkspace");
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -280,12 +278,7 @@ if (!app.requestSingleInstanceLock()) {
     wireIpc();
     buildMenu();
     createWindow();
-    if (IS_MAC) {
-      systemPreferences.subscribeNotification("AppleColorPreferencesChangedNotification", () => {
-        const hex = accentHex();
-        if (hex) win?.webContents.send("system:accentChanged", hex);
-      });
-    }
+    stopWatchingAccent = watchSystemAccent(hex => win?.webContents.send("system:accentChanged", hex));
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
@@ -294,5 +287,5 @@ if (!app.requestSingleInstanceLock()) {
   app.on("window-all-closed", () => {
     if (!IS_MAC) app.quit();
   });
-  app.on("before-quit", () => { void posterShare.stop(); store?.close(); });
+  app.on("before-quit", () => { stopWatchingAccent(); void posterShare.stop(); store?.close(); });
 }

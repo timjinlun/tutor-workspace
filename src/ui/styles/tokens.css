@@ -1,11 +1,11 @@
 /* =====================================================================
    设计 token。三条原则：系统字体、一个强调色、深浅色都由这里定义。
-   强调色三选一：珊瑚（默认）/ 靛蓝 / 跟随系统（macOS 强调色，由 platform 写入 --accent-system）
+   强调色三选一：珊瑚（默认）/ 靛蓝 / 跟随系统（macOS / Windows 强调色，由 platform 写入 --accent-system）
    ===================================================================== */
 :root {
-  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", system-ui, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", system-ui, sans-serif;
-  --font-num: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "PingFang SC", system-ui, sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-num: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
 
   --bg: #f5f5f7;
   --surface: #ffffff;

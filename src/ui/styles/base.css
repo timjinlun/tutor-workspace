@@ -41,6 +41,7 @@ button { cursor: default; background: none; border: none; }
   background: var(--sidebar); padding: 52px 12px 14px; -webkit-app-region: drag;
 }
 body:not(.app) .sidebar { background: var(--sidebar-solid); padding-top: 20px; }
+html[data-platform="win32"] .sidebar { padding-top: 20px; background: var(--sidebar-solid); -webkit-app-region: no-drag; }
 .sidebar > * { -webkit-app-region: no-drag; }
 .sidebar .nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .nav-item {

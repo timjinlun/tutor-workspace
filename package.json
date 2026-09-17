@@ -1,8 +1,8 @@
 {
   "name": "tutor-workspace",
   "productName": "记一课",
-  "version": "3.5.3",
-  "description": "给独立老师的本地优先桌面工作台：今天 / 学员 / 课表 / 收支。macOS 原生质感，数据存本机 SQLite。",
+  "version": "3.6.0",
+  "description": "给独立老师的本地优先桌面工作台：今天 / 学员 / 课表 / 收支，数据存本机 SQLite。",
   "author": "Tim",
   "license": "MIT",
   "private": true,
@@ -20,7 +20,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "node scripts/check-module-boundaries.mjs && eslint src electron --ext .ts,.tsx",
     "pack": "electron-vite build && electron-builder --dir",
-    "build:mac": "electron-vite build && electron-builder --mac"
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:win": "electron-vite build && electron-builder --win nsis --x64",
+    "test:desktop": "node scripts/run-desktop-smoke.cjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -69,7 +71,38 @@
       "title": "${productName} ${version}"
     },
     "afterSign": "build/after-sign.js",
-    "publish": null
+    "publish": null,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "LessonLog-${version}-win-${arch}.${ext}",
+      "signExecutable": false,
+      "extraResources": [
+        {
+          "from": "build/icon.png",
+          "to": "icon.png"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "记一课",
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ]
+    }
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.20.0",

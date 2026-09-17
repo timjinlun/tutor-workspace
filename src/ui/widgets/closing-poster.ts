@@ -7,7 +7,7 @@ export function drawClosingPoster(canvas: HTMLCanvasElement, d: ClosingDayData, 
   canvas.width = 1080; canvas.height = 1350;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("无法绘制海报，请重新打开收工卡片");
-  const font = (weight: number, size: number) => `${weight} ${size}px -apple-system, "PingFang SC", system-ui, sans-serif`;
+  const font = (weight: number, size: number) => `${weight} ${size}px -apple-system, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif`;
   const text = (value: string, x: number, y: number, size: number, weight = 500, color = colors.ink) => {
     ctx.font = font(weight, size); ctx.fillStyle = color; ctx.fillText(value, x, y);
   };

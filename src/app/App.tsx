@@ -5,7 +5,7 @@ import { useStore, type Page } from "@/store";
 import { lowBalanceStudents } from "@/core/finance";
 import { CoinPile } from "@/ui/widgets/SavingsJar";
 import { Avatar } from "@/ui/primitives";
-import { platform, isApp } from "@/platform";
+import { platform } from "@/platform";
 import { TodayPage } from "@/ui/features/today/TodayPage";
 import { StudentsPage } from "@/ui/features/students/StudentsPage";
 import { SchedulePage } from "@/ui/features/schedule/SchedulePage";
@@ -130,8 +130,4 @@ function useAppearance(appearance: string, accent: string) {
     void platform.systemAccent().then((hex) => hex && root.style.setProperty("--accent-system", hex));
     return platform.onSystemAccentChange((hex) => root.style.setProperty("--accent-system", hex));
   }, [accent]);
-
-  useEffect(() => {
-    if (isApp) document.body.classList.add("app");
-  }, []);
 }

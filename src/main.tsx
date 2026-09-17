@@ -4,6 +4,10 @@ import { useStore } from "@/store";
 import { selectRepository } from "@/data";
 import "@/ui/styles/base.css";
 
+// Apply native chrome spacing before the first frame, including the loading shell.
+if (window.tw) document.body.classList.add("app");
+document.documentElement.dataset.platform = window.tw?.system.platform ?? "browser";
+
 const repo = selectRepository();
 void useStore.getState().hydrate(repo);
 

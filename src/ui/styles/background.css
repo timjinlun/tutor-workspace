@@ -50,7 +50,8 @@ html:not([data-bg="none"]) .month-wrap {
   -webkit-backdrop-filter: blur(28px) saturate(1.5);
   box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 0 0 1px color-mix(in srgb, var(--surface) 60%, transparent) inset, 0 8px 30px rgba(0,0,0,.05);
 }
-html:not([data-bg="none"]) body:not(.app) .sidebar { background: color-mix(in srgb, var(--sidebar-solid) 70%, transparent); backdrop-filter: blur(28px); }
+html:not([data-bg="none"]) body:not(.app) .sidebar,
+html:not([data-bg="none"])[data-platform="win32"] .sidebar { background: color-mix(in srgb, var(--sidebar-solid) 70%, transparent); backdrop-filter: blur(28px); }
 html:not([data-bg="none"]) .month th.nm, html:not([data-bg="none"]) .month td.nm { background: color-mix(in srgb, var(--surface) 92%, transparent); }
 html:not([data-bg="none"]) .month td.wk, html:not([data-bg="none"]) .month th.wk { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
 html:not([data-bg="none"]) .students-list { background: color-mix(in srgb, var(--surface) 78%, transparent); }

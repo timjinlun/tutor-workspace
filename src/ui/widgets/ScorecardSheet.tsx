@@ -57,7 +57,7 @@ export function ScorecardSheet({ open, onClose }: { open: boolean; onClose: () =
 function draw(canvas: HTMLCanvasElement, d: ScorecardData, accent: string, watermark: boolean) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const font = (w: number, size: number, rounded = false) => `${w} ${size}px ${rounded ? 'ui-rounded, "SF Pro Rounded", ' : ""}-apple-system, "PingFang SC", system-ui, sans-serif`;
+  const font = (w: number, size: number, rounded = false) => `${w} ${size}px ${rounded ? 'ui-rounded, "SF Pro Rounded", ' : ""}-apple-system, "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif`;
   /* 背景：强调色渐变 */
   const g = ctx.createLinearGradient(0, 0, W, H);
   g.addColorStop(0, accent);

@@ -1,14 +1,13 @@
-# 推一个 v* tag，用 macOS 机器打包 dmg，产物挂到 Release 上。（3.x 只发 Mac；Windows 以后加回矩阵）
-#   git tag v1.0.0 && git push origin v1.0.0
-#
-# 为什么必须用 CI：Mac 上打不出能正常安装的 Windows 包，Windows 上也打不出 .dmg。
-# 各自用自己平台的机器打，是唯一稳的做法。
+# Tags publish both desktop installers. Manual runs only retain build artifacts.
 name: build
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -18,9 +17,17 @@ jobs:
         include:
           - os: macos-latest
             script: build:mac
+            installer: dist/*.dmg
+          - os: windows-latest
+            script: build:win
+            installer: dist/*-win-x64.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check release tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: node -e "const version=require('./package.json').version; const expected='v'+version; if(process.env.GITHUB_REF_NAME!==expected) throw new Error('Tag '+process.env.GITHUB_REF_NAME+' does not match '+expected)"
 
       - uses: actions/setup-node@v4
         with:
@@ -28,21 +35,29 @@ jobs:
           cache: npm
 
       - run: npm ci
-
       - run: npm test
+      - run: npm run typecheck
+      - run: npm run lint
 
       - run: npm run ${{ matrix.script }}
         env:
-          # 只打包不发布；发布由下面的 release job 做
-          # 还没买证书之前，先关掉签名，让打包能跑通。
-          # 买了 Apple 证书之后：删掉这一行，改成把 .p12 放进 CSC_LINK / CSC_KEY_PASSWORD secrets。
+          # Unsigned test builds; release publishing is handled separately below.
           CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - run: npm run test:desktop
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-installer
-          path: dist/*.dmg
-          if-no-files-found: warn
+          path: ${{ matrix.installer }}
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.os }}-desktop-check
+          path: out/qa/desktop-*/
+          if-no-files-found: ignore
 
   release:
     needs: build
@@ -53,8 +68,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: out
+          pattern: '*-installer'
+          path: installers
       - uses: softprops/action-gh-release@v2
         with:
-          files: out/**/*
+          files: |
+            installers/**/*.dmg
+            installers/**/*.exe
+          fail_on_unmatched_files: true
           generate_release_notes: true

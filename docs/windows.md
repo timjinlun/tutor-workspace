@@ -68,7 +68,7 @@ Windows 签名目前由 `package.json` 中的 `build.win.signExecutable: false` 
 
 ## 首发前验证记录
 
-2026-09-17 本地收尾核对基于 v3.6.0 发布候选代码。GitHub Release 以 Windows CI 的检查结果和产物为准。
+2026-09-17 本地收尾核对基于 v3.6.1 发布代码。GitHub Release 以 Windows CI 的检查结果和产物为准。
 
 | 检查 | 结果与范围 |
 |---|---|

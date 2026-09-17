@@ -35,6 +35,10 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # Electron 43 downloads its runtime on first require. Do this before Vitest
+      # so the Windows download cannot starve parallel test workers.
+      - name: Prepare Electron runtime
+        run: node -e "require('electron')"
       - run: npm test
       - run: npm run typecheck
       - run: npm run lint

@@ -14,9 +14,9 @@
 
 1. 打开 [下载页面](https://github.com/timjinlun/tutor-workspace/releases/latest)，展开 **Assets**。
 2. 根据电脑下载对应安装包：
-   - Apple Silicon（M 系列芯片）Mac：`LessonLog-3.6.0-arm64.dmg`
-   - Intel Mac：`LessonLog-3.6.0-x64.dmg`
-   - Windows 11 Intel / AMD 电脑：`LessonLog-3.6.0-win-x64.exe`
+   - Apple Silicon（M 系列芯片）Mac：`LessonLog-3.6.1-arm64.dmg`
+   - Intel Mac：`LessonLog-3.6.1-x64.dmg`
+   - Windows 11 Intel / AMD 电脑：`LessonLog-3.6.1-win-x64.exe`
 3. Mac 打开 `.dmg` 后把「记一课」拖入「应用程序」；Windows 双击 `.exe` 完成当前用户安装。
 
 目前支持 macOS 和 Windows 11 x64。Windows ARM64、32 位 Windows、iPhone 和 iPad 暂不支持，也没有跨设备自动同步。Windows 的数据位置、迁移方法和验收范围见 [Windows 版说明](docs/windows.md)。
@@ -27,7 +27,7 @@
 xattr -dr com.apple.quarantine /Applications/记一课.app
 ```
 
-下文介绍 **v3.6.0**。截图仅供了解布局，具体界面以安装版本为准。
+下文介绍 **v3.6.1**。截图仅供了解布局，具体界面以安装版本为准。
 
 ## 第一次使用
 

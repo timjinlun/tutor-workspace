@@ -1,4 +1,4 @@
-# 记一课 v3.6.0 · Windows 版与完整学员档案
+# 记一课 v3.6.1 · Windows 版与完整学员档案
 
 这是记一课首次同时提供 macOS 和 Windows 安装包的版本，也完成了学员档案与教学管理的结构升级。
 
@@ -14,9 +14,9 @@
 
 ## 下载
 
-- Apple Silicon Mac：`LessonLog-3.6.0-arm64.dmg`
-- Intel Mac：`LessonLog-3.6.0-x64.dmg`
-- Windows 11 Intel / AMD：`LessonLog-3.6.0-win-x64.exe`
+- Apple Silicon Mac：`LessonLog-3.6.1-arm64.dmg`
+- Intel Mac：`LessonLog-3.6.1-x64.dmg`
+- Windows 11 Intel / AMD：`LessonLog-3.6.1-win-x64.exe`
 
 Windows ARM64、32 位 Windows、iPhone 和 iPad 暂不支持。Mac 与 Windows 没有自动同步，可通过「设置 → 你的数据 → 导出 JSON / 从 JSON 导入」迁移，导入前请先备份。
 

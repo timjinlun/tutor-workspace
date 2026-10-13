@@ -15,7 +15,7 @@ export function StudentLedger({ lessons, payments, purchased, used, remaining, p
     <Button size="sm" variant="ghost" onClick={() => onFeedback(lesson)}>{hasRecord(lesson.id) ? "查看评语" : "补写评语"}</Button>
     <details className="ledger-more"><summary aria-label="课程操作">⋯</summary><Button size="sm" variant="ghost" onClick={() => onUndo(lesson)}>撤销打卡</Button></details>
   </div>;
-  const paymentRow = (payment: Payment) => <div className="ledger-row"><div className="ledger-description"><b>{payment.date}</b><p>{payment.hours} 课时{payment.note && ` · ${payment.note}`}</p></div><strong>{fmtMoney(payment.amount)}</strong><Button variant="ghost" size="sm" onClick={() => onRemovePayment(payment)}>删除</Button></div>;
+  const paymentRow = (payment: Payment) => <div className="ledger-row"><div className="ledger-description"><b>{payment.date}</b><p>{payment.hours ? `${payment.hours} 课时` : "只记金额"}{payment.note && ` · ${payment.note}`}</p></div><strong>{fmtMoney(payment.amount)}</strong><Button variant="ghost" size="sm" onClick={() => onRemovePayment(payment)}>删除</Button></div>;
   return <div className="student-ledger">
     <div className="card ledger-totals"><span>已购 <b>{purchased}</b></span><span>已用 <b>{used}</b></span><span>剩余 <b>{remaining}</b> 课时</span><small>累计缴费 {fmtMoney(paid)} · 确认收入 {fmtMoney(income)}</small></div>
     <section className="card"><div className="section-title">最近上课记录 <span className="right">{lessons.length} 次</span></div>{lessons.slice(0, 3).map((l) => <div key={l.id}>{lessonRow(l)}</div>)}{!lessons.length && <p className="muted">还没有打卡记录。</p>}{!!lessons.length && <Button variant="ghost" onClick={() => setHistory("lessons")}>查看全部上课记录（{lessons.length}）</Button>}</section>

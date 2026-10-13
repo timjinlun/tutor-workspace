@@ -3,6 +3,7 @@ import type { StudentDetails } from "./student-profile/types";
 import type { LearningRecord } from "./learning-records/types";
 import { normalizeLearningRecords } from "./learning-records/selectors";
 import { cleanTags } from "./student-profile/selectors";
+import { fromWebExport, isWebExport } from "./web-import";
 
 export type ID = string;
 export type ISODate = string;
@@ -249,7 +250,8 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 /** 读入旧存档时补齐新字段；每次加字段都在这里补默认值，别处不用管 */
-export function normalizeState(raw: Partial<State> | null | undefined): State {
+export function normalizeState(input: Partial<State> | null | undefined): State {
+  const raw = isWebExport(input) ? fromWebExport(input) : input;
   const base = emptyState();
   const s: State = { ...base, ...(raw ?? {}), version: 3, settings: { ...DEFAULT_SETTINGS, ...(raw?.settings ?? {}) } };
   s.classes = Array.isArray(s.classes) ? s.classes : [];

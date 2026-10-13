@@ -10,6 +10,7 @@ import { SqliteStore } from "./db/store";
 import { PosterShare } from "./poster-share";
 import { adoptOrphanWal, dataDir, dbFile, setupUserData, wallpaperFile } from "./datadir";
 import { systemAccent, watchSystemAccent } from "./system-appearance";
+import { appLogger } from "./logging";
 
 const IS_MAC = process.platform === "darwin";
 let win: BrowserWindow | null = null;
@@ -85,8 +86,9 @@ function buildMenu() {
       submenu: [
         { label: "备份到文件…", accelerator: "CmdOrCtrl+Shift+B", click: () => void doBackup() },
         { label: "导出 JSON…", click: () => void doExportFromDb() },
-        { label: "从 JSON 导入…", click: () => void doImport() },
+        { label: "从 JSON 导入…", click: () => void doImport().then((state) => { if (state) win?.webContents.send("data:imported", state); }) },
         { type: "separator" },
+        { label: "打开日志文件", click: () => void shell.openPath(appLogger.transports.file.getFile().path) },
         { label: "打开数据文件夹", click: () => void shell.openPath(dataDir()) },
         { type: "separator" },
         IS_MAC ? { role: "close", label: "关闭窗口" } : { role: "quit", label: "退出" },
@@ -171,7 +173,6 @@ async function doImport(): Promise<unknown | null> {
     const state = raw?.data ?? raw;
     if (!state || typeof state !== "object") throw new Error("文件格式不对");
     if (store) store.snapshot(store.load() ?? { version: 3, settings: {} }, "before-import");
-    win?.webContents.send("data:imported", state);
     return state;
   } catch (e) {
     dialog.showErrorBox("导入失败", String(e instanceof Error ? e.message : e));
@@ -182,6 +183,13 @@ async function doImport(): Promise<unknown | null> {
 /* ============================== IPC ============================== */
 
 function wireIpc() {
+  ipcMain.on("logging:write", (e, level: unknown, message: unknown) => {
+    if (e.sender !== win?.webContents || !["info", "warn", "error"].includes(String(level)) || typeof message !== "string") return;
+    const text = message.slice(0, 20_000);
+    if (level === "error") appLogger.error(text);
+    else if (level === "warn") appLogger.warn(text);
+    else appLogger.info(text);
+  });
   ipcMain.handle("poster:addresses", (e) => e.sender === win?.webContents ? posterShare.addresses() : []);
   ipcMain.handle("poster:start", (e, dataUrl: unknown, address: unknown) => {
     if (e.sender !== win?.webContents || (address !== undefined && typeof address !== "string")) return { ok: false, error: "分享请求无效" };
@@ -251,6 +259,7 @@ function wireIpc() {
 
 /* 必须在任何人读 userData 之前：钉住数据目录，并把旧目录搬过来 */
 const moved = setupUserData();
+appLogger.info("Application starting", { version: app.getVersion(), platform: process.platform });
 if (process.platform === "win32") app.setAppUserModelId("com.tim.tutorworkspace");
 
 if (!app.requestSingleInstanceLock()) {
@@ -270,6 +279,7 @@ if (!app.requestSingleInstanceLock()) {
       const loaded = store.load();
       if (loaded) store.snapshot(loaded, "launch");
     } catch (e) {
+      appLogger.error("Database startup failed", e);
       dialog.showErrorBox("数据打开失败", `${e instanceof Error ? e.message : e}\n\n${dbFile()}`);
       app.exit(1);
       return;

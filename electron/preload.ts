@@ -2,6 +2,9 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 const bridge = {
+  logging: {
+    write: (level: "info" | "warn" | "error", message: string) => ipcRenderer.send("logging:write", level, message),
+  },
   posterShare: {
     addresses: () => ipcRenderer.invoke("poster:addresses"),
     start: (dataUrl: string, address?: string) => ipcRenderer.invoke("poster:start", dataUrl, address),

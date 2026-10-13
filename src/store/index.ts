@@ -13,6 +13,7 @@ import { emptyState, normalizeState } from "@/core/types";
 import { uid } from "@/core/id";
 import { todayISO } from "@/core/date";
 import { demoState } from "@/core/demo";
+import { previewImport, type ImportPreview } from "@/core/data-import";
 import { cancelLesson, completeLesson, copyFromLastWeek, logLesson, rescheduleLesson, scheduleLesson, undoLesson, type DayItem, type LogLessonInput } from "@/core/lesson";
 import { cancelGroup, completeClass, logClass, scheduleClass, type Attendance, type ClassLessonInput } from "@/core/klass";
 import { createEntitlements, type Entitlements, type Tier } from "@/entitlements";
@@ -98,6 +99,11 @@ export interface Store extends StudentProfileActions, LearningRecordActions {
   updateSettings(patch: Partial<Settings>): void;
   saveCoinPile(coins: CoinPilePose[], settledLessonIds?: ID[]): void;
   replaceState(next: State, reason: AuditEntry["kind"]): void;
+  /** 选完文件后的待确认导入；确认前不动现有数据 */
+  pendingImport: ImportPreview | null;
+  requestImport(raw: unknown): boolean;
+  confirmImport(): void;
+  cancelImport(): void;
   loadDemo(): void;
   clearAll(): void;
   setTier(t: Tier): void;
@@ -115,6 +121,7 @@ function persist(get: () => Store, set: (p: Partial<Store>) => void) {
       await repo!.save(get().s);
       if (get().saveError) set({ saveError: null });
     } catch (e) {
+      platform.logging.error("State persistence failed", e);
       set({ saveError: e instanceof Error ? e.message : String(e) });
     }
   }, 150);
@@ -169,6 +176,7 @@ export const useStore = create<Store>((set, get) => {
     ent: createEntitlements("free"),
     wallpaper: null,
     setWallpaper: (url) => set({ wallpaper: url }),
+    pendingImport: null,
 
     async hydrate(r) {
       repo = r;
@@ -427,6 +435,18 @@ export const useStore = create<Store>((set, get) => {
       persist(get, set);
       audited({ id: uid("a"), at: new Date().toISOString(), kind: reason, summary: reason === "data.import" ? "导入数据" : "重置数据", payload: {} });
     },
+    requestImport(raw) {
+      const preview = previewImport(get().s.settings, raw);
+      set({ pendingImport: preview });
+      return !!preview;
+    },
+    confirmImport() {
+      const preview = get().pendingImport;
+      if (!preview) return;
+      set({ pendingImport: null });
+      get().replaceState(preview.state, "data.import");
+    },
+    cancelImport: () => set({ pendingImport: null }),
     loadDemo() {
       get().replaceState(demoState(), "data.reset");
     },

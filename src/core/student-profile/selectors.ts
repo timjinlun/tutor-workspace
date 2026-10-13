@@ -3,6 +3,10 @@ import type { State, Student } from "../types";
 export function cleanTags(value: unknown): string[] {
   return Array.isArray(value) ? [...new Set(value.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean))] : [];
 }
+/** 在读学员，按学员名单里拖出来的手动顺序。凡是列出全部在读学员的视图都用它，顺序才一致。 */
+export function activeStudentsInOrder(s: State): Student[] {
+  return s.students.filter((st) => !st.archived).sort((a, b) => a.sortOrder - b.sortOrder);
+}
 export interface StudentTag { key: string; label: string; kind: "course" | "format" | "custom" }
 export function studentTags(s: State, st: Student): StudentTag[] {
   const tags: StudentTag[] = s.courses.filter((c) => st.courseIds.includes(c.id)).map((c) => ({ key: `course:${c.id}`, label: c.name, kind: "course" }));

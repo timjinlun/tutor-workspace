@@ -3,6 +3,9 @@ import type { LanAddress, ShareResult } from "@/core/poster-share-types";
 
 /** preload 暴露给页面的桥。页面拿不到 Node，只有这些。 */
 export interface TutorBridge {
+  logging: {
+    write(level: "info" | "warn" | "error", message: string): void;
+  };
   posterShare: {
     addresses(): Promise<LanAddress[]>;
     start(dataUrl: string, address?: string): Promise<ShareResult>;

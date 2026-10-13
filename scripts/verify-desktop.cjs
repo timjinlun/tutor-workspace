@@ -90,6 +90,7 @@ app.whenReady().then(async () => {
       state.courses = [{ id: 'smoke-course', name: '数学', price: 200, unitsPerLesson: 1 }];
       state.students = [{ id: 'smoke-student', name: '测试学员', courseIds: ['smoke-course'], note: '', createdAt: '2026-09-15', archived: false, sortOrder: 0 }];
       win.webContents.send('data:imported', state);
+      await click('覆盖导入');
       await until(() => saved?.students[0]?.id === 'smoke-student', 'Fixture not saved');
       // Reload so form defaults come from the fixture rather than the first-launch demo.
       await new Promise(resolve => { win.webContents.once('did-finish-load', resolve); win.reload(); });
@@ -122,7 +123,12 @@ app.whenReady().then(async () => {
       // Change the exported copy so the subsequent read proves import actually replaced state.
       exported.data.students[0].note = 'JSON 导入验证';
       fs.writeFileSync(files.json, JSON.stringify(exported));
-      await evaluate('window.tw.data.importJSON()');
+      // Go through the real UI: settings button → confirmation sheet → overwrite.
+      await evaluate(`document.querySelector('.sidebar-foot').click()`);
+      await click('从 JSON 导入…');
+      await until(() => evaluate(`!!document.querySelector('[role="dialog"]')?.textContent.includes('不会叠加')`), 'Import confirmation not shown');
+      assert.notEqual(saved.students[0]?.note, 'JSON 导入验证');
+      await click('覆盖导入');
       await until(() => saved.students[0]?.note === 'JSON 导入验证', 'JSON import did not persist');
       await click('更多'); await click('成绩卡');
       await until(() => evaluate(`document.querySelector('[role="dialog"] canvas')?.width === 1080`), 'Scorecard not rendered');

@@ -26,8 +26,8 @@ app.whenReady().then(async()=>{
  let win;
  try {
   for(let i=0;i<100;i++){win=BrowserWindow.getAllWindows()[0];if(win&&!win.webContents.isLoading()&&win.webContents.getURL())break;await pause(50);}
-  if(!win)throw new Error('No window');await pause(300);
-  win.webContents.send('data:imported',state);await pause(350);
+  if(!win)throw new Error('No window');win.webContents.setBackgroundThrottling(false);await pause(300);
+  win.webContents.send('data:imported',state);await pause(350);await (async () => { const js = `[...document.querySelectorAll('[role="dialog"] button')].find(b => b.textContent.trim() === '覆盖导入')`; for (let i = 0; i < 100 && !(await win.webContents.executeJavaScript('!!' + js)); i++) await pause(50); if (!(await win.webContents.executeJavaScript('!!' + js))) throw new Error('Import confirmation not shown'); await win.webContents.executeJavaScript(js + '.click()'); for (let i = 0; i < 100 && await win.webContents.executeJavaScript(`!!document.querySelector('[role="dialog"]')`); i++) await pause(50); })();await pause(300);
   const click=async text=>win.webContents.executeJavaScript(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing button');b.click()})()`);
   await click('收工');await pause(350);
   if(await win.webContents.executeJavaScript(`document.querySelector('[role="switch"]').checked`))throw new Error('Income should default to hidden');

@@ -10,7 +10,7 @@ import { platform, isApp } from "@/platform";
 
 export function SettingsPage() {
   const s = useStore((x) => x.s);
-  const { updateSettings, replaceState, loadDemo, clearAll } = useStore(useShallow((x) => ({ updateSettings: x.updateSettings, replaceState: x.replaceState, loadDemo: x.loadDemo, clearAll: x.clearAll })));
+  const { updateSettings, requestImport, loadDemo, clearAll } = useStore(useShallow((x) => ({ updateSettings: x.updateSettings, requestImport: x.requestImport, loadDemo: x.loadDemo, clearAll: x.clearAll })));
   const [info, setInfo] = useState<{ path: string; sizeBytes: number; snapshots: number } | null>(null);
   const wallpaper = useStore((x) => x.wallpaper);
   const setWallpaper = useStore((x) => x.setWallpaper);
@@ -111,7 +111,7 @@ export function SettingsPage() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {isApp && <Button icon={<Save />} onClick={async () => { const r = await platform.data.backup(); if (r.ok) say("已备份"); }}>备份到文件…</Button>}
           <Button icon={<Download />} onClick={async () => { const r = await platform.data.exportJSON(s); if (r.ok) say("已导出"); }}>导出 JSON…</Button>
-          <Button icon={<Upload />} onClick={async () => { const st = await platform.data.importJSON(); if (st) { replaceState(st, "data.import"); say("已导入"); } }}>从 JSON 导入…</Button>
+          <Button icon={<Upload />} onClick={async () => { const st = await platform.data.importJSON(); if (st && !requestImport(st)) say("文件格式不对"); }}>从 JSON 导入…</Button>
           {isApp && <Button icon={<FolderOpen />} onClick={() => platform.data.revealFolder()}>打开数据文件夹</Button>}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>

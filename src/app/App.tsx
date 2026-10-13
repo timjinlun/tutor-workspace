@@ -4,6 +4,7 @@ import { Sun, Users, CalendarDays, BookOpen, Wallet, LayoutGrid } from "lucide-r
 import { useStore, type Page } from "@/store";
 import { lowBalanceStudents } from "@/core/finance";
 import { CoinPile } from "@/ui/widgets/SavingsJar";
+import { ImportConfirmSheet } from "@/ui/widgets/ImportConfirmSheet";
 import { Avatar } from "@/ui/primitives";
 import { platform } from "@/platform";
 import { TodayPage } from "@/ui/features/today/TodayPage";
@@ -85,6 +86,7 @@ export function App() {
         {saveError && <div className="banner-error" style={{ margin: "16px 40px 0" }}>没能保存：{saveError}。建议先在设置里导出一份 JSON。</div>}
         <Page />
       </main>
+      <ImportConfirmSheet />
     </div>
   );
 }

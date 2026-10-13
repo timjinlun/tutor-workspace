@@ -1,0 +1,12 @@
+{
+  "productionDataTouched": false,
+  "isolatedData": "/var/folders/tz/t6gh9x7x1kd_9mfvypfcrzch0000gn/T/lessonlog-web-import-qa-Q3O3sE",
+  "fixture": "tests/fixtures/web-real-v8.json",
+  "confirmBeforeOverwrite": true,
+  "lessonsImported": 71,
+  "perStudentMatchesWeb": true,
+  "gridFollowsManualOrder": true,
+  "crosshair": true,
+  "moneyOnlyPayment": true,
+  "singleImportAudit": true
+}

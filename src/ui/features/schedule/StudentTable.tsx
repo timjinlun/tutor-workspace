@@ -6,6 +6,7 @@ import { lessonsOn, type DayItem } from "@/core/lesson";
 import { fmtMoney } from "@/core/finance";
 import { WEEKDAY_CN, todayISO, weekdayOf } from "@/core/date";
 import type { Lesson } from "@/core/types";
+import { activeStudentsInOrder } from "@/core/student-profile/selectors";
 import { Avatar } from "@/ui/primitives";
 import { LogLessonSheet } from "@/ui/widgets/LogLessonSheet";
 import { UndoLessonSheet } from "@/ui/widgets/UndoLessonSheet";
@@ -17,7 +18,9 @@ export function StudentTable({ ym }: { ym: string }) {
   const days = new Date(y ?? 2026, m ?? 1, 0).getDate();
   const dates = useMemo(() => Array.from({ length: days }, (_, i) => `${ym}-${String(i + 1).padStart(2, "0")}`), [ym, days]);
   const byDate = useMemo(() => new Map(dates.map((d) => [d, lessonsOn(s, d)])), [s, dates]);
-  const students = s.students.filter((x) => !x.archived);
+  const students = activeStudentsInOrder(s);
+  /* 鼠标所在的那一天，整列高亮；行高亮交给 CSS :hover */
+  const [col, setCol] = useState<string | null>(null);
   const [log, setLog] = useState<{ studentId: string; date: string } | null>(null);
   const [undo, setUndo] = useState<Lesson | null>(null);
 
@@ -33,14 +36,14 @@ export function StudentTable({ ym }: { ym: string }) {
     <>
       <div className="month-legend"><i className="done" /> 已上 <i className="sched" /> 待上 <i className="canc" /> 取消</div>
       <div className="card month-wrap">
-        <table className="month">
+        <table className="month" onMouseLeave={() => setCol(null)}>
           <thead>
             <tr>
               <th className="nm">学员</th>
               {dates.map((d) => {
                 const wd = weekdayOf(d);
                 return (
-                  <th key={d} className={`${wd === 0 || wd === 6 ? "wk" : ""} ${d === today ? "today" : ""}`}>
+                  <th key={d} className={`${wd === 0 || wd === 6 ? "wk" : ""} ${d === today ? "today" : ""} ${d === col ? "col-on" : ""}`}>
                     <span className="num">{Number(d.slice(8))}</span>
                     <small>{WEEKDAY_CN[wd]}</small>
                   </th>
@@ -50,7 +53,7 @@ export function StudentTable({ ym }: { ym: string }) {
               <th className="sum">费用</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody onMouseOver={(e) => setCol((e.target as HTMLElement).closest("td")?.dataset.date ?? null)}>
             {students.map((st) => {
               const done = dates.flatMap((d) => cellOf(st.id, d)).filter((l) => l.status === "done");
               const units = done.reduce((a, l) => a + l.units, 0);
@@ -63,7 +66,7 @@ export function StudentTable({ ym }: { ym: string }) {
                     const wd = weekdayOf(d);
                     const status = items.some((i) => i.status === "done") ? "done" : items.some((i) => i.status === "scheduled") ? "sched" : items.some((i) => i.status === "cancelled") ? "canc" : "";
                     return (
-                      <td key={d} className={`${wd === 0 || wd === 6 ? "wk" : ""} ${d === today ? "today" : ""}`}>
+                      <td key={d} data-date={d} className={`${wd === 0 || wd === 6 ? "wk" : ""} ${d === today ? "today" : ""} ${d === col ? "col-on" : ""}`}>
                         <button className={`cell ${status}`} onClick={() => onCell(st.id, d)} title={status === "done" ? "已上 · 点击撤销" : d <= today ? "点击补记" : ""}>
                           {status === "done" && <Check strokeWidth={3.5} />}
                           {items.length > 1 && <i className="n">{items.length}</i>}

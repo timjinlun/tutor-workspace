@@ -25,13 +25,14 @@ app.whenReady().then(async () => {
   const errors = [];
   try {
     for(let i=0;i<120;i++){ win=BrowserWindow.getAllWindows()[0]; if(win && !win.webContents.isLoading() && win.webContents.getURL())break; await pause(50); }
-    assert(win); win.webContents.on('console-message', (_event, level, message) => { if(level === 3) errors.push(message); });
-    await pause(300); win.webContents.send('data:imported', state); await pause(400);
+    assert(win); win.webContents.setBackgroundThrottling(false); win.webContents.on('console-message', (_event, level, message) => { if(level === 3) errors.push(message); });
+    await pause(300); win.webContents.send('data:imported', state); await pause(400); await (async () => { const js = `[...document.querySelectorAll('[role="dialog"] button')].find(b => b.textContent.trim() === '覆盖导入')`; for (let i = 0; i < 100 && !(await win.webContents.executeJavaScript('!!' + js)); i++) await pause(50); if (!(await win.webContents.executeJavaScript('!!' + js))) throw new Error('Import confirmation not shown'); await win.webContents.executeJavaScript(js + '.click()'); for (let i = 0; i < 100 && await win.webContents.executeJavaScript(`!!document.querySelector('[role="dialog"]')`); i++) await pause(50); })(); await pause(300);
     const evaluate = code => win.webContents.executeJavaScript(code);
     const scope = `([...document.querySelectorAll('[role="dialog"]')].at(-1) || document)`;
     const click = async (text) => { await evaluate(`(()=>{const root=${scope};const el=[...root.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)});if(!el)throw Error('Missing button '+${JSON.stringify(text)});el.click()})()`); await pause(100); };
     const fill = async (selector,value) => { await evaluate(`(()=>{const el=${scope}.querySelector(${JSON.stringify(selector)});if(!el)throw Error('Missing input');const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));})()`); await pause(80); };
-    const screenshot = async name => { await pause(200); fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage()).toPNG()); };
+    /* 窗口被挡住时，重载后第一帧可能还没合成出来（UnknownVizError），稍等重试 */
+    const screenshot = async name => { for (let i = 0; ; i++) { await pause(200); try { fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage()).toPNG()); return; } catch (e) { if (i >= 2) throw e; } } };
     await evaluate(`document.querySelectorAll('.nav-item')[1].click()`); await pause(200);
     assert.equal(await evaluate(`document.querySelectorAll('[role="tabpanel"] .learning-row').length`),3);
     await click('编辑资料'); await fill('[aria-label="姓名"]','张明（测试）'); await fill('[aria-label="年级"]','初二'); await fill('[aria-label="自定义标签"]','中考，重点跟进'); await fill('[aria-label="学习目标"]','能独立分析多条件应用题'); await click('保存资料'); await pause(300);

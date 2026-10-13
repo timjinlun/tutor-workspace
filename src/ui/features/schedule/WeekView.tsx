@@ -20,7 +20,8 @@ export function WeekView({ days, onPick, onEmpty }: { days: ISODate[]; onPick: (
   const columns = useMemo(() => {
     const cols = days.map((date) => {
       const items = groupItems(lessonsOn(s, date)).map((group) => {
-        const start = timeToMin(group.time);
+        /* 网页版导入的课没记时间，放在默认网格顶部，别把网格拉到半夜 */
+        const start = timeToMin(group.time || "08:00");
         return { id: group.key, group, start, end: start + lessonMinutes(s, group.items[0]!) };
       });
       return { date, blocks: placeBlocks(items) };

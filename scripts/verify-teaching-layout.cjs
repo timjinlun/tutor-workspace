@@ -22,7 +22,7 @@ app.whenReady().then(async () => {
   let win;
   try {
     for (let i = 0; i < 120; i++) { win = BrowserWindow.getAllWindows()[0]; if (win && !win.webContents.isLoading() && win.webContents.getURL()) break; await pause(50); }
-    assert(win); await pause(250); win.webContents.send('data:imported', state); await pause(400);
+    assert(win); win.webContents.setBackgroundThrottling(false); await pause(250); win.webContents.send('data:imported', state); await pause(400); await (async () => { const js = `[...document.querySelectorAll('[role="dialog"] button')].find(b => b.textContent.trim() === '覆盖导入')`; for (let i = 0; i < 100 && !(await win.webContents.executeJavaScript('!!' + js)); i++) await pause(50); if (!(await win.webContents.executeJavaScript('!!' + js))) throw new Error('Import confirmation not shown'); await win.webContents.executeJavaScript(js + '.click()'); for (let i = 0; i < 100 && await win.webContents.executeJavaScript(`!!document.querySelector('[role="dialog"]')`); i++) await pause(50); })(); await pause(300);
     const evaluate = code => win.webContents.executeJavaScript(code);
     const click = async text => { await evaluate(`(() => { const root = [...document.querySelectorAll('[role="dialog"]')].at(-1) || document; const el = [...root.querySelectorAll('button')].find(b => b.textContent.trim() === ${JSON.stringify(text)} || b.getAttribute('aria-label') === ${JSON.stringify(text)}); if (!el) throw Error('Missing button: ' + ${JSON.stringify(text)}); el.click(); })()`); await pause(180); };
     const tab = async id => { await evaluate(`document.getElementById('teaching-tab-${id}').click()`); await pause(100); };

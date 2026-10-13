@@ -5,10 +5,12 @@
 import type { Appearance, State } from "@/core/types";
 import type { LanAddress, ShareResult } from "@/core/poster-share-types";
 import { pickWallpaper } from "./wallpaper";
+import { logging } from "./logging";
 
 export const isApp = typeof window !== "undefined" && !!window.tw;
 
 export const platform = {
+  logging,
   posterShare: {
     async addresses(): Promise<LanAddress[]> { return isApp ? window.tw!.posterShare.addresses() : []; },
     async start(dataUrl: string, address?: string): Promise<ShareResult> {

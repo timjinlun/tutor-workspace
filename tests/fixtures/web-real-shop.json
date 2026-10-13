@@ -1,0 +1,129 @@
+{
+  "payload": {
+    "version": 4,
+    "exportedAt": "2026-09-27T16:41:51.572Z",
+    "data": {
+      "courses": [
+        {
+          "id": "c1",
+          "name": "数学1对1辅导",
+          "price": 300
+        },
+        {
+          "id": "c2",
+          "name": "英语口语辅导",
+          "price": 250
+        },
+        {
+          "id": "c3",
+          "name": "编程入门辅导",
+          "price": 350
+        }
+      ],
+      "students": [
+        {
+          "id": "s1",
+          "name": "示例学员A",
+          "courseId": "c1",
+          "note": "新学员",
+          "courseIds": [
+            "c1"
+          ]
+        },
+        {
+          "id": "s2",
+          "name": "示例学员B",
+          "courseId": "c2",
+          "note": "",
+          "courseIds": [
+            "c2"
+          ]
+        },
+        {
+          "id": "s3",
+          "name": "示例学员C",
+          "courseId": "c3",
+          "note": "",
+          "courseIds": [
+            "c3"
+          ]
+        }
+      ],
+      "payments": [
+        {
+          "id": "p1",
+          "date": "2025-09-01",
+          "studentId": "s1",
+          "amount": 6000,
+          "hours": 20,
+          "note": "首次缴费"
+        },
+        {
+          "id": "p2",
+          "date": "2025-09-05",
+          "studentId": "s2",
+          "amount": 5000,
+          "hours": 20,
+          "note": ""
+        },
+        {
+          "id": "p3",
+          "date": "2025-09-10",
+          "studentId": "s3",
+          "amount": 7000,
+          "hours": 20,
+          "note": ""
+        }
+      ],
+      "attendance": {
+        "s1": {
+          "2025-09-02": 1,
+          "2025-09-04": 1,
+          "2025-09-09": 1,
+          "2025-09-11": 1,
+          "2025-09-16": 1
+        },
+        "s2": {
+          "2025-09-06": 1,
+          "2025-09-08": 1,
+          "2025-09-13": 1
+        },
+        "s3": {
+          "2025-09-11": 1,
+          "2025-09-13": 1,
+          "2025-09-18": 1,
+          "2025-09-20": 1
+        }
+      },
+      "teachers": [
+        {
+          "id": "t1",
+          "name": "我",
+          "color": "#3b82f6",
+          "note": ""
+        }
+      ],
+      "schedules": []
+    }
+  },
+  "expected": {
+    "s1": {
+      "name": "示例学员A",
+      "bought": 20,
+      "used": 5,
+      "income": 1500
+    },
+    "s2": {
+      "name": "示例学员B",
+      "bought": 20,
+      "used": 3,
+      "income": 750
+    },
+    "s3": {
+      "name": "示例学员C",
+      "bought": 20,
+      "used": 4,
+      "income": 1400
+    }
+  }
+}

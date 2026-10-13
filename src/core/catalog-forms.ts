@@ -1,6 +1,6 @@
 import type { Course, Teacher } from "./types";
 
-type Parsed<T> = { ok: true; value: T } | { ok: false; reason: string };
+export type Parsed<T> = { ok: true; value: T } | { ok: false; reason: string };
 export interface CourseDraft { name: string; price: string; units: string; minutes: string }
 export interface TeacherDraft { name: string; color: string; pay: string }
 

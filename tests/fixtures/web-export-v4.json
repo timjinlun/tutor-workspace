@@ -1,0 +1,39 @@
+{
+  "version": 4,
+  "exportedAt": "2026-09-26T10:00:00.000Z",
+  "data": {
+    "courses": [
+      { "id": "c1", "name": "英语1对1", "price": 100 },
+      { "id": "c2", "name": "晚托", "price": 200, "unitsPerSession": 2 }
+    ],
+    "students": [
+      { "id": "s1", "name": "凌荟芝", "courseId": "c1", "courseIds": ["c1"], "note": "" },
+      { "id": "s2", "name": "章光晚托", "courseId": "c2", "courseIds": ["c2"], "note": "包月 2000/月" },
+      { "id": "s3", "name": "李亭欣", "courseId": "c1", "note": "" }
+    ],
+    "payments": [
+      { "id": "p1", "date": "2026-09-01", "studentId": "s1", "amount": 2000, "hours": 20, "note": "" },
+      { "id": "p2", "date": "2026-09-01", "studentId": "s2", "amount": 2000, "hours": 0, "note": "9月包月" }
+    ],
+    "attendance": {
+      "s1": {
+        "2026-09-01": 1,
+        "2026-09-02": 1,
+        "2026-09-03": [
+          { "time": "10:00", "courseId": "c1", "scheduleId": "sc1" },
+          { "time": 1, "courseId": "c1", "scheduleId": "" }
+        ]
+      },
+      "s2": {
+        "2026-09-01": { "time": 1, "courseId": "c2", "price": 180, "units": 2, "scheduleId": "" }
+      },
+      "s3": {}
+    },
+    "teachers": [{ "id": "t1", "name": "我", "color": "#3b82f6", "note": "" }],
+    "schedules": [
+      { "id": "sc1", "teacherId": "t1", "studentId": "s1", "courseId": "c1", "date": "2026-09-03", "time": "10:00", "status": "done", "note": "" },
+      { "id": "sc2", "teacherId": "t1", "studentId": "s1", "courseId": "c1", "date": "2026-10-08", "time": "16:00", "status": "pending", "note": "" },
+      { "id": "sc3", "teacherId": "t1", "studentId": "s1", "courseId": "c1", "date": "2026-10-09", "time": "16:00", "status": "cancelled", "note": "" }
+    ]
+  }
+}

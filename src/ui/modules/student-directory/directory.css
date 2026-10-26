@@ -17,6 +17,7 @@
 .directory-name { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 3px; }
 .directory-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .directory-name small { font-size: 11px; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.directory-name .directory-note { display: block; width: fit-content; max-width: 100%; margin-top: 1px; padding: 2px 5px; border-left: 2px solid var(--accent); border-radius: 2px; background: var(--accent-soft); color: var(--label); font-size: 10.5px; line-height: 1.3; }
 .directory-balance { text-align: right; font-size: 13px; font-weight: 600; }
 .directory-balance small { display: block; font-size: 10px; color: var(--label-2); font-weight: 400; }
 .directory-balance.low { color: var(--orange); }

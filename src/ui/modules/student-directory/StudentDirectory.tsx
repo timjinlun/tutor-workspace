@@ -33,8 +33,9 @@ export function StudentDirectory({ active, archived, selectedId, tags, selectedT
 }
 function DirectoryRow({ row, selected, draggable, onSelect }: { row: DirectoryStudent; selected: boolean; draggable: boolean; onSelect(): void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.student.id, disabled: !draggable });
+  const note = row.student.note?.trim() ?? "";
   return <div ref={setNodeRef} className={`directory-row ${selected ? "selected" : ""}`} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }}>
     {draggable && <button className="directory-grip" {...attributes} {...listeners} aria-label={`拖动排序 ${row.student.name}`}><GripVertical size={13} /></button>}
-    <button className="directory-person" aria-pressed={selected} onClick={onSelect}><Avatar name={row.student.name} size="sm" /><span className="directory-name"><b>{row.student.name}</b><small>{row.courses || "未选课程"}</small></span><span className={`directory-balance ${row.level}`}>{row.remaining}<small>课时</small></span></button>
+    <button className="directory-person" aria-pressed={selected} onClick={onSelect}><Avatar name={row.student.name} size="sm" /><span className="directory-name"><b>{row.student.name}</b><small>{row.courses || "未选课程"}</small>{note && <small className="directory-note" title={note} aria-label={`备注：${note}`}>{note}</small>}</span><span className={`directory-balance ${row.level}`}>{row.remaining}<small>课时</small></span></button>
   </div>;
 }

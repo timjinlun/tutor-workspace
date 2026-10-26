@@ -43,7 +43,7 @@ export function StudentTable({ ym }: { ym: string }) {
               {dates.map((d) => {
                 const wd = weekdayOf(d);
                 return (
-                  <th key={d} className={`${wd === 0 || wd === 6 ? "wk" : ""} ${d === today ? "today" : ""} ${d === col ? "col-on" : ""}`}>
+                  <th key={d} className={`${wd === 0 || wd === 6 ? "wk" : ""} ${wd === 1 ? "week-start" : ""} ${d === today ? "today" : ""} ${d === col ? "col-on" : ""}`}>
                     <span className="num">{Number(d.slice(8))}</span>
                     <small>{WEEKDAY_CN[wd]}</small>
                   </th>
@@ -66,8 +66,8 @@ export function StudentTable({ ym }: { ym: string }) {
                     const wd = weekdayOf(d);
                     const status = items.some((i) => i.status === "done") ? "done" : items.some((i) => i.status === "scheduled") ? "sched" : items.some((i) => i.status === "cancelled") ? "canc" : "";
                     return (
-                      <td key={d} data-date={d} className={`${wd === 0 || wd === 6 ? "wk" : ""} ${d === today ? "today" : ""} ${d === col ? "col-on" : ""}`}>
-                        <button className={`cell ${status}`} onClick={() => onCell(st.id, d)} title={status === "done" ? "已上 · 点击撤销" : d <= today ? "点击补记" : ""}>
+                      <td key={d} data-date={d} className={`${wd === 0 || wd === 6 ? "wk" : ""} ${wd === 1 ? "week-start" : ""} ${d === today ? "today" : ""} ${d === col ? "col-on" : ""}`}>
+                        <button className={`cell ${status} ${d <= today ? "can-log" : ""}`} onClick={() => onCell(st.id, d)} title={status === "done" ? "已上 · 点击撤销" : status === "sched" ? "待上" : status === "canc" ? "已取消" : d <= today ? "点击补记" : "尚未到课"} aria-label={`${st.name}，${Number(d.slice(8))}日，${status === "done" ? "已上，点击撤销" : status === "sched" ? "待上" : status === "canc" ? "已取消" : d <= today ? "未划课，点击补记" : "尚未到课"}`}>
                           {status === "done" && <Check strokeWidth={3.5} />}
                           {items.length > 1 && <i className="n">{items.length}</i>}
                         </button>

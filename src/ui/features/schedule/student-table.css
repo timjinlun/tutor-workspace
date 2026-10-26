@@ -17,6 +17,7 @@ table.month { border-collapse: separate; border-spacing: 0; font-size: 12px; min
 .month th.nm, .month td.nm { position: sticky; left: 0; background: var(--surface); z-index: 2; text-align: left; min-width: 96px; padding-left: 6px; }
 .month td.nm { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; height: 40px; }
 .month td { text-align: center; height: 40px; border-top: 1px solid var(--line); }
+.month th.week-start, .month td.week-start { border-left: 1px solid color-mix(in srgb, var(--line) 75%, var(--label-3)); }
 .month td.wk, .month th.wk { background: var(--surface-2); }
 .month td.today { background: var(--accent-soft); }
 .month th.sum, .month td.sum { min-width: 52px; font-weight: 600; position: sticky; right: 0; background: var(--surface); z-index: 2; }
@@ -25,16 +26,19 @@ table.month { border-collapse: separate; border-spacing: 0; font-size: 12px; min
 .month td.fee { color: var(--label-2); font-weight: 500; }
 .cell { width: 22px; height: 22px; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; position: relative; color: transparent; transition: transform .1s, background .1s; }
 .cell:hover { transform: scale(1.15); background: var(--fill); }
-.cell::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--fill-2); }
+.cell::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--fill-2); opacity: 0; transition: opacity .1s; }
+.cell.can-log:not(.done):not(.sched):not(.canc):is(:hover, :focus-visible)::before { content: "+"; width: auto; height: auto; border-radius: 0; background: none; color: var(--accent); font-size: 15px; font-weight: 500; line-height: 1; opacity: 1; }
+.cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 1; }
 .cell.done { background: var(--accent); color: #fff; }
 .cell.done::before { display: none; }
 .cell.done svg { width: 12px; height: 12px; }
 .cell.sched { border: 2px solid var(--accent); }
 .cell.sched::before { display: none; }
-.cell.canc::before { width: 10px; height: 2px; border-radius: 1px; background: var(--fill-2); }
+.cell.canc::before { width: 10px; height: 2px; border-radius: 1px; background: var(--fill-2); opacity: 1; }
 .cell .n { position: absolute; top: -5px; right: -6px; background: var(--label); color: var(--bg); font-size: 9px; font-weight: 700; min-width: 14px; height: 14px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-style: normal; }
 /* 十字高亮：鼠标所在的行和列叠一层强调色，划课时不串行、不串列。
    用 inset 阴影而不是 background：叠在周末、今天、毛玻璃各自的底色上面，不跟主题里的 background 规则抢优先级 */
 .month tbody tr:hover td, .month .col-on { box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--accent) 8%, transparent); }
 .month tbody tr:hover td.col-on { box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--accent) 18%, transparent); }
 .month th.col-on .num { color: var(--accent); font-weight: 700; }
+@media (hover: none) { .cell.can-log:not(.done):not(.sched):not(.canc)::before { opacity: .32; } }

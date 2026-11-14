@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SqliteStore } from "../electron/db/store";
@@ -86,12 +86,49 @@ describe("v2 数据库自动升级到 v3", () => {
     expect((st.leads as { status: string }[])[0]!.status).toBe("contacted");
     expect(st.settings.teacherName).toBe("王老师");
     expect(st.settings.remindAhead).toBe(2);
+    const backup = `${file}.before-v3.db`;
+    expect(existsSync(backup)).toBe(true);
+    const old = new DatabaseSync(backup);
+    expect((old.prepare("SELECT v FROM meta WHERE k='schema_version'").get() as { v: string }).v).toBe("1");
+    expect(old.prepare("SELECT * FROM attendance").all()).toHaveLength(2);
+    old.close();
     /* 二次打开不再迁移 */
     store.close();
     const again = new SqliteStore(file);
     expect(again.migratedFromV2).toBeNull();
     expect(again.load()!.students).toHaveLength(1);
     again.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("只记了收支的 v2 库也保留，不会当成空库", () => {
+    const dir = mkdtempSync(join(tmpdir(), "tw-mig-"));
+    const file = join(dir, "工作台.db");
+    makeV2(file, false);
+    const old = new DatabaseSync(file);
+    old.exec("INSERT INTO expenses VALUES('e1','2026-02-01','场地',500,'',0)");
+    old.close();
+    const store = new SqliteStore(file);
+    expect(store.hasState()).toBe(true);
+    expect(store.load()!.expenses).toHaveLength(1);
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("转换写入失败时旧 schema 整体回滚，且备份已留好", () => {
+    const dir = mkdtempSync(join(tmpdir(), "tw-mig-"));
+    const file = join(dir, "工作台.db");
+    makeV2(file, true);
+    const old = new DatabaseSync(file);
+    old.exec("DROP TABLE snapshots; CREATE TABLE snapshots(id INTEGER PRIMARY KEY, x TEXT NOT NULL)");
+    old.close();
+    expect(() => new SqliteStore(file)).toThrow();
+    expect(existsSync(`${file}.before-v3.db`)).toBe(true);
+    const unchanged = new DatabaseSync(file);
+    expect((unchanged.prepare("SELECT v FROM meta WHERE k='schema_version'").get() as { v: string }).v).toBe("1");
+    expect(unchanged.prepare("SELECT * FROM students").all()).toHaveLength(1);
+    expect(unchanged.prepare("SELECT name FROM sqlite_master WHERE name='v2_students'").get()).toBeUndefined();
+    unchanged.close();
     rmSync(dir, { recursive: true, force: true });
   });
 

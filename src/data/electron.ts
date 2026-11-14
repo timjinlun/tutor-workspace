@@ -10,6 +10,7 @@ export function electronRepository(): Repository {
       const r = await tw.data.save(s);
       if (!r.ok) throw new Error(r.error ?? "保存失败");
     },
+    saveSync: (s) => tw.data.saveSync(s),
     audit: (e) => tw.data.audit(e),
     recentAudit: (n) => tw.data.recentAudit(n),
   };

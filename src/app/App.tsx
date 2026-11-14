@@ -64,6 +64,7 @@ export function App() {
         {bg === "aurora" && <><i className="blob b1" /><i className="blob b2" /><i className="blob b3" /></>}
       </div>
       <aside className="sidebar">
+        <Brand />
         <nav className="nav">
           {NAV.map((n) => (
             <button key={n.page} className={`nav-item ${route.page === n.page || (n.page === "more" && ["leads", "materials", "referral"].includes(route.page)) ? "on" : ""}`} onClick={() => go({ page: n.page })}>
@@ -91,12 +92,17 @@ export function App() {
   );
 }
 
+function Brand() {
+  return <div className="brand"><span className="brand-seal" aria-hidden="true">记</span><span className="brand-name">记一课</span></div>;
+}
+
 /** 数据就绪前的骨架：背景和侧栏跟正式界面一致，所以看不出"加载中" */
 function Shell() {
   return (
     <div className="layout">
       <div className="bg-layer" aria-hidden="true"><i className="blob b1" /><i className="blob b2" /><i className="blob b3" /></div>
       <aside className="sidebar">
+        <Brand />
         <nav className="nav">
           {NAV.map((n) => (
             <span key={n.page} className="nav-item" aria-hidden="true">{n.icon}{n.label}</span>

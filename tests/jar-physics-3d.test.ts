@@ -29,7 +29,8 @@ describe("Rapier 开放金币堆物理适配层", () => {
       radius: 0.11,
       halfHeight: 0.025,
     });
-    expect(pose!.position.y).toBeCloseTo(0.9);
+    /* 从画面上沿外面掉进来：场景高度 + 0.55 + 0.5 × 随机数 */
+    expect(pose!.position.y).toBeCloseTo(5.4);
 
     physics.dispose();
   });
@@ -142,14 +143,15 @@ describe("Rapier 开放金币堆物理适配层", () => {
         physics.step();
       }
       for (let pass = 0; pass < 6; pass++) {
-        for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
+        for (let i = 0; i < 600 && !physics.isCalm(); i++) physics.step();
         if (physics.tipUprightCoins() === 0) break;
       }
-      for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
+      for (let i = 0; i < 600 && !physics.isCalm(); i++) physics.step();
 
       const added = physics.poses();
       expect(added).toHaveLength(28);
-      expect(Math.max(...added.map((coin) => coin.position.y))).toBeGreaterThan(oldPileMaxY);
+      /* 金币现在会弹、会滑，最高的那枚不一定正好停在旧堆顶上，但一定有金币留在堆上而不是全滚到地面 */
+      expect(Math.max(...added.map((coin) => coin.position.y))).toBeGreaterThan(oldPileMaxY * 0.8);
       for (const coin of added) {
         expect(coin.position.y).toBeGreaterThanOrEqual(0);
         expect(Math.hypot(coin.position.x, coin.position.z)).toBeLessThan(2);
@@ -230,7 +232,83 @@ describe("Rapier 开放金币堆物理适配层", () => {
     expect(physics.hasActiveBodies()).toBe(false);
 
     physics.addCoin({ radius: 0.11, halfHeight: 0.025, random: () => 0.5 });
-    expect(physics.poses()[1]!.position.y).toBeCloseTo(0.9, 4);
+    expect(physics.poses()[1]!.position.y).toBeCloseTo(3.1, 4);
+    physics.dispose();
+  });
+
+  it("金币落地后会停稳", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    let seed = 7;
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 30; i++) { physics.addCoin({ radius: 0.082, halfHeight: 0.018, random }); physics.step(); }
+    expect(physics.isCalm()).toBe(false);
+    let frames = 0;
+    while (!physics.isCalm() && frames++ < 600) physics.step();
+    expect(frames).toBeLessThan(600);
+    for (const pose of physics.poses()) expect(pose.position.y).toBeGreaterThan(0);
+    physics.dispose();
+  });
+
+  it("捏住金币拖动：金币跟着走，松手后带着速度飞出去", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    const id = physics.addCoin({ radius: 0.082, halfHeight: 0.018, random: () => 0.5, position: { x: 0, y: 0.018, z: 0 }, atRest: true });
+    physics.grab(id);
+    expect(physics.grabbedId()).toBe(id);
+    physics.dragTo({ x: 0.6, y: 1.2, z: 0 });
+    for (let i = 0; i < 40; i++) physics.step();
+    const lifted = physics.poses()[0]!.position;
+    expect(lifted.x).toBeCloseTo(0.6, 1);
+    expect(lifted.y).toBeCloseTo(1.2, 1);
+    expect(physics.isCalm()).toBe(false);
+
+    physics.dragTo({ x: -0.6, y: 1.2, z: 0 });
+    for (let i = 0; i < 3; i++) physics.step();
+    physics.release();
+    expect(physics.grabbedId()).toBeUndefined();
+    const released = physics.poses()[0]!.position.x;
+    for (let i = 0; i < 6; i++) physics.step();
+    expect(physics.poses()[0]!.position.x).toBeLessThan(released - 0.1);
+    physics.dispose();
+  });
+
+  it("被拖着的金币会撞开别的金币", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    const hand = physics.addCoin({ radius: 0.082, halfHeight: 0.018, random: () => 0.5, position: { x: -0.5, y: 0.018, z: 0 }, atRest: true });
+    physics.addCoin({ radius: 0.082, halfHeight: 0.018, random: () => 0.5, position: { x: 0, y: 0.018, z: 0 }, atRest: true });
+    physics.grab(hand);
+    physics.dragTo({ x: 0.5, y: 0.018, z: 0 });
+    for (let i = 0; i < 60; i++) physics.step();
+    const other = physics.poses()[1]!.position;
+    /* 薄硬币多半是擦着滑过去，不会像台球一样被推很远，但一定被碰动了 */
+    expect(Math.hypot(other.x, other.z)).toBeGreaterThan(0.005);
+    physics.dispose();
+  });
+
+  it("点一下金币：弹起来翻面", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    const id = physics.addCoin({ radius: 0.082, halfHeight: 0.018, random: () => 0.5, position: { x: 0, y: 0.018, z: 0 }, atRest: true });
+    for (let i = 0; i < 30; i++) physics.step();
+    physics.flip(id, () => 0.5);
+    let top = 0;
+    let tumbled = 1;
+    for (let i = 0; i < 30; i++) {
+      physics.step();
+      const pose = physics.poses()[0]!;
+      top = Math.max(top, pose.position.y);
+      tumbled = Math.min(tumbled, coinAxisVertical(pose.rotation));
+    }
+    expect(top).toBeGreaterThan(0.4);
+    expect(tumbled).toBeLessThan(0.5);
+    physics.dispose();
+  });
+
+  it("用力扔出去的金币被画面外的挡板拦住，不会丢", async () => {
+    const physics = await createJarPhysics3D({ height: 4.6, radius: 0.95 });
+    physics.addCoin({ radius: 0.082, halfHeight: 0.018, random: () => 0.5, position: { x: 0, y: 0.5, z: 0 }, linearVelocity: { x: 9, y: 3, z: 0 } });
+    for (let i = 0; i < 400; i++) physics.step();
+    const pose = physics.poses()[0]!.position;
+    expect(Math.hypot(pose.x, pose.z)).toBeLessThan(0.95 * 1.45);
+    expect(pose.y).toBeGreaterThan(0);
     physics.dispose();
   });
 });

@@ -20,3 +20,4 @@
 .coin-pile-caption { position: relative; z-index: 2; text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--label-2); white-space: nowrap; }
 .coin-pile-caption b { font-weight: 600; color: var(--label); font-size: 12px; }
 @media (max-height: 650px) { .coin-pile { margin-top: 6px; } }
+.coin-pile canvas { touch-action: none; cursor: grab; }

@@ -6,6 +6,8 @@ export interface Repository {
   /** 全新安装返回 null */
   load(): Promise<State | null>;
   save(state: State): Promise<void>;
+  /** 页面即将卸载时用：必须在返回前落盘 */
+  saveSync(state: State): void;
   audit(entry: AuditEntry): Promise<void>;
   recentAudit(limit: number): Promise<AuditEntry[]>;
 }

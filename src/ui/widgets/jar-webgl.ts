@@ -37,11 +37,12 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
       gl_Position=vec4(p.x/1.40,p.y/(1.40*aspect),-p.z/10.,1.);
     }`);
   const fragment = shader(gl.FRAGMENT_SHADER, `#version 300 es
-    precision highp float; in vec3 n; in vec3 p; uniform float glass; uniform float opacity; uniform float dark; out vec4 color;
+    precision highp float; in vec3 n; in vec3 p; uniform float glass; uniform float opacity; uniform float dark; uniform vec2 shadowCenter; uniform float shadowRadius; out vec4 color;
     void main(){vec3 N=normalize(n); if(!gl_FrontFacing)N=-N;
       vec3 L=normalize(vec3(-.6,1.,1.5)); float light=max(0.,dot(N,L));
       float spec=pow(max(0.,dot(reflect(-L,N),vec3(0,0,1))),48.);
       float fres=pow(1.-abs(N.z),3.);
+      if(glass>1.5){float d=length(p.xy-shadowCenter)/max(shadowRadius,.0001); color=vec4(0.,0.,0.,opacity*smoothstep(1.,.35,d)); return;}
       if(glass>.5){color=vec4(mix(mix(vec3(.28,.40,.46),vec3(.72,.85,.92),dark),vec3(1.),light*.65+spec*.3),(.045+fres*(.45+dark*.35)+spec*.3)*opacity);}
       else{vec3 gold=mix(vec3(.34,.16,.025),vec3(1.,.73,.24),.28+.72*light); float band=pow(.5+.5*sin(N.x*9.+N.y*5.),10.); color=vec4(gold+vec3(1.,.9,.62)*(spec*.75+band*.13),opacity);}}`);
   const program = gl.createProgram()!;
@@ -53,7 +54,7 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? "Shader link failed");
   const uniform = (name: string) => gl.getUniformLocation(program, name);
   const u = Object.fromEntries([
-    "offset", "objectScale", "objectRotation", "cameraYaw", "cameraPitch", "height", "aspect", "glass", "opacity", "dark",
+    "offset", "objectScale", "objectRotation", "cameraYaw", "cameraPitch", "height", "aspect", "glass", "opacity", "dark", "shadowCenter", "shadowRadius",
   ].map((name) => [name, uniform(name)]));
   const upload = (mesh: Mesh) => {
     const vao = gl.createVertexArray()!;
@@ -84,8 +85,16 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
   const coin = upload(goldCoin());
   let height = 4;
   let sceneHeight = 300;
-  const cameraYaw = 0;
+  let cameraYaw = 0;
   const cameraPitch = 0.24;
+  const VIEW_HALF_WIDTH = 1.4;
+  const CANVAS_WIDTH = 160;
+  /* 与顶点着色器里的 view=rx(pitch)*ry(yaw) 同一套变换，拾取和拖拽靠它把鼠标位置和三维位置互相换算 */
+  const toView = (q: { x: number; y: number; z: number }) => {
+    const cy = Math.cos(cameraYaw), sy = Math.sin(cameraYaw), cp = Math.cos(cameraPitch), sp = Math.sin(cameraPitch);
+    const x = cy * q.x + sy * q.z, z1 = -sy * q.x + cy * q.z, y0 = q.y - height * 0.5;
+    return { x, y: cp * y0 - sp * z1, z: sp * y0 + cp * z1 };
+  };
   const meshDraw = (
     mesh: ReturnType<typeof upload>,
     position: { x: number; y: number; z: number },
@@ -143,8 +152,38 @@ export function createJarRenderer(canvas: HTMLCanvasElement) {
       }
       finish();
     },
+    setYaw(yaw: number) {
+      cameraYaw = yaw;
+    },
+    /** 世界坐标 → 画布上的 CSS 像素位置，depth 越大离镜头越近 */
+    project(position: { x: number; y: number; z: number }) {
+      const v = toView(position);
+      const aspect = sceneHeight / CANVAS_WIDTH;
+      return { x: (v.x / VIEW_HALF_WIDTH + 1) * 0.5 * CANVAS_WIDTH, y: (1 - v.y / (VIEW_HALF_WIDTH * aspect)) * 0.5 * sceneHeight, depth: v.z };
+    },
+    /** 画布上的一点 + 深度 → 世界坐标（拖拽时金币沿着正对镜头的平面移动） */
+    unproject(x: number, y: number, depth: number) {
+      const aspect = sceneHeight / CANVAS_WIDTH;
+      const vx = (x / CANVAS_WIDTH * 2 - 1) * VIEW_HALF_WIDTH, vy = (1 - y / sceneHeight * 2) * VIEW_HALF_WIDTH * aspect;
+      const cy = Math.cos(cameraYaw), sy = Math.sin(cameraYaw), cp = Math.cos(cameraPitch), sp = Math.sin(cameraPitch);
+      const y0 = cp * vy + sp * depth, z1 = -sp * vy + cp * depth;
+      return { x: cy * vx - sy * z1, y: y0 + height * 0.5, z: sy * vx + cy * z1 };
+    },
     drawRigid(coins: PhysicsCoinPose[]) {
       begin();
+      /* 先画落在地面上的影子：离地越高越淡、越大、越偏，金币落下时影子会收拢到脚下 */
+      gl.depthMask(false);
+      const flat = { x: 0, y: 0, z: 0, w: 1 };
+      for (const item of coins) {
+        const lift = Math.max(0, item.position.y - item.halfHeight);
+        if (lift > 2.4) continue;
+        const spread = item.radius * (1.25 + lift * 0.5);
+        const ground = { x: item.position.x + lift * 0.22, y: 0.002, z: item.position.z - lift * 0.12 };
+        const center = toView(ground);
+        gl.uniform2f(u.shadowCenter!, center.x, center.y);
+        gl.uniform1f(u.shadowRadius!, spread);
+        meshDraw(coin, ground, { x: spread, y: 0.01, z: spread }, flat, 2, 0.34 / (1 + lift * 1.6));
+      }
       gl.depthMask(true);
       for (const item of coins) {
         meshDraw(

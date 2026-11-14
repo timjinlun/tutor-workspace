@@ -13,6 +13,7 @@ const bridge = {
   data: {
     load: () => ipcRenderer.invoke("data:load"),
     save: (state: unknown) => ipcRenderer.invoke("data:save", state),
+    saveSync: (state: unknown) => { ipcRenderer.sendSync("data:saveSync", state); },
     audit: (entry: unknown) => ipcRenderer.invoke("data:audit", entry),
     recentAudit: (limit: number) => ipcRenderer.invoke("data:recentAudit", limit),
     info: () => ipcRenderer.invoke("data:info"),

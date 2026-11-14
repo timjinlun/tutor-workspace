@@ -42,7 +42,11 @@ export function readV2State(db: DatabaseSync): StateLike | null {
     archived: false,
     sortOrder: i,
   }));
-  if (students.length === 0 && courses.length === 0) return null;
+  /* 只有真正全空的旧库才当成新安装；只记过收支或待办也要保留。 */
+  if (students.length === 0 && courses.length === 0 && !V2_TABLES.some((table) => {
+    try { return !!db.prepare(`SELECT 1 FROM ${table} LIMIT 1`).get(); }
+    catch { return false; }
+  })) return null;
 
   const payments = all("payments").map((r) => ({ id: s(r.id), studentId: s(r.student_id), date: s(r.date), amount: n(r.amount), hours: n(r.hours), note: s(r.note) }));
   const teachers = all("teachers").map((r) => ({ id: s(r.id), name: s(r.name), color: s(r.color) || "#ff6b4a" }));

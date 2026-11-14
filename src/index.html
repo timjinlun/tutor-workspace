@@ -7,19 +7,9 @@
     <title>记一课</title>
     <style>
       /* 首帧就有底色，别让窗口先白一下。真正的 token 在 base.css 里 */
-      html { background: #f5f5f7; }
-      html[data-appearance="dark"] { background: #1c1c1e; }
+      html { background: #eceee8; }
+      html[data-appearance="dark"] { background: #0c1311; }
     </style>
-    <script>
-      /* 在第一帧之前就把上次的外观和背景落到 <html>，避免闪白 / 闪浅色 */
-      try {
-        var a = localStorage.getItem("tw.appearance") || "system";
-        var dark = a === "dark" || (a === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.dataset.appearance = dark ? "dark" : "light";
-        document.documentElement.dataset.accent = localStorage.getItem("tw.accent") || "coral";
-        document.documentElement.dataset.bg = localStorage.getItem("tw.bg") || "aurora";
-      } catch (e) {}
-    </script>
   </head>
   <body>
     <div id="root"></div>

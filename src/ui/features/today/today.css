@@ -1,17 +1,17 @@
-.timeline { padding: 6px 20px; margin-bottom: 16px; }
-.lesson { display: flex; align-items: center; gap: 14px; padding: 14px 0; position: relative; }
+.timeline { padding: 6px 22px; margin-bottom: 16px; }
+.lesson { display: flex; align-items: center; gap: 16px; padding: 16px 0; position: relative; }
 .lesson + .lesson { border-top: 1px solid var(--line); }
-.lesson-end { display: block; font-size: 11px; font-weight: 500; color: var(--label-3); }
-.lesson-time { width: 64px; font-size: 15px; font-weight: 600; color: var(--label); flex-shrink: 0; }
+.lesson-end { display: block; font-size: 12px; font-weight: 500; color: var(--label-3); margin-top: 2px; }
+.lesson-time { width: 76px; font-size: 26px; line-height: 1.05; font-weight: 700; color: var(--label); flex-shrink: 0; }
 .lesson-rail { width: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .lesson-rail .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--fill-2); box-shadow: 0 0 0 3px var(--surface); }
 .lesson.done .lesson-rail .dot { background: var(--green); }
 .lesson.next .lesson-rail .dot { background: var(--accent); box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--accent-soft); }
-.next-tag { display: block; font-family: var(--font-ui); font-size: 10.5px; font-weight: 600; color: var(--accent); letter-spacing: .02em; margin-top: 1px; }
+.next-tag { display: inline-block; font-family: var(--font-ui); font-size: 10.5px; font-weight: 700; color: var(--accent-text); background: var(--accent); border-radius: 4px; padding: 0 5px; margin-top: 4px; }
 .lesson.cancelled { opacity: .5; }
 .lesson.cancelled .lesson-title { text-decoration: line-through; }
 .lesson-main { flex: 1; min-width: 0; }
-.lesson-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.lesson-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .lesson-course { font-weight: 500; color: var(--label-2); }
 .lesson-meta { font-size: 12.5px; color: var(--label-2); margin-top: 2px; }
 .lesson-actions { display: flex; align-items: center; gap: 6px; }
@@ -20,9 +20,14 @@
 .check svg { width: 12px; height: 12px; }
 .check:hover { border-color: var(--accent); }
 .check.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-.toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--label); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 200; animation: toast-in .2s var(--spring); }
+.toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--label); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 200; animation: toast-in .2s var(--spring); }
 @keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 .lesson.klass .lesson-main { padding-right: 8px; }
 .lesson.klass .att-chips { margin-top: 8px; }
 .link-plain { font: inherit; color: inherit; text-align: left; }
 .link-plain:hover { color: var(--accent); }
+/* 强调色只给「接下来」这一节；其余的课用描边按钮，不抢 */
+.lesson.next .lesson-time { color: var(--accent); }
+.lesson.done .lesson-time { color: var(--label-3); }
+.lesson:not(.next) .lesson-actions .btn.primary { background: transparent; color: var(--label); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.lesson:not(.next) .lesson-actions .btn.primary:hover { background: var(--accent); color: var(--accent-text); box-shadow: none; }

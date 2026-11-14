@@ -19,6 +19,9 @@ export function localStorageRepository(): Repository {
     async save(s) {
       localStorage.setItem(KEY, JSON.stringify(s));
     },
+    saveSync(s) {
+      localStorage.setItem(KEY, JSON.stringify(s));
+    },
     async audit(e) {
       const list = await this.recentAudit(499);
       localStorage.setItem(AUDIT_KEY, JSON.stringify([e, ...list]));

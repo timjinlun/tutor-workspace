@@ -14,6 +14,7 @@ export interface TutorBridge {
   data: {
     load(): Promise<State | null>;
     save(state: State): Promise<{ ok: true } | { ok: false; error: string }>;
+    saveSync(state: State): void;
     audit(entry: AuditEntry): Promise<void>;
     recentAudit(limit: number): Promise<AuditEntry[]>;
     info(): Promise<{ path: string; sizeBytes: number; snapshots: number }>;

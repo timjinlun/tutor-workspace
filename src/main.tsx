@@ -1,9 +1,18 @@
 import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
-import { useStore } from "@/store";
+import { flushPendingSave, useStore } from "@/store";
 import { selectRepository } from "@/data";
 import { platform } from "@/platform";
 import "@/ui/styles/base.css";
+
+/* 首帧之前把上次的外观落到 <html>，避免闪浅色。（原来写在 index.html 的内联脚本里，被 CSP 拦掉了，从没执行过） */
+{
+  const root = document.documentElement;
+  const a = localStorage.getItem("tw.appearance") || "system";
+  root.dataset.appearance = a === "dark" || (a === "system" && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+  root.dataset.accent = localStorage.getItem("tw.accent") || "coral";
+  root.dataset.bg = localStorage.getItem("tw.bg") || "aurora";
+}
 
 // Apply native chrome spacing before the first frame, including the loading shell.
 if (window.tw) document.body.classList.add("app");
@@ -12,6 +21,7 @@ document.documentElement.dataset.platform = window.tw?.system.platform ?? "brows
 const repo = selectRepository();
 void useStore.getState().hydrate(repo);
 
+window.addEventListener("pagehide", flushPendingSave);
 window.addEventListener("error", (event) => platform.logging.error("Unhandled renderer error", event.error ?? event.message));
 window.addEventListener("unhandledrejection", (event) => platform.logging.error("Unhandled renderer promise rejection", event.reason));
 

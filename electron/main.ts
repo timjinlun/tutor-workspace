@@ -16,6 +16,8 @@ const IS_MAC = process.platform === "darwin";
 let win: BrowserWindow | null = null;
 let store: SqliteStore | null = null;
 const posterShare = new PosterShare();
+/** 文件名里的日期按本地日历，不按 UTC（晚上备份不该写成明天） */
+const localStamp = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 let stopWatchingAccent = () => {};
 
 
@@ -39,7 +41,7 @@ function createWindow() {
       vibrancy: "sidebar" as const,
       visualEffectState: "active" as const,
     } : { titleBarStyle: "default" as const }),
-    backgroundColor: IS_MAC ? "#00000000" : nativeTheme.shouldUseDarkColors ? "#1e1e20" : "#f5f5f7",
+    backgroundColor: IS_MAC ? "#00000000" : nativeTheme.shouldUseDarkColors ? "#0c1311" : "#eceee8",
     webPreferences: {
       preload: path.join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
@@ -127,7 +129,7 @@ function buildMenu() {
 
 async function doBackup() {
   if (!store) return { ok: false as const, error: "数据未就绪" };
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = localStamp();
   const { canceled, filePath } = await dialog.showSaveDialog(win!, {
     title: "备份你的数据",
     defaultPath: `记一课备份_${stamp}.db`,
@@ -143,7 +145,7 @@ async function doBackup() {
 }
 
 async function exportJSON(state: unknown) {
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = localStamp();
   const { canceled, filePath } = await dialog.showSaveDialog(win!, {
     title: "导出 JSON",
     defaultPath: `记一课_${stamp}.json`,
@@ -207,6 +209,8 @@ function wireIpc() {
       return { ok: false, error: String(e instanceof Error ? e.message : e) };
     }
   });
+  /* 窗口关闭时页面用同步通道把防抖里还没写的那次保存送过来 */
+  ipcMain.on("data:saveSync", (e, state) => { store!.save(state); e.returnValue = true; });
   ipcMain.handle("data:audit", (_e, entry) => store?.audit(entry));
   ipcMain.handle("data:recentAudit", (_e, limit) => store?.recentAudit(limit) ?? []);
   ipcMain.handle("data:info", () => store?.info());
@@ -284,7 +288,7 @@ if (!app.requestSingleInstanceLock()) {
       app.exit(1);
       return;
     }
-    if (moved.movedFrom) console.log(`[datadir] 已从 ${moved.movedFrom} 搬到 ${app.getPath("userData")}`);
+    if (moved.movedFrom) console.log(`[datadir] 已从 ${moved.movedFrom} 复制到 ${app.getPath("userData")}`);
     wireIpc();
     buildMenu();
     createWindow();
@@ -297,5 +301,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on("window-all-closed", () => {
     if (!IS_MAC) app.quit();
   });
-  app.on("before-quit", () => { stopWatchingAccent(); void posterShare.stop(); store?.close(); });
+  app.on("before-quit", () => { stopWatchingAccent(); void posterShare.stop(); });
+  /* 库要等窗口都关完再关：before-quit 时页面还活着，最后一次保存会撞上已关闭的库 */
+  app.on("will-quit", () => store?.close());
 }

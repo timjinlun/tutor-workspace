@@ -175,8 +175,10 @@ export function scheduleLesson(state: State, input: LogLessonInput, at: string =
 export function rescheduleLesson(state: State, item: DayItem, to: { date: ISODate; time: string }, at: string = new Date().toISOString()): LessonChange | null {
   if (item.status !== "scheduled") return null;
   const base = stripVirtual(item);
-  const moved: Lesson = item.virtual ? { ...base, id: uid("l"), date: to.date, time: to.time, createdAt: at } : { ...base, date: to.date, time: to.time };
   const sameDay = to.date === item.date;
+  const moved: Lesson = item.virtual ? { ...base, id: uid("l"), date: to.date, time: to.time, createdAt: at } : { ...base, date: to.date, time: to.time };
+  /* 挪到别的日期后它不再占用固定课表的位置，否则挪到同一个星期几时会把那天本来的课顶掉 */
+  if (!sameDay) delete moved.templateId;
   let lessons = item.virtual ? [...state.lessons, moved] : state.lessons.map((l) => (l.id === item.id ? moved : l));
   if (!sameDay && item.templateId) {
     const placeholder: Lesson = { ...base, id: uid("l"), status: "cancelled", createdAt: at, note: `改到 ${to.date} ${to.time}` };

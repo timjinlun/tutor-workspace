@@ -148,3 +148,15 @@ describe("排课与改期", () => {
     expect(rescheduleLesson({ ...s, lessons: done }, done[0]!, { date: TODAY, time: "17:00" })).toBeNull();
   });
 });
+
+describe("改期到下周同一个星期几", () => {
+  it("不会把那天本来的固定课顶掉", async () => {
+    const { rescheduleLesson } = await import("@/core/lesson");
+    const s = base();
+    const nextWeek = addDays(TODAY, 7);
+    const r = rescheduleLesson(s, lessonsOn(s, TODAY)[0]!, { date: nextWeek, time: "10:00" })!;
+    const items = lessonsOn({ ...s, lessons: r.lessons }, nextWeek);
+    expect(items).toHaveLength(2);
+    expect(items.filter((l) => l.virtual)).toHaveLength(1);
+  });
+});

@@ -11,6 +11,9 @@ export function memoryRepository(initial: State | null = null): Repository {
     save: async (s) => {
       state = structuredClone(s);
     },
+    saveSync: (s) => {
+      state = structuredClone(s);
+    },
     audit: async (e) => {
       audit.unshift(e);
     },

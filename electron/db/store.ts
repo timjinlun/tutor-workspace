@@ -54,27 +54,44 @@ export class SqliteStore {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     this.path = file;
     this.db = new DatabaseSync(file);
-    this.db.exec("PRAGMA journal_mode = WAL");
-    this.db.exec(`CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
-    this.upgradeFromV2();
-    this.migrate();
-    if (this.migratedFromV2) {
-      this.save(this.migratedFromV2);
-      this.snapshot(this.migratedFromV2, "migrated-from-v2");
+    try {
+      this.db.exec("PRAGMA journal_mode = WAL");
+      this.db.exec(`CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
+      if (isV2(this.db)) this.upgradeFromV2();
+      else this.migrate();
+    } catch (e) {
+      this.db.close();
+      throw e;
     }
   }
 
-  /** v2 库（schema_version=1，全列表）：读出数据、旧表改名保留，再让 migrate() 建 v3 表 */
+  /** v2 → v3：先留独立备份，再在单个事务中完成旧表归档、建表和数据写入。 */
   private upgradeFromV2() {
-    if (!isV2(this.db)) return;
+    const backup = `${this.path}.before-v3.db`;
+    if (!fs.existsSync(backup)) {
+      const temporary = `${backup}.${process.pid}.${Date.now()}.tmp`;
+      try {
+        this.backupTo(temporary);
+        fs.renameSync(temporary, backup);
+      } catch (e) {
+        fs.rmSync(temporary, { force: true });
+        throw e;
+      }
+    }
     this.db.exec("BEGIN IMMEDIATE");
     try {
-      this.migratedFromV2 = readV2State(this.db);
+      const migrated = readV2State(this.db);
       archiveV2Tables(this.db);
       this.db.prepare("INSERT OR REPLACE INTO meta(k,v) VALUES('schema_version','3')").run();
       this.db.prepare("INSERT OR REPLACE INTO meta(k,v) VALUES('migrated_from','v2')").run();
       this.db.prepare("DELETE FROM meta WHERE k='has_state'").run();
+      this.migrate();
+      if (migrated) {
+        this.writeState(migrated);
+        this.snapshot(migrated, "migrated-from-v2");
+      }
       this.db.exec("COMMIT");
+      this.migratedFromV2 = migrated;
     } catch (e) {
       this.db.exec("ROLLBACK");
       throw e;
@@ -115,29 +132,33 @@ export class SqliteStore {
   }
 
   save(state: StateLike) {
-    const now = new Date().toISOString();
     this.db.exec("BEGIN IMMEDIATE");
     try {
-      for (const [name, keys] of Object.entries(COLLECTIONS)) {
-        this.db.exec(`DELETE FROM ${name}`);
-        const ins = this.db.prepare(`INSERT INTO ${name}(id,k1,k2,data,updated_at) VALUES(?,?,?,?,?)`);
-        const rows = (state[name] as Row[] | undefined) ?? [];
-        for (const row of rows) {
-          const k1 = keys[0] ? str(row[keys[0]]) : null;
-          const k2 = keys[1] ? str(row[keys[1]]) : null;
-          ins.run(String(row.id), k1, k2, JSON.stringify(row), now);
-        }
-      }
-      this.db.exec("DELETE FROM settings");
-      const ins = this.db.prepare("INSERT INTO settings(k,v) VALUES(?,?)");
-      for (const [k, v] of Object.entries(state.settings ?? {})) ins.run(k, JSON.stringify(v ?? null));
-      this.db.prepare("INSERT OR REPLACE INTO meta(k,v) VALUES('has_state','1')").run();
+      this.writeState(state);
       this.db.exec("COMMIT");
     } catch (e) {
       this.db.exec("ROLLBACK");
       throw e;
     }
     this.maybeSnapshot(state);
+  }
+
+  private writeState(state: StateLike) {
+    const now = new Date().toISOString();
+    for (const [name, keys] of Object.entries(COLLECTIONS)) {
+      this.db.exec(`DELETE FROM ${name}`);
+      const ins = this.db.prepare(`INSERT INTO ${name}(id,k1,k2,data,updated_at) VALUES(?,?,?,?,?)`);
+      const rows = (state[name] as Row[] | undefined) ?? [];
+      for (const row of rows) {
+        const k1 = keys[0] ? str(row[keys[0]]) : null;
+        const k2 = keys[1] ? str(row[keys[1]]) : null;
+        ins.run(String(row.id), k1, k2, JSON.stringify(row), now);
+      }
+    }
+    this.db.exec("DELETE FROM settings");
+    const ins = this.db.prepare("INSERT INTO settings(k,v) VALUES(?,?)");
+    for (const [k, v] of Object.entries(state.settings ?? {})) ins.run(k, JSON.stringify(v ?? null));
+    this.db.prepare("INSERT OR REPLACE INTO meta(k,v) VALUES('has_state','1')").run();
   }
 
   audit(e: AuditLike) {
@@ -177,6 +198,8 @@ export class SqliteStore {
   /** SQLite 官方在线备份：VACUUM INTO，WAL 里的内容也会带上 */
   backupTo(target: string) {
     fs.mkdirSync(path.dirname(target), { recursive: true });
+    /* VACUUM INTO 不覆盖已有文件；保存对话框里选了「替换」就得先删 */
+    fs.rmSync(target, { force: true });
     this.db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
   }
 

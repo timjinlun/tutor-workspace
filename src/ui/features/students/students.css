@@ -7,6 +7,6 @@
 .dossier-more > div { position: absolute; top: 36px; right: 0; display: flex; flex-direction: column; padding: 8px; background: var(--surface); box-shadow: var(--shadow-sheet); border-radius: var(--radius); z-index: 3; }
 .dossier-tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--line); margin: 0 0 18px; }
 .dossier-tabs button { color: var(--label-2); padding: 12px 1px; font-size: 14px; font-weight: 600; border-bottom: 2px solid transparent; }
-.dossier-tabs button[aria-selected="true"] { color: var(--label); border-color: var(--accent); }
+.dossier-tabs button[aria-selected="true"] { color: var(--label); border-color: var(--label); }
 @media (max-width: 1120px) { .students-body { grid-template-columns: 230px minmax(0, 1fr); gap: 16px; } .students.page { padding-left: 22px; padding-right: 22px; } }
 @media (max-width: 880px) { .students-body { grid-template-columns: 1fr; } .students .student-directory { position: static; max-height: 270px; } }

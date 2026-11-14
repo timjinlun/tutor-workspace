@@ -13,6 +13,11 @@ import "./savings-jar.css";
 
 const COIN_RADIUS = 0.082;
 const COIN_HALF_HEIGHT = 0.018;
+/** 金币在画面里只有十来个像素宽，拾取范围放宽到这么多像素，才捏得住 */
+const PICK_RADIUS_PX = 13;
+/** 动过多少像素算拖，没到就算「点了一下」 */
+const TAP_SLOP_PX = 4;
+const TOUCH = "__touch__";
 
 function legacyPile(fill: number, count: number): PhysicsCoinPose[] {
   return buildJarPile(fill, count, COIN_RADIUS, COIN_HALF_HEIGHT).map((coin, index) => {
@@ -129,6 +134,9 @@ export function CoinPile() {
       let emitted = 0;
       let physicsFrames = 0;
       let current = jarState(useStore.getState().s);
+      let held: { id: string; depth: number; start: { x: number; y: number }; moved: boolean } | undefined;
+      let orbit: { x: number; yaw: number } | undefined;
+      let yaw = 0;
 
       const saveStable = (settledLessonIds: string[] = []) => {
         canvas.dataset.stableBodies = String(stable.length);
@@ -214,14 +222,16 @@ export function CoinPile() {
       };
       const finishLedgerAnimation = () => {
         stopLoop();
+        held = undefined;
+        canvas.dataset.holding = "false";
         for (const entry of pending) addEmission(entry);
         pending = [];
         canvas.dataset.pendingCoins = "0";
         for (let pass = 0; pass < 6; pass++) {
-          for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
+          for (let i = 0; i < 240 && !physics.isCalm(); i++) physics.step();
           if (physics.tipUprightCoins() === 0) break;
         }
-        for (let i = 0; i < 600 && physics.hasActiveBodies(); i++) physics.step();
+        for (let i = 0; i < 240 && !physics.isCalm(); i++) physics.step();
         const settledAt = Date.now();
         const dynamic = physics.poses();
         const settledLessonIds = [...new Set([
@@ -248,9 +258,9 @@ export function CoinPile() {
         delayTimer = undefined;
         physicsFrames++;
         canvas.dataset.physicsFrames = String(physicsFrames);
-        while (pending[0] && pending[0].at <= now) {
-          const entry = pending.shift()!;
-          addEmission(entry);
+        /* 一帧最多放两枚：掉帧时也不会一口气把一把金币生成在同一个位置、互相挤爆 */
+        for (let released = 0; released < 2 && pending[0] && pending[0].at <= now; released++) {
+          addEmission(pending.shift()!);
         }
         canvas.dataset.pendingCoins = String(pending.length);
         let steps = 0;
@@ -262,11 +272,11 @@ export function CoinPile() {
         outgoing = outgoing.filter((item) => now - item.start < 300);
         draw(now);
         const noQueuedAnimation = pending.length === 0 && outgoing.length === 0;
-        if (noQueuedAnimation && unsettled.size > 0 && (!physics.hasActiveBodies() || now >= hardStopAt)) {
+        if (noQueuedAnimation && unsettled.size > 0 && !held && (physics.isCalm() || now >= hardStopAt)) {
           finishLedgerAnimation();
           return;
         }
-        if (noQueuedAnimation && unsettled.size === 0 && !physics.hasActiveBodies()) {
+        if (noQueuedAnimation && unsettled.size === 0 && !held && physics.isCalm()) {
           stopLoop();
           return;
         }
@@ -274,7 +284,7 @@ export function CoinPile() {
       };
       const startLoop = (now = performance.now(), delay = 0) => {
         canvas.dataset.animating = "true";
-        hardStopAt = Math.max(hardStopAt, now + 1800);
+        hardStopAt = Math.max(hardStopAt, now + 3600);
         if (raf || delayTimer) return;
         last = now;
         delayTimer = setTimeout(() => {
@@ -284,8 +294,84 @@ export function CoinPile() {
         }, delay);
       };
 
+      /* ---------- 互动：捏起来扔、点一下弹起来、拖空白处转着看 ---------- */
+      const pointerAt = (event: PointerEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      };
+      const pick = (at: { x: number; y: number }, poses: PhysicsCoinPose[]) => {
+        let best: { pose: PhysicsCoinPose; depth: number } | undefined;
+        for (const pose of poses) {
+          const screen = renderer.project(pose.position);
+          if (Math.hypot(screen.x - at.x, screen.y - at.y) > PICK_RADIUS_PX) continue;
+          if (!best || screen.depth > best.depth) best = { pose, depth: screen.depth };
+        }
+        return best;
+      };
+      /** 历史金币平时是固定不动的；手一碰，整堆变回真的刚体，停稳后再存回去 */
+      const wakePile = () => {
+        if (!stable.length) return;
+        const sleeping = stable;
+        stable = [];
+        physics.setStaticPile([]);
+        for (const pose of sleeping) {
+          physics.addCoin({ radius: pose.radius, halfHeight: pose.halfHeight, lessonId: pose.lessonId, position: { ...pose.position }, rotation: { ...pose.rotation }, atRest: true, random: Math.random });
+        }
+      };
+      const pointerDown = (event: PointerEvent) => {
+        if (reduce.matches || event.button !== 0) return;
+        const at = pointerAt(event);
+        const hitStable = pick(at, [...stable, ...physics.poses()]);
+        canvas.setPointerCapture(event.pointerId);
+        if (!hitStable) {
+          orbit = { x: event.clientX, yaw };
+          return;
+        }
+        /* 先记下它在哪，再把整堆叫醒：叫醒后编号会变，按位置找回同一枚 */
+        const where = hitStable.pose.position;
+        wakePile();
+        const coin = physics.poses().reduce((a, b) => (Math.hypot(a.position.x - where.x, a.position.y - where.y, a.position.z - where.z) <= Math.hypot(b.position.x - where.x, b.position.y - where.y, b.position.z - where.z) ? a : b));
+        physics.grab(coin.id);
+        held = { id: coin.id, depth: renderer.project(coin.position).depth, start: at, moved: false };
+        unsettled.set(TOUCH, 1);
+        canvas.dataset.holding = "true";
+        canvas.style.cursor = "grabbing";
+        startLoop();
+      };
+      const pointerMove = (event: PointerEvent) => {
+        const at = pointerAt(event);
+        if (held) {
+          if (Math.hypot(at.x - held.start.x, at.y - held.start.y) > TAP_SLOP_PX) held.moved = true;
+          if (held.moved) physics.dragTo(renderer.unproject(at.x, at.y, held.depth));
+          return;
+        }
+        if (orbit) {
+          yaw = orbit.yaw + (event.clientX - orbit.x) * 0.012;
+          renderer.setYaw(yaw);
+          canvas.dataset.yaw = yaw.toFixed(3);
+          if (!raf && !delayTimer) draw();
+          return;
+        }
+        if (!reduce.matches) canvas.style.cursor = pick(at, [...stable, ...physics.poses()]) ? "grab" : "ew-resize";
+      };
+      const pointerUp = (event: PointerEvent) => {
+        orbit = undefined;
+        if (!held) return;
+        physics.release();
+        if (!held.moved) physics.flip(held.id, Math.random);
+        held = undefined;
+        canvas.dataset.holding = "false";
+        canvas.style.cursor = "grab";
+        hardStopAt = performance.now() + 6000;
+        if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      };
+      canvas.addEventListener("pointerdown", pointerDown);
+      canvas.addEventListener("pointermove", pointerMove);
+      canvas.addEventListener("pointerup", pointerUp);
+      canvas.addEventListener("pointercancel", pointerUp);
+
       initializePile();
-      if (pending.length > 0 || unsettled.size > 0 || physics.hasActiveBodies()) startLoop();
+      if (pending.length > 0 || unsettled.size > 0 || !physics.isCalm()) startLoop();
       else canvas.dataset.animating = "false";
       const unsubscribe = useStore.subscribe((next, previous) => {
         if (next.s === previous.s) return;
@@ -314,9 +400,10 @@ export function CoinPile() {
           updateEvidence();
           draw();
           if (recovery.fulfilledLessonIds.length && !repairingUprightCoins) saveStable(recovery.fulfilledLessonIds);
-          if (pending.length > 0 || unsettled.size > 0 || physics.hasActiveBodies()) startLoop();
+          if (pending.length > 0 || unsettled.size > 0 || !physics.isCalm()) startLoop();
           return;
         }
+        if (unsettled.has(TOUCH)) finishLedgerAnimation();
         const now = performance.now();
         const changes = next.jarFeedback.changes;
         const value = next.s.settings.coinValue.amount;
@@ -358,7 +445,7 @@ export function CoinPile() {
           physics.setHeight(physicsHeight);
           canvas.dataset.physicsHeight = physicsHeight.toFixed(4);
           if (!ledgerAnimationInProgress || reduce.matches) {
-            for (let i = 0; i < 240 && physics.hasActiveBodies(); i++) physics.step();
+            for (let i = 0; i < 240 && !physics.isCalm(); i++) physics.step();
             draw();
             stopLoop();
           } else {
@@ -376,13 +463,14 @@ export function CoinPile() {
       const restored = () => {
         renderer.dispose();
         renderer = createJarRenderer(canvas);
+        renderer.setYaw(yaw);
         physicsHeight = resize();
         physics.setHeight(physicsHeight);
         canvas.dataset.physicsHeight = physicsHeight.toFixed(4);
         physics.setStaticPile(stable);
         updateEvidence();
         draw();
-        if (pending.length > 0 || outgoing.length > 0 || unsettled.size > 0 || physics.hasActiveBodies()) startLoop();
+        if (pending.length > 0 || outgoing.length > 0 || unsettled.size > 0 || !physics.isCalm()) startLoop();
         else canvas.dataset.animating = "false";
       };
       canvas.addEventListener("webglcontextlost", lost);
@@ -408,6 +496,10 @@ export function CoinPile() {
         reduce.removeEventListener("change", reduceChanged);
         window.removeEventListener("resize", redraw);
         window.removeEventListener("focus", refresh);
+        canvas.removeEventListener("pointerdown", pointerDown);
+        canvas.removeEventListener("pointermove", pointerMove);
+        canvas.removeEventListener("pointerup", pointerUp);
+        canvas.removeEventListener("pointercancel", pointerUp);
         canvas.removeEventListener("webglcontextlost", lost);
         canvas.removeEventListener("webglcontextrestored", restored);
       };
@@ -422,7 +514,7 @@ export function CoinPile() {
       teardown?.();
     };
   }, []);
-  return <div className="coin-pile" title={`已确认收入 ${fmtMoney(state.amount)}，目标 ${fmtMoney(state.capacity)}`}>
+  return <div className="coin-pile" title={`已确认收入 ${fmtMoney(state.amount)}，目标 ${fmtMoney(state.capacity)}\n捏住金币可以扔，点一下会弹起来，拖空白处转着看`}>
     <canvas ref={ref} aria-label={`金币堆，已达目标的 ${Math.round(state.fill * 100)}%，${fmtMoney(state.amount)}`} role="img" />
     <div className="coin-pile-caption"><b>{fmtMoney(state.amount)}</b><span> / {fmtMoney(state.capacity)}</span></div>
   </div>;

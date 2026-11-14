@@ -37,7 +37,7 @@ export function IncomeStat() {
     reduce.addEventListener("change", reset);
     return () => { unsubscribe(); clearTimeout(timer); animation?.stop(); reduce.removeEventListener("change", reset); };
   }, []);
-  return <><div className="stat" ref={ref}>本月确认收入 <b>{fmtMoney(value)}</b></div>
+  return <><div className="stat gold" ref={ref}>本月确认收入<span className="v"><b>{fmtMoney(value)}</b></span></div>
     {createPortal(flights.map((f) => <motion.div key={f.id} className="income-flight" aria-hidden="true"
       initial={{ x: f.from.x, y: f.from.y, opacity: 1, scale: 1 }}
       animate={{ x: f.to.x, y: f.to.y, opacity: 0, scale: 0.55 }}

@@ -77,10 +77,10 @@ export function TodayPage() {
       </div>
 
       <div className="stat-row">
-        <div className="stat">今天 <b>{doneCount}/{groups.filter((g) => groupStatus(g) !== "cancelled").length}</b> 节</div>
-        <div className="stat">本周已上 <b>{doneLessonsInWeek(s, today)}</b> 节</div>
+        <div className="stat">今天已上<span className="v"><b>{doneCount}/{groups.filter((g) => groupStatus(g) !== "cancelled").length}</b>节</span></div>
+        <div className="stat">本周已上<span className="v"><b>{doneLessonsInWeek(s, today)}</b>节</span></div>
         <IncomeStat key={today} />
-        {low.length > 0 && <div className={`stat ${low.some((l) => l.level === "danger") ? "danger" : "warn"}`}>该提醒续费 <b>{low.length}</b> 人</div>}
+        {low.length > 0 && <div className={`stat ${low.some((l) => l.level === "danger") ? "danger" : "warn"}`}>该提醒续费<span className="v"><b>{low.length}</b>人</span></div>}
       </div>
 
       {/* ---------- 时间轴 ---------- */}

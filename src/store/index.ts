@@ -127,6 +127,14 @@ function persist(get: () => Store, set: (p: Partial<Store>) => void) {
   }, 150);
 }
 
+/** 页面卸载前调用：防抖里还压着一次保存就立刻同步写掉 */
+export function flushPendingSave() {
+  if (!repo || !saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  repo.saveSync(useStore.getState().s);
+}
+
 function recordAudit(entry: AuditEntry) {
   void repo?.audit(entry);
 }
@@ -301,6 +309,7 @@ export const useStore = create<Store>((set, get) => {
         payments: s.payments.filter((x) => x.studentId !== id),
         lessons: s.lessons.filter((x) => x.studentId !== id),
         templates: s.templates.filter((x) => x.studentId !== id),
+        classes: s.classes.map((c) => (c.studentIds.includes(id) ? { ...c, studentIds: c.studentIds.filter((x) => x !== id) } : c)),
       });
       audited({ id: uid("a"), at: new Date().toISOString(), kind: "student.remove", summary: `删除学员 ${st?.name ?? id}`, payload: { studentId: id } });
     },
@@ -342,6 +351,8 @@ export const useStore = create<Store>((set, get) => {
       const s = get().s;
       const users = s.students.filter((x) => x.courseIds.includes(id)).length;
       if (users > 0) return { ok: false, reason: `还有 ${users} 位学员在上这门课，先改学员的课程再删。` };
+      const classes = s.classes.filter((c) => c.courseId === id).length;
+      if (classes > 0) return { ok: false, reason: `还有 ${classes} 个班在上这门课，先改班级的课程再删。` };
       commit({ courses: s.courses.filter((c) => c.id !== id), templates: s.templates.filter((t) => t.courseId !== id) });
       return { ok: true };
     },

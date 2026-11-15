@@ -18,6 +18,14 @@ const PICK_RADIUS_PX = 13;
 /** 动过多少像素算拖，没到就算「点了一下」 */
 const TAP_SLOP_PX = 4;
 const TOUCH = "__touch__";
+/**
+ * 手碰到金币时只叫醒它周围这一小片，其余的继续当固定的底座。
+ * 整堆两三百枚同时变成刚体，一帧物理要算十几毫秒，整个界面都会跟着卡。
+ */
+const WAKE_RADIUS = 0.34;
+const WAKE_MAX = 28;
+/** 到了超时还在以这个速度以上运动，就是真的还在飞，再等等；否则原地定格 */
+const STILL_MOVING_SPEED = 0.8;
 
 function legacyPile(fill: number, count: number): PhysicsCoinPose[] {
   return buildJarPile(fill, count, COIN_RADIUS, COIN_HALF_HEIGHT).map((coin, index) => {
@@ -220,18 +228,21 @@ export function CoinPile() {
         emitted++;
         canvas.dataset.emitted = String(emitted);
       };
-      const finishLedgerAnimation = () => {
+      /** settle=false：金币基本不动了，直接原地定格，不再同步快进物理（那会让界面卡一下） */
+      const finishLedgerAnimation = (settle = true) => {
         stopLoop();
         held = undefined;
         canvas.dataset.holding = "false";
         for (const entry of pending) addEmission(entry);
         pending = [];
         canvas.dataset.pendingCoins = "0";
-        for (let pass = 0; pass < 6; pass++) {
+        if (settle) {
+          for (let pass = 0; pass < 6; pass++) {
+            for (let i = 0; i < 240 && !physics.isCalm(); i++) physics.step();
+            if (physics.tipUprightCoins() === 0) break;
+          }
           for (let i = 0; i < 240 && !physics.isCalm(); i++) physics.step();
-          if (physics.tipUprightCoins() === 0) break;
         }
-        for (let i = 0; i < 240 && !physics.isCalm(); i++) physics.step();
         const settledAt = Date.now();
         const dynamic = physics.poses();
         const settledLessonIds = [...new Set([
@@ -264,15 +275,23 @@ export function CoinPile() {
         }
         canvas.dataset.pendingCoins = String(pending.length);
         let steps = 0;
-        while (now - last >= 1000 / 60 && steps++ < 4) {
+        while (now - last >= 1000 / 60 && steps++ < 2) {
           physics.step();
           last += 1000 / 60;
         }
-        if (steps >= 4) last = now;
+        if (steps >= 2) last = now;
         outgoing = outgoing.filter((item) => now - item.start < 300);
         draw(now);
         const noQueuedAnimation = pending.length === 0 && outgoing.length === 0;
-        if (noQueuedAnimation && unsettled.size > 0 && !held && (physics.isCalm() || now >= hardStopAt)) {
+        if (noQueuedAnimation && unsettled.size > 0 && !held && now >= hardStopAt && !physics.isCalm()) {
+          if (physics.maxSpeed() > STILL_MOVING_SPEED && now < hardStopAt + 6000) {
+            raf = requestAnimationFrame(tick);
+            return;
+          }
+          finishLedgerAnimation(false);
+          return;
+        }
+        if (noQueuedAnimation && unsettled.size > 0 && !held && physics.isCalm()) {
           finishLedgerAnimation();
           return;
         }
@@ -308,13 +327,17 @@ export function CoinPile() {
         }
         return best;
       };
-      /** 历史金币平时是固定不动的；手一碰，整堆变回真的刚体，停稳后再存回去 */
-      const wakePile = () => {
-        if (!stable.length) return;
-        const sleeping = stable;
-        stable = [];
-        physics.setStaticPile([]);
-        for (const pose of sleeping) {
+      /** 历史金币平时是固定不动的；手碰到哪，哪一小片（同层和压在上面的）变回真的刚体，停稳后再存回去 */
+      const wakeAround = (where: { x: number; y: number; z: number }) => {
+        const distance = (pose: PhysicsCoinPose) => Math.hypot(pose.position.x - where.x, pose.position.y - where.y, pose.position.z - where.z);
+        const woken = stable
+          .filter((pose) => Math.hypot(pose.position.x - where.x, pose.position.z - where.z) < WAKE_RADIUS && pose.position.y >= where.y - 0.01)
+          .sort((a, b) => distance(a) - distance(b))
+          .slice(0, WAKE_MAX);
+        const wokenIds = new Set(woken.map((pose) => pose.id));
+        stable = stable.filter((pose) => !wokenIds.has(pose.id));
+        physics.setStaticPile(stable);
+        for (const pose of woken) {
           physics.addCoin({ radius: pose.radius, halfHeight: pose.halfHeight, lessonId: pose.lessonId, position: { ...pose.position }, rotation: { ...pose.rotation }, atRest: true, random: Math.random });
         }
       };
@@ -327,9 +350,9 @@ export function CoinPile() {
           orbit = { x: event.clientX, yaw };
           return;
         }
-        /* 先记下它在哪，再把整堆叫醒：叫醒后编号会变，按位置找回同一枚 */
+        /* 先记下它在哪，再叫醒它周围：叫醒后编号会变，按位置找回同一枚 */
         const where = hitStable.pose.position;
-        wakePile();
+        wakeAround(where);
         const coin = physics.poses().reduce((a, b) => (Math.hypot(a.position.x - where.x, a.position.y - where.y, a.position.z - where.z) <= Math.hypot(b.position.x - where.x, b.position.y - where.y, b.position.z - where.z) ? a : b));
         physics.grab(coin.id);
         held = { id: coin.id, depth: renderer.project(coin.position).depth, start: at, moved: false };

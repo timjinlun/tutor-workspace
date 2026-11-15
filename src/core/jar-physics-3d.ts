@@ -210,6 +210,15 @@ export async function createJarPhysics3D(options: JarPhysicsOptions) {
         calmWindows = moving ? 0 : calmWindows + 1;
       }
     },
+    /** 当前最快的那枚金币的速度 */
+    maxSpeed() {
+      let fastest = 0;
+      for (const coin of coins.values()) {
+        const v = coin.body.linvel();
+        fastest = Math.max(fastest, Math.hypot(v.x, v.y, v.z));
+      }
+      return fastest;
+    },
     /** 所有金币都已经停稳（或者根本没有在动的金币） */
     isCalm() {
       return coins.size === 0 || calmWindows >= 2;
